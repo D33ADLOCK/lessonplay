@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Atom Snap</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #172033;
+        overflow: hidden;
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      canvas {
+        width: min(100vw, 177.78vh);
+        height: min(56.25vw, 100vh);
+        aspect-ratio: 16/9;
+        background: #20324f;
+        touch-action: none;
+        image-rendering: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas
+      id="game"
+      width="960"
+      height="540"
+      aria-label="Atom Snap one-button chemistry game"
+    ></canvas>
+    <script>
+      (() => {
+        "use strict";
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const W = 960,
+          H = 540;
+        const LEFT = 170,
+          RIGHT = 210,
+          PLAY_X = LEFT,
+          PLAY_W = W - LEFT - RIGHT;
+        const ZONE_X = PLAY_X + PLAY_W * 0.52;
+        const ZONE_W = 74;
+        const LANES = [130, 190, 250, 310, 370, 430];
+        const RUN_TIME = 60;
+        const formulas = [
+          {
+            name: "Water",
+            formula: "H₂O",
+            slots: ["H", "H", "O"],
+            counts: { H: 2, O: 1 },
+            hint: "Water always needs 2 H and 1 O.",
+          },
+          {
+            name: "Carbon dioxide",
+            formula: "CO₂",
+            slots: ["O", "C", "O"],
+            counts: { C: 1, O: 2 },
+            hint: "CO₂ always needs 1 C and 2 O.",
+          },
+          {
+            name: "Table salt",
+            formula: "NaCl",
+            slots: ["Na", "Cl"],
+            counts: { Na: 1, Cl: 1 },
+            hint: "Salt formula units use 1 Na and 1 Cl.",
+          },
+        ];
+        const atomStyle = {
+          H: { fill: "#78d7ee", edge: "#2a8faf", label: "#18364c" },
+          O: { fill: "#ff6b7d", edge: "#ad3448", label: "#481924" },
+          C: { fill: "#77849a", edge: "#394457", label: "#151c29" },
+          Na: { fill: "#f0bd45", edge: "#9b6c1e", label: "#4b3110" },
+          Cl: { fill: "#6bd46f", edge: "#2b8939", label: "#123c1a" },
+          N: { fill: "#b48bff", edge: "#7253b8", label: "#2d2254" },
+        };
+        let atoms,
+          particles,
+          progress,
+          targetIndex,
+          moleculeCount,
+          score,
+          highScore,
+          timeLeft,
+          pressure,
+          spawnT,
+          cooldown,
+          ended,
+          message,
+          messageT,
+          shake,
+          flashGood,
+          lastTime,
+          started;
+        let atomId = 1;
+        const safeStorage = {
+          get(k) {
+            try {
+              return localStorage.getItem(k);
+            } catch (e) {
+              return null;
+            }
+          },
+          set(k, v) {
+            try {
+              localStorage.setItem(k, v);
+            } catch (e) {}
+          },
+        };
+        function reset() {
+          atoms = [];
+          particles = [];
+          progress = {};
+          targetIndex = 0;
+          moleculeCount = 0;
+          score = 0;
+          highScore = Number(safeStorage.get("atomSnapHigh") || 0);
+          timeLeft = RUN_TIME;
+          pressure = 0;
+          spawnT = 0.25;
+          cooldown = 0;
+          ended = false;
+          message = "Snap exact atoms!";
+          messageT = 2.2;
+          shake = 0;
+          flashGood = 0;
+          lastTime = performance.now();
+          started = true;
+        }
+        function currentFormula() {
+          return formulas[targetIndex % formulas.length];
+        }
+        function requiredCount(type) {
+          return currentFormula().counts[type] || 0;
+        }
+        function haveCount(type) {
+          return progress[type] || 0;
+        }
+        function isComplete() {
+          const f = currentFormula();
+          return Object.keys(f.counts).every(
+            (k) => haveCount(k) === f.counts[k],
+          );
+        }
+        function targetPool() {
+          const f = currentFormula();
+          const good = f.slots.slice();
+          const distract = ["H", "O", "C", "Na", "Cl", "N"].filter(
+            (t) => !(t in f.counts),
+          );
+          if (Math.random() < 0.72)
+            return good[Math.floor(Math.random() * good.length)];
+          return distract[Math.floor(Math.random() * distract.length)];
+        }
+        function spawnAtom() {
+          const level = Math.floor(moleculeCount / 3);
+          const type = targetPool();
+          const y =
+            LANES[Math.floor(Math.random() * LANES.length)] +
+            (Math.random() * 16 - 8);
+          const speed =
+            73 + Math.min(70, moleculeCount * 5.5) + Math.random() * 22;
+          atoms.push({
+            id: atomId++,
+            type,
+            x: PLAY_X - 34,
+            y,
+            vx: speed,
+            r: type.length > 1 ? 24 : 22,
+            wobble: Math.random() * Math.PI * 2,
+            grabbed: false,
+          });
+          const base = Math.max(0.42, 1.12 - moleculeCount * 0.035);
+          spawnT = base + Math.random() * 0.45;
+        }
+        function puff(x, y, color, count, force) {
+          for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2,
+              s = (0.6 + Math.random() * 1.6) * force;
+            particles.push({
+              x,
+              y,
+              vx: Math.cos(a) * s,
+              vy: Math.sin(a) * s,
+              life: 0.45 + Math.random() * 0.35,
+              max: 0.8,
+              color,
+              size: 2 + Math.random() * 5,
+            });
+          }
+        }
+        function setMessage(txt, t) {
+          message = txt;
+          messageT = t || 1.2;
+        }
+        function addScore(n) {
+          score += n;
+          if (score > highScore) {
+            highScore = score;
+            safeStorage.set("atomSnapHigh", String(highScore));
+          }
+        }
+        function fizzle(reason, atom) {
+          pressure = Math.min(100, pressure + (atom ? 18 : 7));
+          progress = {};
+          shake = 0.32;
+          setMessage(reason + " Fizzle: exact formula reset.", 1.8);
+          puff(atom ? atom.x : ZONE_X, atom ? atom.y : 270, "#ff7e62", 24, 2.0);
+          if (pressure >= 100) {
+            ended = true;
+            setMessage("Fizz pressure filled the lab!", 5);
+          }
+        }
+        function completeMolecule() {
+          const f = currentFormula();
+          addScore(60 + Math.max(0, Math.floor(timeLeft)) + f.slots.length * 8);
+          moleculeCount++;
+          targetIndex++;
+          pressure = Math.max(0, pressure - 12);
+          progress = {};
+          flashGood = 0.45;
+          setMessage(f.formula + " formed! Exact ratio works.", 1.9);
+          puff(ZONE_X, 270, "#ffe07a", 38, 2.3);
+        }
+        function press() {
+          if (!started || ended) {
+            reset();
+            return;
+          }
+          if (cooldown > 0) return;
+          cooldown = 0.16;
+          let best = null,
+            bestD = 9999;
+          for (const a of atoms) {
+            const dx = Math.abs(a.x - ZONE_X);
+            if (dx < ZONE_W * 0.52 && a.x > PLAY_X && a.x < PLAY_X + PLAY_W) {
+              if (dx < bestD) {
+                bestD = dx;
+                best = a;
+              }
+            }
+          }
+          if (!best) {
+            fizzle("No atom in the snap zone.", null);
+            return;
+          }
+          best.grabbed = true;
+          const need = requiredCount(best.type);
+          if (need > 0 && haveCount(best.type) < need) {
+            progress[best.type] = haveCount(best.type) + 1;
+            const centerBonus = Math.max(0, Math.round(12 - bestD * 0.25));
+            addScore(12 + centerBonus);
+            setMessage("Good snap: " + best.type + " fits the formula.", 1.1);
+            puff(best.x, best.y, atomStyle[best.type].fill, 18, 1.5);
+            atoms = atoms.filter((a) => a !== best);
+            if (isComplete()) completeMolecule();
+          } else {
+            atoms = atoms.filter((a) => a !== best);
+            const over =
+              need > 0
+                ? "Too many " + best.type + "."
+                : best.type + " is not in this formula.";
+            fizzle(over, best);
+          }
+        }
+        function update(dt) {
+          if (!ended) {
+            timeLeft -= dt;
+            if (timeLeft <= 0) {
+              timeLeft = 0;
+              ended = true;
+              setMessage("Time up! Exact molecules built: " + moleculeCount, 5);
+            }
+            cooldown = Math.max(0, cooldown - dt);
+            spawnT -= dt;
+            if (spawnT <= 0) spawnAtom();
+            for (const a of atoms) {
+              a.x += a.vx * dt;
+              a.wobble += dt * 4;
+              a.y += Math.sin(a.wobble) * 0.018;
+            }
+            atoms = atoms.filter(
+              (a) => a.x < PLAY_X + PLAY_W + 46 && !a.grabbed,
+            );
+          }
+          for (const p of particles) {
+            p.x += p.vx * 60 * dt;
+            p.y += p.vy * 60 * dt;
+            p.vy += 2.8 * dt;
+            p.life -= dt;
+          }
+          particles = particles.filter((p) => p.life > 0);
+          messageT = Math.max(0, messageT - dt);
+          shake = Math.max(0, shake - dt);
+          flashGood = Math.max(0, flashGood - dt);
+        }
+        function roundRect(x, y, w, h, r) {
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + w, y, x + w, y + h, r);
+          ctx.arcTo(x + w, y + h, x, y + h, r);
+          ctx.arcTo(x, y + h, x, y, r);
+          ctx.arcTo(x, y, x + w, y, r);
+          ctx.closePath();
+        }
+        function drawText(txt, x, y, size, align, color, bold) {
+          ctx.fillStyle = color || "#f4df9c";
+          ctx.font =
+            (bold ? "700 " : "600 ") +
+            size +
+            "px system-ui, -apple-system, Segoe UI, sans-serif";
+          ctx.textAlign = align || "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(txt, x, y);
+        }
+        function drawPanel(x, y, w, h, title) {
+          ctx.fillStyle = "#24395d";
+          roundRect(x, y, w, h, 18);
+          ctx.fill();
+          ctx.strokeStyle = "#486996";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          if (title)
+            drawText(title, x + w / 2, y + 26, 20, "center", "#ffd36b", true);
+        }
+        function drawAtom(a, ghost) {
+          const st = atomStyle[a.type];
+          ctx.save();
+          ctx.translate(a.x, a.y);
+          const pulse = 1 + Math.sin(a.wobble * 2) * 0.035;
+          ctx.scale(pulse, 1 / pulse);
+          ctx.fillStyle = ghost ? "#50627f" : st.fill;
+          ctx.beginPath();
+          ctx.arc(0, 0, a.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = ghost ? "#394a66" : st.edge;
+          ctx.stroke();
+          ctx.fillStyle = ghost ? "#c8b978" : st.label;
+          ctx.font =
+            "800 " + (a.type.length > 1 ? 17 : 22) + "px system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(a.type, 0, 1);
+          // little eyes for liveliness, not used for gameplay
+          ctx.fillStyle = "#24425a";
+          ctx.beginPath();
+          ctx.arc(-7, -7, 3, 0, Math.PI * 2);
+          ctx.arc(7, -7, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        function drawSlots() {
+          const f = currentFormula();
+          const startX = 210,
+            y = 56,
+            gap = 55;
+          const temp = {};
+          for (let i = 0; i < f.slots.length; i++) {
+            const t = f.slots[i];
+            temp[t] = temp[t] || 0;
+            temp[t]++;
+            const filled = haveCount(t) >= temp[t];
+            ctx.fillStyle = filled ? atomStyle[t].fill : "#2f466d";
+            ctx.strokeStyle = filled ? "#ffe07a" : "#7190bd";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(startX + i * gap, y, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            drawText(
+              t,
+              startX + i * gap,
+              y + 1,
+              t.length > 1 ? 15 : 20,
+              "center",
+              filled ? atomStyle[t].label : "#d7c279",
+              true,
+            );
+          }
+        }
+        function draw() {
+          ctx.save();
+          const sx = shake ? (Math.random() * 2 - 1) * 8 * shake : 0;
+          const sy = shake ? (Math.random() * 2 - 1) * 6 * shake : 0;
+          ctx.translate(sx, sy);
+          const grad = ctx.createLinearGradient(0, 0, 0, H);
+          grad.addColorStop(0, "#1c2b49");
+          grad.addColorStop(1, "#16263e");
+          ctx.fillStyle = grad;
+          ctx.fillRect(-20, -20, W + 40, H + 40);
+          // Play lane
+          ctx.fillStyle = "#1e3354";
+          roundRect(LEFT, 82, PLAY_W, 400, 24);
+          ctx.fill();
+          ctx.strokeStyle = "#355985";
+          ctx.lineWidth = 4;
+          ctx.stroke();
+          for (const y of LANES) {
+            ctx.strokeStyle = "#29476e";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(PLAY_X + 12, y);
+            ctx.lineTo(PLAY_X + PLAY_W - 12, y);
+            ctx.stroke();
+          }
+          // Snap zone
+          ctx.fillStyle = flashGood
+            ? "rgba(255,211,107,0.22)"
+            : "rgba(116,215,238,0.16)";
+          roundRect(ZONE_X - ZONE_W / 2, 94, ZONE_W, 376, 20);
+          ctx.fill();
+          ctx.strokeStyle = "#74d7ee";
+          ctx.lineWidth = 4;
+          ctx.setLineDash([10, 8]);
+          roundRect(ZONE_X - ZONE_W / 2, 94, ZONE_W, 376, 20);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          drawText("SNAP ZONE", ZONE_X, 108, 15, "center", "#9ee4ef", true);
+          // Panels
+          drawPanel(14, 18, 142, 504, "LAB");
+          drawText("Score", 85, 70, 16, "center", "#c9b66d");
+          drawText(String(score), 85, 98, 28, "center", "#ffd36b", true);
+          drawText("Best", 85, 134, 15, "center", "#c9b66d");
+          drawText(String(highScore), 85, 158, 22, "center", "#f0bd45", true);
+          drawText("Time", 85, 202, 16, "center", "#c9b66d");
+          drawText(
+            Math.ceil(timeLeft) + "s",
+            85,
+            228,
+            25,
+            "center",
+            "#9be8ff",
+            true,
+          );
+          drawText("Fizz", 85, 278, 16, "center", "#c9b66d");
+          ctx.fillStyle = "#13223a";
+          roundRect(49, 302, 72, 174, 12);
+          ctx.fill();
+          ctx.fillStyle = "#ff7e62";
+          roundRect(54, 471 - pressure * 1.62, 62, pressure * 1.62, 9);
+          ctx.fill();
+          ctx.strokeStyle = "#77516a";
+          ctx.lineWidth = 3;
+          roundRect(49, 302, 72, 174, 12);
+          ctx.stroke();
+          drawPanel(762, 18, 184, 504, "TARGET");
+          const f = currentFormula();
+          drawText(f.name, 854, 76, 18, "center", "#ffe07a", true);
+          drawText(f.formula, 854, 126, 46, "center", "#ffd36b", true);
+          drawText("Exact recipe:", 854, 180, 16, "center", "#c9b66d");
+          let lineY = 212;
+          Object.keys(f.counts).forEach((k) => {
+            drawText(
+              f.counts[k] + " × " + k,
+              854,
+              lineY,
+              22,
+              "center",
+              atomStyle[k].fill,
+              true,
+            );
+            lineY += 34;
+          });
+          drawText(
+            "Built: " + moleculeCount,
+            854,
+            328,
+            20,
+            "center",
+            "#9be8ff",
+            true,
+          );
+          wrapText(f.hint, 785, 376, 138, 18, "#f4df9c");
+          drawText("Tap only when", 854, 462, 16, "center", "#c9b66d");
+          drawText("the needed atom", 854, 484, 16, "center", "#c9b66d");
+          drawText("is in the zone.", 854, 506, 16, "center", "#c9b66d");
+          // Top target slots
+          drawText("Build exactly:", 210, 24, 18, "left", "#f4df9c", true);
+          drawSlots();
+          // Atoms
+          for (const a of atoms) drawAtom(a);
+          // Particles
+          for (const p of particles) {
+            const alpha = Math.max(0, Math.min(1, p.life / p.max));
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+          // Message bar
+          if (messageT > 0 || ended) {
+            ctx.fillStyle = ended
+              ? "rgba(30,39,59,0.90)"
+              : "rgba(27,42,68,0.82)";
+            roundRect(236, 488, 462, 38, 13);
+            ctx.fill();
+            drawText(
+              message,
+              467,
+              507,
+              18,
+              "center",
+              ended ? "#ffd36b" : "#f4df9c",
+              true,
+            );
+          }
+          if (ended) {
+            ctx.fillStyle = "rgba(16,24,39,0.62)";
+            ctx.fillRect(LEFT, 82, PLAY_W, 400);
+            drawText(
+              timeLeft <= 0 ? "Run complete!" : "Lab fizzled!",
+              ZONE_X,
+              214,
+              38,
+              "center",
+              "#ffd36b",
+              true,
+            );
+            drawText(
+              "Score " + score + "  •  Molecules " + moleculeCount,
+              ZONE_X,
+              267,
+              24,
+              "center",
+              "#9be8ff",
+              true,
+            );
+            drawText(
+              "Tap / Space / Enter to try again",
+              ZONE_X,
+              324,
+              22,
+              "center",
+              "#f4df9c",
+              true,
+            );
+          }
+          ctx.restore();
+        }
+        function wrapText(text, x, y, maxWidth, lineHeight, color) {
+          ctx.font = "600 15px system-ui, sans-serif";
+          ctx.fillStyle = color;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const words = text.split(" ");
+          let line = "",
+            yy = y;
+          for (let n = 0; n < words.length; n++) {
+            const test = line + words[n] + " ";
+            if (ctx.measureText(test).width > maxWidth && n > 0) {
+              ctx.fillText(line.trim(), x + maxWidth / 2, yy);
+              line = words[n] + " ";
+              yy += lineHeight;
+            } else line = test;
+          }
+          ctx.fillText(line.trim(), x + maxWidth / 2, yy);
+        }
+        function loop(now) {
+          const dt = Math.min(0.033, (now - lastTime) / 1000 || 0.016);
+          lastTime = now;
+          update(dt);
+          draw();
+          requestAnimationFrame(loop);
+        }
+        function snapshot() {
+          const f = currentFormula();
+          return {
+            ready: true,
+            score,
+            highScore,
+            timeLeft: Math.round(timeLeft * 10) / 10,
+            pressure: Math.round(pressure),
+            ended,
+            moleculeCount,
+            target: {
+              name: f.name,
+              formula: f.formula,
+              counts: Object.assign({}, f.counts),
+              slots: f.slots.slice(),
+            },
+            progress: Object.assign({}, progress),
+            atoms: atoms
+              .slice(0, 12)
+              .map((a) => ({
+                id: a.id,
+                type: a.type,
+                x: Math.round(a.x),
+                y: Math.round(a.y),
+                inZone: Math.abs(a.x - ZONE_X) < ZONE_W * 0.52,
+              })),
+            cooldown: Math.round(cooldown * 100) / 100,
+            message,
+          };
+        }
+        canvas.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          press();
+        });
+        window.addEventListener("keydown", (e) => {
+          if ((e.code === "Space" || e.code === "Enter") && !e.repeat) {
+            e.preventDefault();
+            press();
+          }
+        });
+        reset();
+        window.__TEST__ = { ready: true, state: snapshot };
+        requestAnimationFrame(loop);
+      })();
+    </script>
+  </body>
+</html>

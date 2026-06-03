@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+**/node_modules/
+.pnp
+.pnp.*
+
+# env / secrets
+.env
+.env.*
+*.pem
+
+# build output
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# next
+next-env.d.ts
+
+# vercel
+.vercel
+
+# misc
+.DS_Store
+**/.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# coverage
+coverage/

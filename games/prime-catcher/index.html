@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prime Catcher</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #f6e9c8;
+      font-family: "Trebuchet MS", "Gill Sans", Verdana, sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: #f6e9c8;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game" aria-label="Prime Catcher one-button game"></canvas>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const TAU = Math.PI * 2;
+
+  const state = {
+    ready: false,
+    scene: "play",
+    time: 0,
+    score: 0,
+    streak: 0,
+    cracks: 0,
+    nextSpawn: 0,
+    numbers: [],
+    reveals: [],
+    pops: [],
+    particles: [],
+    caught: 0,
+    inputHeld: false,
+    message: "Tap primes in the zone",
+    width: 1,
+    height: 1,
+    catchTop: 0,
+    catchBottom: 0,
+    lastEvent: "start"
+  };
+
+  let lastTime = 0;
+  let spawnIndex = 0;
+
+  const sequence = [
+    2, 4, 3, 1, 6, 5, 8, 7, 9, 11, 12, 13, 15, 17, 18, 19,
+    21, 23, 25, 29, 31, 33, 37, 39, 41, 43, 45, 47, 49
+  ];
+
+  function resize() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    state.width = window.innerWidth;
+    state.height = window.innerHeight;
+    state.catchTop = state.height * 0.64;
+    state.catchBottom = state.height * 0.78;
+  }
+
+  function isPrime(n) {
+    if (!Number.isInteger(n) || n <= 1) return false;
+    if (n === 2) return true;
+    if (n % 2 === 0) return false;
+    for (let d = 3; d * d <= n; d += 2) {
+      if (n % d === 0) return false;
+    }
+    return true;
+  }
+
+  function factorPair(n) {
+    if (n <= 1) return [1, n];
+    for (let d = 2; d * d <= n; d++) {
+      if (n % d === 0) return [d, n / d];
+    }
+    return [1, n];
+  }
+
+  function spawnNumber() {
+    const t = state.time;
+    let value;
+    if (spawnIndex < sequence.length) {
+      value = sequence[spawnIndex];
+    } else {
+      const max = t < 20 ? 23 : t < 40 ? 37 : 49;
+      value = 1 + Math.floor(Math.random() * max);
+    }
+    const laneCount = state.width < 520 ? 3 : 4;
+    const lane = spawnIndex % laneCount;
+    const gap = state.width / (laneCount + 1);
+    const wobble = Math.sin(spawnIndex * 1.7) * Math.min(24, state.width * 0.05);
+    state.numbers.push({
+      id: `${spawnIndex}-${value}`,
+      value,
+      prime: isPrime(value),
+      x: gap * (lane + 1) + wobble,
+      y: -54,
+      r: Math.max(24, Math.min(36, state.width * 0.065)),
+      speed: 92 + Math.min(86, state.time * 1.9),
+      judged: false
+    });
+    spawnIndex++;
+    const interval = Math.max(1.65, 2.45 - state.time * 0.008);
+    state.nextSpawn = state.time + interval;
+  }
+
+  function numberInZone(n) {
+    return n.y > state.catchTop && n.y < state.catchBottom;
+  }
+
+  function bestTarget() {
+    let target = null;
+    let bestDistance = Infinity;
+    const center = (state.catchTop + state.catchBottom) / 2;
+    for (const n of state.numbers) {
+      if (!numberInZone(n)) continue;
+      const dist = Math.abs(n.y - center);
+      if (dist < bestDistance) {
+        bestDistance = dist;
+        target = n;
+      }
+    }
+    return target;
+  }
+
+  function attemptCatch() {
+    if (state.scene !== "play") {
+      restart();
+      return;
+    }
+    const target = bestTarget();
+    if (!target) {
+      mistake("empty tap", null);
+      return;
+    }
+    target.judged = true;
+    if (target.prime) {
+      const bonus = state.streak >= 2 ? 5 : 0;
+      state.score += 10 + bonus;
+      state.streak++;
+      state.caught++;
+      state.message = target.value + " is prime";
+      state.lastEvent = "caught-prime";
+      addReveal(target, true);
+      addPop("+" + (10 + bonus), target.x, target.y, "#7ff1a8");
+      burst(target.x, target.y, "#7ff1a8", 18);
+      state.numbers = state.numbers.filter((n) => n !== target);
+      if (state.caught >= 20) finish("win");
+    } else {
+      mistake(target.value + " splits", target);
+    }
+  }
+
+  function mistake(reason, target) {
+    if (state.scene !== "play") return;
+    state.cracks++;
+    state.streak = 0;
+    state.message = reason;
+    state.lastEvent = "mistake";
+    addPop("crack", state.width / 2, state.height * 0.86, "#ff9b73");
+    burst(state.width / 2, state.height * 0.86, "#ff9b73", 12);
+    if (target) {
+      addReveal(target, false);
+      state.numbers = state.numbers.filter((n) => n !== target);
+    }
+    if (state.cracks >= 3) finish("lose");
+  }
+
+  function finish(kind) {
+    state.scene = kind;
+    state.message = kind === "win" ? "Prime streak complete" : "Jar broke";
+    state.lastEvent = kind;
+  }
+
+  function restart() {
+    state.scene = "play";
+    state.time = 0;
+    state.score = 0;
+    state.streak = 0;
+    state.cracks = 0;
+    state.nextSpawn = 0;
+    state.numbers = [];
+    state.reveals = [];
+    state.pops = [];
+    state.particles = [];
+    state.caught = 0;
+    state.message = "Tap primes in the zone";
+    state.lastEvent = "restart";
+    spawnIndex = 0;
+  }
+
+  function addReveal(n, primeCaught) {
+    const pair = factorPair(n.value);
+    state.reveals.push({
+      value: n.value,
+      prime: n.prime,
+      primeCaught,
+      pair,
+      x: n.x,
+      y: Math.max(92, Math.min(state.height - 160, n.y)),
+      age: 0,
+      life: 1.15
+    });
+  }
+
+  function addPop(text, x, y, color) {
+    state.pops.push({ text, x, y, color, age: 0, life: 0.8 });
+  }
+
+  function burst(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * TAU;
+      const s = 50 + Math.random() * 120;
+      state.particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        color,
+        age: 0,
+        life: 0.45 + Math.random() * 0.35
+      });
+    }
+  }
+
+  function update(dt) {
+    if (state.scene === "play") {
+      state.time += dt;
+      if (state.time >= 60) finish("win");
+      if (state.time >= state.nextSpawn) spawnNumber();
+      for (const n of state.numbers) n.y += n.speed * dt;
+      for (const n of [...state.numbers]) {
+        if (n.y > state.catchBottom && !n.judged) {
+          n.judged = true;
+          if (n.prime) {
+            mistake("missed " + n.value, n);
+          } else {
+            addReveal(n, false);
+            state.numbers = state.numbers.filter((item) => item !== n);
+            state.lastEvent = "safe-composite-pass";
+          }
+        }
+      }
+    }
+
+    for (const r of state.reveals) r.age += dt;
+    state.reveals = state.reveals.filter((r) => r.age < r.life);
+    for (const p of state.pops) {
+      p.age += dt;
+      p.y -= 34 * dt;
+    }
+    state.pops = state.pops.filter((p) => p.age < p.life);
+    for (const p of state.particles) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 220 * dt;
+    }
+    state.particles = state.particles.filter((p) => p.age < p.life);
+  }
+
+  function draw() {
+    const w = state.width;
+    const h = state.height;
+    ctx.clearRect(0, 0, w, h);
+    drawBackground(w, h);
+    drawCatchZone(w);
+    drawHud(w, h);
+    for (const r of state.reveals) drawReveal(r);
+    for (const n of state.numbers) drawNumber(n);
+    for (const p of state.particles) drawParticle(p);
+    drawJar(w, h);
+    for (const p of state.pops) drawPop(p);
+    if (state.scene !== "play") drawEndOverlay(w, h);
+  }
+
+  function drawBackground(w, h) {
+    const grd = ctx.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, "#f9f0d4");
+    grd.addColorStop(0.58, "#cbeadf");
+    grd.addColorStop(1, "#8bd2c4");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.32)";
+    for (let y = 82; y < h - 70; y += 74) {
+      for (let x = 34; x < w; x += 96) {
+        ctx.beginPath();
+        ctx.arc(x + ((y / 74) % 2) * 28, y, 2.2, 0, TAU);
+        ctx.fill();
+      }
+    }
+
+    const laneCount = w < 520 ? 3 : 4;
+    const gap = w / (laneCount + 1);
+    ctx.lineWidth = 2;
+    for (let i = 1; i <= laneCount; i++) {
+      const x = gap * i;
+      ctx.strokeStyle = "rgba(37, 96, 103, 0.13)";
+      ctx.beginPath();
+      ctx.moveTo(x, 78);
+      ctx.lineTo(x, h - 112);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(37, 96, 103, 0.11)";
+      for (let y = 112; y < h - 134; y += 54) {
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, TAU);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawCatchZone(w) {
+    const pad = Math.max(14, Math.min(34, w * 0.035));
+    const zoneH = state.catchBottom - state.catchTop;
+    ctx.save();
+    ctx.shadowColor = "rgba(36, 141, 115, 0.25)";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.64)";
+    roundRect(pad, state.catchTop, w - pad * 2, zoneH, 22);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const scan = ctx.createLinearGradient(0, state.catchTop, 0, state.catchBottom);
+    scan.addColorStop(0, "rgba(82, 202, 143, 0.34)");
+    scan.addColorStop(0.5, "rgba(255, 221, 103, 0.28)");
+    scan.addColorStop(1, "rgba(82, 202, 143, 0.34)");
+    ctx.fillStyle = scan;
+    roundRect(pad + 8, state.catchTop + 8, w - pad * 2 - 16, zoneH - 16, 18);
+    ctx.fill();
+
+    ctx.strokeStyle = "#159a73";
+    ctx.lineWidth = 4;
+    roundRect(pad, state.catchTop, w - pad * 2, zoneH, 22);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(21, 154, 115, 0.55)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 10]);
+    ctx.beginPath();
+    ctx.moveTo(pad + 18, (state.catchTop + state.catchBottom) / 2);
+    ctx.lineTo(w - pad - 18, (state.catchTop + state.catchBottom) / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "#106451";
+    ctx.font = "800 15px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("PRIME ZONE", w / 2, state.catchTop + 22);
+    ctx.restore();
+  }
+
+  function drawHud(w) {
+    ctx.save();
+    ctx.fillStyle = "rgba(255, 252, 236, 0.86)";
+    roundRect(12, 10, Math.min(250, w * 0.44), 62, 18);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 252, 236, 0.86)";
+    roundRect(w - Math.min(216, w * 0.38) - 12, 10, Math.min(216, w * 0.38), 62, 18);
+    ctx.fill();
+    ctx.fillStyle = "#1b4d55";
+    ctx.font = "800 22px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Prime Catcher", 28, 35);
+    ctx.font = "800 18px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.fillStyle = "#c25134";
+    ctx.fillText("Score " + state.score, 28, 62);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#1b4d55";
+    ctx.fillText("Time " + Math.max(0, Math.ceil(60 - state.time)), w - 28, 35);
+    ctx.fillStyle = "#c25134";
+    ctx.fillText("Streak " + state.streak, w - 28, 62);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(27, 77, 85, 0.92)";
+    ctx.font = "800 18px 'Trebuchet MS', Verdana, sans-serif";
+    const msgW = Math.min(330, w - 300);
+    if (msgW > 120) {
+      roundRect(w / 2 - msgW / 2, 17, msgW, 40, 20);
+      ctx.fill();
+      ctx.fillStyle = "#fff7d8";
+      ctx.fillText(state.message, w / 2, 42);
+    }
+    ctx.restore();
+  }
+
+  function drawNumber(n) {
+    const active = numberInZone(n);
+    ctx.save();
+    ctx.translate(n.x, n.y);
+    ctx.shadowColor = active ? "rgba(242, 111, 68, 0.35)" : "rgba(42, 89, 93, 0.22)";
+    ctx.shadowBlur = active ? 22 : 10;
+    ctx.shadowOffsetY = 7;
+    ctx.fillStyle = active ? "#ffcf4d" : "#fff4c9";
+    roundRect(-n.r * 1.08, -n.r * 1.02, n.r * 2.16, n.r * 2.04, 14);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.lineWidth = active ? 6 : 3;
+    ctx.strokeStyle = active ? "#f26f44" : "#6ca098";
+    ctx.stroke();
+    ctx.fillStyle = "#183a42";
+    ctx.font = "900 " + Math.round(n.r * 1.02) + "px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(n.value), 0, 1);
+    ctx.fillStyle = active ? "#f26f44" : "#6ca098";
+    const pipCount = Math.min(n.value, 7);
+    const start = -((pipCount - 1) * 7) / 2;
+    for (let i = 0; i < pipCount; i++) {
+      ctx.beginPath();
+      ctx.arc(start + i * 7, n.r * 0.68, 2, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawReveal(r) {
+    const t = r.age / r.life;
+    const alpha = Math.max(0, 1 - t);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(r.x, r.y);
+    const [rows, cols] = r.pair;
+    const dot = Math.max(3, Math.min(7, 90 / Math.max(cols, rows, 6)));
+    const gap = dot * 2.4;
+    ctx.shadowColor = r.prime ? "rgba(15, 151, 106, 0.28)" : "rgba(216, 100, 57, 0.25)";
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = r.prime ? "#18a975" : "#e26d3f";
+    const startX = -((cols - 1) * gap) / 2;
+    const startY = -((rows - 1) * gap) / 2;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        ctx.beginPath();
+        ctx.arc(startX + col * gap, startY + row * gap, dot, 0, TAU);
+        ctx.fill();
+      }
+    }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = r.prime ? "#0e604f" : "#7c3425";
+    ctx.font = "800 16px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.textAlign = "center";
+    const label = r.prime ? "only 1 x " + r.value : rows + " x " + cols;
+    ctx.fillText(label, 0, 42 + Math.min(36, rows * 4));
+    ctx.restore();
+  }
+
+  function drawJar(w, h) {
+    const x = w / 2;
+    const y = h * 0.89;
+    const jarW = Math.min(230, w * 0.48);
+    const jarH = 86;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.shadowColor = "rgba(22, 96, 91, 0.28)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = "rgba(231, 255, 249, 0.68)";
+    ctx.strokeStyle = "#168f86";
+    ctx.lineWidth = 5;
+    roundRect(-jarW / 2, -jarH / 2, jarW, jarH, 24);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(-jarW * 0.36, -jarH * 0.31);
+    ctx.lineTo(jarW * 0.36, -jarH * 0.31);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 207, 77, 0.34)";
+    ctx.beginPath();
+    ctx.ellipse(0, 4, jarW * 0.35, jarH * 0.2, 0, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = "#ff9b73";
+    ctx.lineWidth = 3;
+    for (let i = 0; i < state.cracks; i++) {
+      const ox = (i - 1) * jarW * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(ox, -jarH * 0.24);
+      ctx.lineTo(ox - 12, -2);
+      ctx.lineTo(ox + 5, 13);
+      ctx.lineTo(ox - 9, jarH * 0.25);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawParticle(p) {
+    ctx.globalAlpha = Math.max(0, 1 - p.age / p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawPop(p) {
+    ctx.globalAlpha = Math.max(0, 1 - p.age / p.life);
+    ctx.fillStyle = p.color;
+    ctx.font = "900 23px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawEndOverlay(w, h) {
+    ctx.fillStyle = "rgba(21, 74, 80, 0.72)";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#fff7d8";
+    ctx.textAlign = "center";
+    ctx.font = "900 42px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.fillText(state.scene === "win" ? "You caught the primes" : "The jar broke", w / 2, h * 0.42);
+    ctx.font = "800 24px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.fillText("Score " + state.score, w / 2, h * 0.5);
+    ctx.font = "700 18px 'Trebuchet MS', Verdana, sans-serif";
+    ctx.fillText("Tap once to play again", w / 2, h * 0.58);
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function frame(now) {
+    if (!lastTime) lastTime = now;
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+    update(dt);
+    draw();
+    state.ready = true;
+    window.__TEST__.ready = true;
+    requestAnimationFrame(frame);
+  }
+
+  function press() {
+    if (state.inputHeld) return;
+    state.inputHeld = true;
+    attemptCatch();
+  }
+
+  function release() {
+    state.inputHeld = false;
+  }
+
+  window.addEventListener("resize", resize);
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space") {
+      e.preventDefault();
+      press();
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    if (e.code === "Space") {
+      e.preventDefault();
+      release();
+    }
+  });
+  canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    press();
+  });
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
+
+  window.__TEST__ = {
+    ready: false,
+    state() {
+      return {
+        ready: state.ready,
+        scene: state.scene,
+        playerPosition: {
+          x: state.width / 2,
+          y: state.height * 0.89
+        },
+        score: state.score,
+        streak: state.streak,
+        cracks: state.cracks,
+        time: Number(state.time.toFixed(2)),
+        catchZone: {
+          top: Number(state.catchTop.toFixed(1)),
+          bottom: Number(state.catchBottom.toFixed(1))
+        },
+        currentNumbers: state.numbers.map((n) => ({
+          value: n.value,
+          prime: n.prime,
+          x: Number(n.x.toFixed(1)),
+          y: Number(n.y.toFixed(1)),
+          inZone: numberInZone(n)
+        })),
+        message: state.message,
+        lastEvent: state.lastEvent
+      };
+    }
+  };
+
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

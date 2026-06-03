@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Squid Jet Thrust</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #10253a;
+      font-family: "Trebuchet MS", "Gill Sans", Verdana, sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: #10253a;
+    }
+  </style>
+</head>
+<body>
+<canvas id="game" aria-label="Squid Jet Thrust one-button educational game"></canvas>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = 1280;
+  const H = 720;
+  const LEFT = 198;
+  const RIGHT = 220;
+  const PLAY_X = LEFT;
+  const PLAY_W = W - LEFT - RIGHT;
+  const CENTER_Y = 360;
+  const TAU = Math.PI * 2;
+  const TOTAL_GATES = 8;
+
+  let scale = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+  let lastTime = 0;
+  let shake = 0;
+  let inputHeld = false;
+
+  const state = {
+    ready: false,
+    scene: "play",
+    time: 0,
+    score: 0,
+    highScore: Number(localStorage.getItem("squidJetHighScore") || 0),
+    gateIndex: 0,
+    gateCount: TOTAL_GATES,
+    tapCount: 0,
+    player: {
+      x: 118,
+      y: CENTER_Y,
+      vx: 0,
+      radius: 28,
+      squash: 0
+    },
+    cameraX: 0,
+    jets: [],
+    bubbles: [],
+    gates: [],
+    pops: [],
+    lastJetImpulse: 0,
+    lastConcept: "Push water backward. Squid moves forward.",
+    message: "Tap to jet",
+    flash: 0
+  };
+
+  function resetGates() {
+    state.gates = [];
+    for (let i = 0; i < TOTAL_GATES; i++) {
+      state.gates.push({
+        x: 500 + i * 330,
+        phase: i * 1.65,
+        passed: false
+      });
+    }
+  }
+
+  function resize() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+    offsetX = (window.innerWidth - W * scale) / 2;
+    offsetY = (window.innerHeight - H * scale) / 2;
+  }
+
+  function restart() {
+    state.scene = "play";
+    state.time = 0;
+    state.score = 0;
+    state.gateIndex = 0;
+    state.tapCount = 0;
+    state.player.x = 118;
+    state.player.y = CENTER_Y;
+    state.player.vx = 0;
+    state.player.squash = 0;
+    state.cameraX = 0;
+    state.jets = [];
+    state.bubbles = [];
+    state.pops = [];
+    state.lastJetImpulse = 0;
+    state.lastConcept = "Push water backward. Squid moves forward.";
+    state.message = "Tap to jet";
+    state.flash = 0;
+    shake = 0;
+    resetGates();
+  }
+
+  function gateOpenAmount(gate) {
+    const speed = 1.65 + state.gateIndex * 0.07;
+    return 0.5 + 0.5 * Math.sin(state.time * speed + gate.phase);
+  }
+
+  function gateIsOpen(gate) {
+    return gateOpenAmount(gate) > 0.54;
+  }
+
+  function addPop(text, x, y, color) {
+    state.pops.push({ text, x, y, color, age: 0, life: 0.9 });
+  }
+
+  function spawnBubble(x, y, color) {
+    state.bubbles.push({
+      x,
+      y,
+      vx: -20 + Math.random() * 40,
+      vy: -24 - Math.random() * 28,
+      r: 3 + Math.random() * 7,
+      age: 0,
+      life: 0.9 + Math.random() * 0.7,
+      color
+    });
+  }
+
+  function tap() {
+    if (state.scene !== "play") {
+      restart();
+      return;
+    }
+    state.tapCount++;
+    const impulse = 128;
+    state.player.vx = Math.min(340, state.player.vx + impulse);
+    state.player.squash = 1;
+    state.lastJetImpulse = impulse;
+    state.lastConcept = "Water goes back. Reaction thrust goes forward.";
+    state.message = "Jet!";
+    state.flash = 0.28;
+    for (let i = 0; i < 14; i++) {
+      state.jets.push({
+        x: state.player.x - 34 - Math.random() * 12,
+        y: state.player.y + (Math.random() - 0.5) * 24,
+        vx: -230 - Math.random() * 90,
+        vy: (Math.random() - 0.5) * 70,
+        r: 7 + Math.random() * 12,
+        age: 0,
+        life: 0.65 + Math.random() * 0.25
+      });
+    }
+  }
+
+  function win() {
+    state.scene = "win";
+    state.message = "All gates cleared";
+    state.lastConcept = "Every useful move came from pushing water backward.";
+    if (state.score > state.highScore) {
+      state.highScore = state.score;
+      localStorage.setItem("squidJetHighScore", String(state.highScore));
+    }
+  }
+
+  function lose(message) {
+    if (state.scene !== "play") return;
+    state.scene = "lose";
+    state.message = message;
+    state.lastConcept = "No backward push means no controlled forward thrust.";
+    shake = 18;
+    if (state.score > state.highScore) {
+      state.highScore = state.score;
+      localStorage.setItem("squidJetHighScore", String(state.highScore));
+    }
+  }
+
+  function update(dt) {
+    if (state.scene === "play") {
+      state.time += dt;
+      state.lastJetImpulse = Math.max(0, state.lastJetImpulse - 360 * dt);
+
+      const drag = Math.pow(0.26, dt);
+      state.player.vx = state.player.vx * drag - 18 * dt;
+      state.player.vx = Math.max(-46, Math.min(340, state.player.vx));
+      state.player.x += state.player.vx * dt;
+      state.player.y = CENTER_Y + Math.sin(state.time * 2.4) * 8;
+      state.player.squash = Math.max(0, state.player.squash - dt * 4.2);
+      state.cameraX = Math.max(0, state.player.x - 330);
+
+      if (state.player.x < 58) {
+        lose("Rear net catch");
+      }
+      if (state.time >= 60) {
+        lose("Time ran out");
+      }
+
+      const gate = state.gates[state.gateIndex];
+      if (gate) {
+        const dx = state.player.x - gate.x;
+        if (!gate.passed && Math.abs(dx) < 25 && !gateIsOpen(gate)) {
+          lose("Closed reef hit");
+        }
+        if (!gate.passed && state.player.x > gate.x + 36 && gateIsOpen(gate)) {
+          gate.passed = true;
+          state.gateIndex++;
+          const controlled = state.player.vx > 65 && state.player.vx < 230;
+          const points = controlled ? 13 : 10;
+          state.score += points;
+          addPop("+" + points, gate.x, CENTER_Y - 72, controlled ? "#ffe279" : "#9ff2ff");
+          state.message = controlled ? "Flow bonus" : "Gate passed";
+          state.lastConcept = "Timed thrust matched the gate.";
+          for (let i = 0; i < 28; i++) {
+            spawnBubble(gate.x, CENTER_Y + (Math.random() - 0.5) * 90, "#9ff2ff");
+          }
+          if (state.gateIndex >= TOTAL_GATES) {
+            win();
+          }
+        }
+      }
+    }
+
+    for (const p of state.jets) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 12 * dt;
+    }
+    state.jets = state.jets.filter((p) => p.age < p.life);
+
+    for (const b of state.bubbles) {
+      b.age += dt;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.vx *= Math.pow(0.7, dt);
+    }
+    state.bubbles = state.bubbles.filter((b) => b.age < b.life);
+
+    for (const p of state.pops) {
+      p.age += dt;
+      p.y -= 28 * dt;
+    }
+    state.pops = state.pops.filter((p) => p.age < p.life);
+    state.flash = Math.max(0, state.flash - dt);
+    shake = Math.max(0, shake - 48 * dt);
+  }
+
+  function tx(worldX) {
+    return PLAY_X + worldX - state.cameraX;
+  }
+
+  function drawRoundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function fillTextFit(text, x, y, maxWidth, size, color, align) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.textAlign = align || "left";
+    ctx.font = `700 ${size}px Trebuchet MS, sans-serif`;
+    while (ctx.measureText(text).width > maxWidth && size > 11) {
+      size -= 1;
+      ctx.font = `700 ${size}px Trebuchet MS, sans-serif`;
+    }
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function drawArrow(x1, y1, x2, y2, color, width) {
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - Math.cos(angle - 0.55) * 18, y2 - Math.sin(angle - 0.55) * 18);
+    ctx.lineTo(x2 - Math.cos(angle + 0.55) * 18, y2 - Math.sin(angle + 0.55) * 18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBackground() {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, "#1a6a86");
+    grad.addColorStop(0.48, "#14536f");
+    grad.addColorStop(1, "#0a2f47");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.globalAlpha = 0.23;
+    ctx.strokeStyle = "#b8f5ff";
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const y = 110 + i * 72 + Math.sin(state.time + i) * 8;
+      ctx.beginPath();
+      for (let x = PLAY_X; x <= W - RIGHT; x += 18) {
+        const wave = Math.sin((x + state.time * 32) * 0.015 + i) * 10;
+        if (x === PLAY_X) ctx.moveTo(x, y + wave);
+        else ctx.lineTo(x, y + wave);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPanels() {
+    ctx.fillStyle = "#0d2638";
+    ctx.fillRect(0, 0, LEFT, H);
+    ctx.fillRect(W - RIGHT, 0, RIGHT, H);
+
+    ctx.fillStyle = "#173d52";
+    drawRoundRect(18, 24, LEFT - 36, 208, 8);
+    ctx.fill();
+    drawRoundRect(W - RIGHT + 18, 24, RIGHT - 36, 260, 8);
+    ctx.fill();
+    drawRoundRect(18, 500, LEFT - 36, 160, 8);
+    ctx.fill();
+    drawRoundRect(W - RIGHT + 18, 504, RIGHT - 36, 150, 8);
+    ctx.fill();
+
+    fillTextFit("PUSHED WATER", 30, 58, LEFT - 60, 20, "#c8fbff");
+    drawArrow(145, 118, 54, 118, "#74d8ff", 8);
+    for (let i = 0; i < 6; i++) {
+      ctx.globalAlpha = 0.25 + Math.max(0, state.flash) * 1.8;
+      ctx.fillStyle = "#91e7ff";
+      ctx.beginPath();
+      ctx.arc(128 - i * 18, 158 + Math.sin(state.time * 3 + i) * 6, 12 - i, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    fillTextFit(`${state.tapCount} jets`, 30, 208, LEFT - 60, 23, "#ffffff");
+
+    fillTextFit("REACTION", W - RIGHT + 34, 58, RIGHT - 68, 20, "#c8fbff");
+    const thrust = Math.min(100, Math.max(18, Math.abs(state.player.vx) * 0.42));
+    drawArrow(W - RIGHT + 54, 120, W - RIGHT + 54 + thrust, 120, "#ffe279", 8);
+    fillTextFit("THRUST", W - RIGHT + 34, 170, RIGHT - 68, 22, "#ffe279");
+    fillTextFit(`Score ${state.score}`, W - RIGHT + 34, 220, RIGHT - 68, 24, "#ffffff");
+    fillTextFit(`Best ${state.highScore}`, W - RIGHT + 34, 254, RIGHT - 68, 20, "#b8f5ff");
+
+    fillTextFit("CONCEPT", 30, 536, LEFT - 60, 19, "#c8fbff");
+    wrapText("Push water back to get pushed forward.", 30, 574, LEFT - 56, 23, "#ffffff");
+
+    fillTextFit("RUN", W - RIGHT + 34, 540, RIGHT - 68, 19, "#c8fbff");
+    fillTextFit(`${state.gateIndex}/${TOTAL_GATES} gates`, W - RIGHT + 34, 586, RIGHT - 68, 25, "#ffffff");
+    fillTextFit(`${Math.max(0, Math.ceil(60 - state.time))} sec`, W - RIGHT + 34, 628, RIGHT - 68, 25, "#ffffff");
+  }
+
+  function wrapText(text, x, y, maxWidth, lineHeight, color) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = "700 17px Trebuchet MS, sans-serif";
+    const words = text.split(" ");
+    let line = "";
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, y);
+        line = word;
+        y += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    ctx.fillText(line, x, y);
+    ctx.restore();
+  }
+
+  function drawGate(gate, index) {
+    const x = tx(gate.x);
+    if (x < LEFT - 80 || x > W - RIGHT + 80) return;
+    const open = gateOpenAmount(gate);
+    const gap = 52 + open * 132;
+    const closed = open <= 0.54;
+    ctx.save();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = closed ? "#ff7970" : "#71f6b2";
+    ctx.fillStyle = closed ? "#b74562" : "#277a73";
+    drawRoundRect(x - 27, 88, 54, CENTER_Y - gap / 2 - 88, 13);
+    ctx.fill();
+    ctx.stroke();
+    drawRoundRect(x - 27, CENTER_Y + gap / 2, 54, H - 118 - (CENTER_Y + gap / 2), 13);
+    ctx.fill();
+    ctx.stroke();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = "#ffe5a1";
+    ctx.setLineDash([8, 9]);
+    ctx.beginPath();
+    ctx.moveTo(x, CENTER_Y - gap / 2);
+    ctx.lineTo(x, CENTER_Y + gap / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    fillTextFit(String(index + 1), x - 6, 76, 36, 16, "#ffffff");
+    ctx.restore();
+  }
+
+  function drawWorld() {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(PLAY_X, 0, PLAY_W, H);
+    ctx.clip();
+
+    const netX = tx(58);
+    ctx.strokeStyle = "#ff9b73";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(netX, 92);
+    ctx.lineTo(netX, H - 92);
+    ctx.stroke();
+    ctx.globalAlpha = 0.4;
+    for (let y = 100; y < H - 90; y += 28) {
+      ctx.beginPath();
+      ctx.moveTo(netX - 26, y);
+      ctx.lineTo(netX + 26, y + 22);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    for (let i = 0; i < state.gates.length; i++) {
+      drawGate(state.gates[i], i);
+    }
+
+    for (const p of state.jets) {
+      const a = 1 - p.age / p.life;
+      ctx.globalAlpha = a * 0.72;
+      ctx.fillStyle = "#8fe9ff";
+      ctx.beginPath();
+      ctx.arc(tx(p.x), p.y, p.r * (0.7 + a * 0.4), 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    for (const b of state.bubbles) {
+      const a = 1 - b.age / b.life;
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(tx(b.x), b.y, b.r, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    drawSquid(tx(state.player.x), state.player.y);
+    for (const p of state.pops) {
+      const a = 1 - p.age / p.life;
+      ctx.globalAlpha = a;
+      fillTextFit(p.text, tx(p.x), p.y, 90, 28, p.color, "center");
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawSquid(x, y) {
+    const squish = state.player.squash;
+    const sx = 1 + squish * 0.16;
+    const sy = 1 - squish * 0.12;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(sx, sy);
+    ctx.fillStyle = "#ff7fb2";
+    ctx.strokeStyle = "#5b1742";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 35, 28, 0, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(20, -24);
+    ctx.lineTo(51, 0);
+    ctx.lineTo(20, 24);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#ff7fb2";
+    ctx.lineWidth = 7;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-22, 14);
+      ctx.quadraticCurveTo(-44, 28 + i * 5, -52, 44 + i * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(11, -8, 8, 0, TAU);
+    ctx.arc(12, 9, 8, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = "#172235";
+    ctx.beginPath();
+    ctx.arc(14, -8, 3, 0, TAU);
+    ctx.arc(15, 9, 3, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    if (state.player.vx > 12) {
+      drawArrow(x - 8, y - 50, x + 38 + Math.min(74, state.player.vx * 0.25), y - 50, "#ffe279", 5);
+    }
+    if (state.flash > 0) {
+      drawArrow(x - 44, y + 48, x - 112, y + 48, "#8fe9ff", 5);
+    }
+  }
+
+  function drawOverlay() {
+    if (state.scene === "play") {
+      fillTextFit(state.message, W / 2, 44, 420, 28, "#ffffff", "center");
+      fillTextFit(state.lastConcept, W / 2, H - 32, 680, 21, "#c8fbff", "center");
+      return;
+    }
+
+    ctx.save();
+    ctx.fillStyle = "rgba(8, 24, 35, 0.78)";
+    ctx.fillRect(PLAY_X, 0, PLAY_W, H);
+    const title = state.scene === "win" ? "Jet Journey Complete" : "Try Again";
+    fillTextFit(title, W / 2, 278, 560, 44, "#ffffff", "center");
+    wrapText(state.lastConcept, W / 2 - 245, 330, 490, 30, "#c8fbff");
+    fillTextFit("Tap to restart", W / 2, 430, 260, 28, "#ffe279", "center");
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+    if (shake > 0) {
+      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    }
+    drawBackground();
+    drawPanels();
+    drawWorld();
+    drawOverlay();
+    ctx.restore();
+  }
+
+  function loop(now) {
+    const dt = Math.min(0.033, (now - lastTime) / 1000 || 0);
+    lastTime = now;
+    update(dt);
+    render();
+    state.ready = true;
+    requestAnimationFrame(loop);
+  }
+
+  function onPress() {
+    if (inputHeld) return;
+    inputHeld = true;
+    tap();
+  }
+
+  function onRelease() {
+    inputHeld = false;
+  }
+
+  window.addEventListener("resize", resize);
+  window.addEventListener("keydown", (event) => {
+    if (event.code !== "Space") return;
+    event.preventDefault();
+    onPress();
+  });
+  window.addEventListener("keyup", (event) => {
+    if (event.code !== "Space") return;
+    event.preventDefault();
+    onRelease();
+  });
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    onPress();
+  });
+  canvas.addEventListener("pointerup", (event) => {
+    event.preventDefault();
+    onRelease();
+  });
+  canvas.addEventListener("pointercancel", onRelease);
+  canvas.addEventListener("pointerleave", onRelease);
+
+  window.__TEST__ = {
+    get ready() {
+      return state.ready;
+    },
+    state() {
+      const gate = state.gates[state.gateIndex] || null;
+      return {
+        ready: state.ready,
+        scene: state.scene,
+        time: Number(state.time.toFixed(3)),
+        score: state.score,
+        highScore: state.highScore,
+        gateIndex: state.gateIndex,
+        gateOpen: gate ? gateIsOpen(gate) : null,
+        player: {
+          x: Number(state.player.x.toFixed(2)),
+          y: Number(state.player.y.toFixed(2)),
+          vx: Number(state.player.vx.toFixed(2))
+        },
+        jets: state.jets.length,
+        tapCount: state.tapCount,
+        lastJetImpulse: Number(state.lastJetImpulse.toFixed(2)),
+        concept: state.lastConcept
+      };
+    }
+  };
+
+  resize();
+  resetGates();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>FLIP — magnet steering</title>
+<style>
+  html, body {
+    margin: 0; height: 100%; background: #070a18; overflow: hidden;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent; touch-action: none;
+  }
+  #wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+  canvas { background: #070a18; image-rendering: auto; box-shadow: 0 0 60px rgba(80,90,200,.25); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script>
+"use strict";
+(function () {
+  // ---------- logical canvas ----------
+  const W = 400, H = 660;
+  const cv = document.getElementById("c");
+  const ctx = cv.getContext("2d");
+
+  function fit() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+    cv.style.width  = Math.floor(W * s) + "px";
+    cv.style.height = Math.floor(H * s) + "px";
+    cv.width  = Math.floor(W * dpr);
+    cv.height = Math.floor(H * dpr);
+    // map logical W,H onto the backing store
+    ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  }
+  window.addEventListener("resize", fit);
+  fit();
+
+  // ---------- colors ----------
+  const RED = "#ff4d5e", BLUE = "#4db5ff";
+  const GREEN = "#5dffb0", ORANGE = "#ffae42";
+  const colHex = p => (p === "red" ? RED : BLUE);
+
+  // ---------- channel geometry ----------
+  const MARGIN = 26;                 // wall thickness region
+  const LEFT  = MARGIN;              // inner left edge
+  const RIGHT = W - MARGIN;          // inner right edge
+  const ORB_R = 13;
+  const ORB_Y = H * 0.70;            // orb fixed screen y
+  const X_MIN = LEFT + ORB_R, X_MAX = RIGHT - ORB_R;
+
+  // ---------- physics tuning ----------
+  const INFLUENCE = 300;             // vertical range a magnet acts over
+  const BASE_F = 0.62;               // force per frame at full proximity
+  const DAMP = 0.9;
+  const VX_CAP = 7;
+  const SECTION_SPACING = 300;       // world px between sections
+  const BAR_THICK = 16;
+
+  // ---------- state ----------
+  let scene = "title";               // 'title' | 'play' | 'over'
+  let sections = [];
+  let orb, score, best = 0, vx, polarity;
+  let scroll, shake, flash, flipPulse, trail, sparks;
+
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function pick(a) { return a[(Math.random() * a.length) | 0]; }
+
+  function speed() { return Math.min(4.2, 1.9 + 0.22 * Math.sqrt(score)); }
+  function gapWidth() { return Math.max(76, 130 - 6 * Math.sqrt(score)); }
+
+  function makeSection(worldY, idx) {
+    const easy = idx < 2;
+    const gw = easy ? 150 : gapWidth();
+    const magColor = pick(["red", "blue"]);
+    const magSide  = pick(["left", "right"]);
+    // 50/50: gap on the magnet's wall (needs attract) or opposite wall (needs repel)
+    const gapSide  = Math.random() < 0.5 ? magSide : (magSide === "left" ? "right" : "left");
+    let gapX;
+    if (idx === 0)           gapX = (LEFT + RIGHT) / 2 - gw / 2;   // centered freebie: orb starts here
+    else if (gapSide === "left") gapX = LEFT + (easy ? 14 : rnd(8, 40));
+    else                     gapX = RIGHT - gw - (easy ? 14 : rnd(8, 40));
+    return { y: worldY, gapX, gw, magSide, magColor, idx, done: false };
+  }
+
+  function reset() {
+    score = 0; vx = 0; polarity = "red";
+    orb = { x: (LEFT + RIGHT) / 2 };
+    scroll = 0; shake = 0; flash = 0; flipPulse = 0;
+    trail = []; sparks = [];
+    sections = [];
+    // first section a beat ahead so the player can read it, rest spaced upward
+    let y = ORB_Y - SECTION_SPACING * 0.6;
+    for (let i = 0; i < 5; i++) { sections.push(makeSection(y, i)); y -= SECTION_SPACING; }
+    nextIdx = 5;
+  }
+  let nextIdx = 0;
+
+  // ---------- input ----------
+  function tap() {
+    if (scene === "title") { reset(); scene = "play"; return; }
+    if (scene === "over")  { reset(); scene = "play"; return; }
+    if (scene === "play")  { polarity = polarity === "red" ? "blue" : "red"; flipPulse = 1; }
+  }
+  window.addEventListener("pointerdown", e => { e.preventDefault(); tap(); }, { passive: false });
+  window.addEventListener("keydown", e => {
+    if (e.code === "Space" || e.code === "Enter" || e.code === "ArrowUp") { e.preventDefault(); tap(); }
+  });
+
+  // ---------- update ----------
+  function update() {
+    if (scene !== "play") return;
+    const v = speed();
+    scroll += v;
+
+    // move sections down; apply forces; evaluate crossings
+    let activeArrow = null;
+    for (const s of sections) {
+      s.y += v;
+      const dy = s.y - ORB_Y;
+      if (Math.abs(dy) < INFLUENCE && !s.done) {
+        const magX = s.magSide === "left" ? LEFT : RIGHT;
+        const toMag = Math.sign(magX - orb.x) || (s.magSide === "left" ? -1 : 1);
+        const attract = polarity !== s.magColor;
+        const dir = attract ? toMag : -toMag;      // pulled toward magnet, or pushed away
+        const prox = 1 - Math.abs(dy) / INFLUENCE;  // strongest as it draws level
+        vx += dir * BASE_F * prox;
+        // remember the closest active magnet for the teaching arrow
+        if (!activeArrow || Math.abs(dy) < Math.abs(activeArrow.dy))
+          activeArrow = { s, dy, attract, magX };
+      }
+      // crossing the orb line -> score or crash (bar center at s.y)
+      if (!s.done && s.y >= ORB_Y) {
+        s.done = true;
+        const inGap = orb.x > s.gapX - ORB_R * 0.6 && orb.x < s.gapX + s.gw + ORB_R * 0.6;
+        if (inGap) {
+          score++;
+          if (score > best) best = score;
+          // clean centre bonus
+          const cx = s.gapX + s.gw / 2;
+          if (Math.abs(orb.x - cx) < 16) { score++; if (score > best) best = score; burst(orb.x, ORB_Y, GREEN, 14); }
+          burst(orb.x, ORB_Y, colHex(polarity), 8);
+        } else {
+          scene = "over"; shake = 16; flash = 1;
+          burst(orb.x, ORB_Y, "#ffffff", 22);
+        }
+      }
+    }
+    window.__lastArrow = activeArrow;
+
+    // recycle + spawn to keep ~5 ahead
+    sections = sections.filter(s => s.y < H + 160);
+    let top = sections.reduce((m, s) => Math.min(m, s.y), Infinity);
+    while (top > -SECTION_SPACING * 1.5) {
+      top -= SECTION_SPACING;
+      sections.push(makeSection(top, nextIdx++));
+    }
+
+    // integrate orb
+    vx = Math.max(-VX_CAP, Math.min(VX_CAP, vx)) * DAMP;
+    orb.x += vx;
+    if (orb.x < X_MIN) { orb.x = X_MIN; if (vx < 0) vx = 0; }
+    if (orb.x > X_MAX) { orb.x = X_MAX; if (vx > 0) vx = 0; }
+
+    // fx decay
+    trail.push({ x: orb.x, y: ORB_Y, c: colHex(polarity) });
+    if (trail.length > 16) trail.shift();
+    if (flipPulse > 0) flipPulse -= 0.06;
+    if (shake > 0) shake *= 0.85;
+    if (flash > 0) flash -= 0.04;
+    for (const p of sparks) { p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.life -= 0.03; }
+    sparks = sparks.filter(p => p.life > 0);
+  }
+
+  function burst(x, y, c, n) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = rnd(1, 5);
+      sparks.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1, c, life: 1 });
+    }
+  }
+
+  // ---------- draw ----------
+  function bg() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#0b1026"); g.addColorStop(1, "#160e2e");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // walls
+    ctx.fillStyle = "#202746";
+    ctx.fillRect(0, 0, LEFT, H);
+    ctx.fillRect(RIGHT, 0, W - RIGHT, H);
+  }
+
+  function drawMagnet(s) {
+    const x = s.magSide === "left" ? LEFT : RIGHT;
+    const w = 20, h = 46, y = s.y;
+    ctx.save();
+    ctx.fillStyle = colHex(s.magColor);
+    ctx.shadowColor = colHex(s.magColor); ctx.shadowBlur = 16;
+    const rx = s.magSide === "left" ? x - 4 : x - w + 4;
+    roundRect(rx, y - h / 2, w, h, 6); ctx.fill();
+    ctx.restore();
+    // field ticks pointing into channel
+    ctx.strokeStyle = colHex(s.magColor); ctx.globalAlpha = 0.5; ctx.lineWidth = 2;
+    const dirx = s.magSide === "left" ? 1 : -1;
+    for (let k = -1; k <= 1; k++) {
+      ctx.beginPath();
+      ctx.moveTo(x + dirx * 2, y + k * 14);
+      ctx.lineTo(x + dirx * 16, y + k * 14);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBarrier(s) {
+    ctx.fillStyle = "#171a30"; // dark bar
+    // left segment
+    ctx.fillRect(LEFT, s.y - BAR_THICK / 2, s.gapX - LEFT, BAR_THICK);
+    // right segment
+    const gapEnd = s.gapX + s.gw;
+    ctx.fillRect(gapEnd, s.y - BAR_THICK / 2, RIGHT - gapEnd, BAR_THICK);
+    // gap glow edges
+    ctx.save();
+    ctx.shadowColor = GREEN; ctx.shadowBlur = 14; ctx.strokeStyle = GREEN; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(s.gapX, s.y - BAR_THICK / 2 - 2); ctx.lineTo(s.gapX, s.y + BAR_THICK / 2 + 2);
+    ctx.moveTo(gapEnd, s.y - BAR_THICK / 2 - 2); ctx.lineTo(gapEnd, s.y + BAR_THICK / 2 + 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawArrow(a) {
+    if (!a) return;
+    const fromX = a.magX, fromY = a.s.y, toX = orb.x, toY = ORB_Y;
+    const c = a.attract ? GREEN : ORANGE;
+    ctx.save();
+    ctx.globalAlpha = 0.85; ctx.strokeStyle = c; ctx.lineWidth = 3;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY); ctx.stroke();
+    ctx.setLineDash([]);
+    // arrowhead at the orb showing force direction (toward orb for attract = pulling orb to magnet? show motion dir)
+    // motion direction on orb:
+    const dirToMag = Math.sign(a.magX - orb.x) || 1;
+    const motion = a.attract ? dirToMag : -dirToMag; // +1 right, -1 left
+    const ax = toX + motion * (ORB_R + 4), ay = toY;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.moveTo(ax + motion * 9, ay);
+    ctx.lineTo(ax, ay - 7);
+    ctx.lineTo(ax, ay + 7);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawOrb() {
+    // trail
+    for (let i = 0; i < trail.length; i++) {
+      const t = trail[i], a = i / trail.length;
+      ctx.globalAlpha = a * 0.4;
+      ctx.fillStyle = t.c;
+      ctx.beginPath(); ctx.arc(t.x, t.y, ORB_R * (0.4 + a * 0.5), 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const c = colHex(polarity);
+    const g = ctx.createRadialGradient(orb.x, ORB_Y, 2, orb.x, ORB_Y, ORB_R + 8);
+    g.addColorStop(0, "#fff"); g.addColorStop(0.35, c); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(orb.x, ORB_Y, ORB_R + 8, 0, 7); ctx.fill();
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(orb.x, ORB_Y, ORB_R, 0, 7); ctx.fill();
+    // flip pulse ring
+    if (flipPulse > 0) {
+      ctx.globalAlpha = flipPulse; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(orb.x, ORB_Y, ORB_R + (1 - flipPulse) * 22, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawSparks() {
+    for (const p of sparks) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3 * p.life + 1, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function text(t, x, y, size, col, align) {
+    ctx.fillStyle = col || "#fff"; ctx.font = "700 " + size + "px system-ui, sans-serif";
+    ctx.textAlign = align || "center"; ctx.textBaseline = "middle";
+    ctx.fillText(t, x, y);
+  }
+
+  function draw() {
+    ctx.save();
+    if (shake > 0.5) ctx.translate(rnd(-shake, shake), rnd(-shake, shake));
+    bg();
+    for (const s of sections) { drawMagnet(s); drawBarrier(s); }
+    if (scene === "play") drawArrow(window.__lastArrow);
+    drawOrb();
+    drawSparks();
+    ctx.restore();
+
+    // HUD
+    if (scene === "play" || scene === "over") text(score, W / 2, 46, 40, "#fff");
+
+    if (scene === "title") {
+      ctx.fillStyle = "rgba(7,10,24,.55)"; ctx.fillRect(0, 0, W, H);
+      text("FLIP", W / 2, 150, 64, "#fff");
+      // mini legend
+      ctx.beginPath(); ctx.fillStyle = RED; ctx.arc(W/2 - 70, 250, 16, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = BLUE; ctx.arc(W/2 + 70, 250, 16, 0, 7); ctx.fill();
+      text("TAP to flip your color", W / 2, 320, 22, "#cdd6ff");
+      text("Opposite colors  →  pull together", W / 2, 360, 18, GREEN);
+      text("Same colors  →  push apart", W / 2, 388, 18, ORANGE);
+      text("Steer into the green gaps!", W / 2, 428, 19, "#cdd6ff");
+      text("TAP / SPACE to start", W / 2, 520, 22, "#fff");
+    }
+    if (scene === "over") {
+      ctx.fillStyle = "rgba(7,10,24,.55)"; ctx.fillRect(0, 0, W, H);
+      text("CRASH!", W / 2, 230, 52, "#ff6b78");
+      text("Gaps passed: " + score, W / 2, 300, 24, "#fff");
+      text("Best: " + best, W / 2, 336, 20, "#cdd6ff");
+      text("TAP to try again", W / 2, 430, 22, "#fff");
+    }
+    if (flash > 0) { ctx.fillStyle = "rgba(255,255,255," + flash * 0.7 + ")"; ctx.fillRect(0, 0, W, H); }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // ---------- loop ----------
+  let started = false;
+  function frame() {
+    update();
+    draw();
+    if (!started) { started = true; if (window.__TEST__) window.__TEST__.ready = true; }
+    requestAnimationFrame(frame);
+  }
+
+  reset();           // build a world for the title backdrop
+  scene = "title";
+  requestAnimationFrame(frame);
+
+  // ---------- test seam ----------
+  window.__TEST__ = {
+    ready: false,
+    state() {
+      return {
+        scene, score, best, polarity,
+        x: +orb.x.toFixed(2), y: ORB_Y, vx: +vx.toFixed(3),
+        sections: sections.length,
+        nextGap: (function () {
+          const ahead = sections.filter(s => !s.done && s.y < ORB_Y).sort((a, b) => b.y - a.y)[0];
+          return ahead ? { gapX: ahead.gapX, gw: ahead.gw, magSide: ahead.magSide, magColor: ahead.magColor, y: +ahead.y.toFixed(1) } : null;
+        })()
+      };
+    },
+    // helpers for automated testing only
+    flip() { if (scene === "play") tap(); },
+    tap() { tap(); }
+  };
+})();
+</script>
+</body>
+</html>

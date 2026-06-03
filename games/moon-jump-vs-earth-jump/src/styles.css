@@ -1,0 +1,457 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@500;700;800&display=swap');
+
+:root {
+  color: #1e2550;
+  background: #96d7ff;
+  font-family: 'Nunito', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app {
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 14% 15%, rgba(255, 240, 143, 0.9) 0 56px, transparent 57px),
+    linear-gradient(160deg, #82d9ff 0%, #c4ecff 46%, #ffe1a6 100%);
+}
+
+.game-shell {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+}
+
+.top-bar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  color: #4351a8;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  color: #14205c;
+  font-family: 'Baloo 2', cursive;
+  font-size: clamp(2.2rem, 6vw, 4.9rem);
+  line-height: 0.92;
+  letter-spacing: 0;
+}
+
+.gravity-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 14px;
+  border: 3px solid #20275e;
+  border-radius: 8px;
+  background: #fff9df;
+  box-shadow: 5px 5px 0 #20275e;
+  font-weight: 900;
+}
+
+.gravity-meter span {
+  min-width: 48px;
+  text-align: right;
+}
+
+.gravity-meter small {
+  color: #5d6292;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.stage-panel,
+.controls-panel {
+  border: 4px solid #20275e;
+  border-radius: 8px;
+  background: rgba(255, 252, 235, 0.88);
+  box-shadow: 8px 8px 0 #20275e;
+}
+
+.stage-panel {
+  position: relative;
+  min-height: 620px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent 35%),
+    linear-gradient(180deg, #9de7ff 0%, #dff8ff 65%, #91df86 66%, #6fca66 100%);
+}
+
+.planet-sky {
+  position: absolute;
+  inset: 0;
+}
+
+.planet-orb {
+  position: absolute;
+  top: 48px;
+  right: 68px;
+  width: 136px;
+  aspect-ratio: 1;
+  border: 4px solid #20275e;
+  border-radius: 50%;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.48), transparent 35%),
+    var(--planet-color);
+  box-shadow: 9px 9px 0 var(--planet-accent);
+}
+
+.star {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff45f;
+  box-shadow: 0 0 0 4px rgba(255, 244, 95, 0.24);
+}
+
+.star-one {
+  top: 92px;
+  left: 15%;
+}
+
+.star-two {
+  top: 210px;
+  right: 31%;
+  width: 15px;
+  height: 15px;
+}
+
+.star-three {
+  top: 260px;
+  left: 31%;
+  width: 18px;
+  height: 18px;
+}
+
+.character-track {
+  position: absolute;
+  left: 50%;
+  bottom: 105px;
+  width: 116px;
+  height: 420px;
+  transform: translateX(-50%);
+}
+
+.character {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 96px;
+  height: 150px;
+  transform: translateY(0);
+  transform-origin: center bottom;
+  transition: filter 160ms ease;
+}
+
+.helmet {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  width: 58px;
+  height: 58px;
+  border: 4px solid #20275e;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.visor {
+  position: absolute;
+  top: 18px;
+  left: 11px;
+  width: 36px;
+  height: 19px;
+  border: 3px solid #20275e;
+  border-radius: 999px;
+  background: #5ed7ff;
+}
+
+.body {
+  position: absolute;
+  top: 54px;
+  left: 18px;
+  width: 62px;
+  height: 76px;
+  border: 4px solid #20275e;
+  border-radius: 24px 24px 18px 18px;
+  background: #ff6b8a;
+}
+
+.body span {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #20275e;
+  border-radius: 50%;
+  background: #ffe45e;
+}
+
+.boots {
+  position: absolute;
+  left: 17px;
+  bottom: 0;
+  width: 64px;
+  height: 22px;
+  border: 4px solid #20275e;
+  border-radius: 999px;
+  background: #2e3a87;
+}
+
+.ground {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 108px;
+  border-top: 4px solid #20275e;
+  background: #4fb950;
+}
+
+.ground span {
+  position: absolute;
+  bottom: 32px;
+  width: 74px;
+  height: 16px;
+  border-radius: 999px;
+  background: #2f8f43;
+}
+
+.ground span:nth-child(1) {
+  left: 10%;
+}
+
+.ground span:nth-child(2) {
+  left: 44%;
+}
+
+.ground span:nth-child(3) {
+  right: 12%;
+}
+
+.controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+}
+
+.planet-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.planet-button,
+.jump-button,
+.add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border: 3px solid #20275e;
+  border-radius: 8px;
+  color: #20275e;
+  background: #ffffff;
+  box-shadow: 4px 4px 0 #20275e;
+  font-weight: 900;
+}
+
+.planet-button {
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+}
+
+.planet-button.active {
+  background: #fff071;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #20275e;
+}
+
+.planet-dot {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 3px solid;
+  border-radius: 50%;
+}
+
+.jump-button {
+  min-height: 76px;
+  background: #ff6b8a;
+  color: #ffffff;
+  font-family: 'Baloo 2', cursive;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.learning-message {
+  min-height: 92px;
+  margin: 0;
+  padding: 16px;
+  border: 3px dashed #20275e;
+  border-radius: 8px;
+  background: #fff9df;
+  color: #26326d;
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.gravity-form {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 3px solid rgba(32, 39, 94, 0.18);
+}
+
+.gravity-form h2 {
+  margin-bottom: 0;
+  font-family: 'Baloo 2', cursive;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.gravity-form label {
+  display: grid;
+  gap: 4px;
+  color: #3e477f;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.gravity-form input,
+.gravity-form textarea {
+  width: 100%;
+  border: 3px solid #20275e;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #ffffff;
+  color: #20275e;
+  resize: vertical;
+}
+
+.add-button {
+  background: #49d7bb;
+}
+
+.form-message {
+  min-height: 22px;
+  margin: 0;
+  color: #4a2f78;
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .app {
+    padding: 16px;
+  }
+
+  .top-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .gravity-meter {
+    align-self: flex-start;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-panel {
+    min-height: 520px;
+  }
+
+  .controls-panel {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .app {
+    padding: 10px;
+  }
+
+  .stage-panel,
+  .controls-panel {
+    box-shadow: 5px 5px 0 #20275e;
+  }
+
+  .stage-panel {
+    min-height: 450px;
+  }
+
+  .planet-orb {
+    top: 34px;
+    right: 28px;
+    width: 92px;
+  }
+
+  .planet-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .character-track {
+    bottom: 88px;
+    height: 340px;
+  }
+
+  .character {
+    width: 86px;
+    height: 136px;
+  }
+
+  .jump-button {
+    min-height: 64px;
+    font-size: 1.65rem;
+  }
+}

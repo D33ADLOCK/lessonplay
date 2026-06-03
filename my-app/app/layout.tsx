@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
-import { StreamingProvider } from '@/contexts/streaming-context'
 import { SWRProvider } from '@/components/providers/swr-provider'
 
 const geistSans = Geist({
@@ -56,9 +55,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ClerkProvider>
-          <SWRProvider>
-            <StreamingProvider>{children}</StreamingProvider>
-          </SWRProvider>
+          <SWRProvider>{children}</SWRProvider>
         </ClerkProvider>
       </body>
     </html>

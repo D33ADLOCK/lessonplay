@@ -6,7 +6,6 @@ import {
   type UIMessage,
 } from 'ai'
 
-import { CodeBlock } from '@/components/ai-elements/code-block'
 import {
   Reasoning,
   ReasoningContent,
@@ -52,23 +51,19 @@ export function MessageParts({ message }: { message: UIMessage }) {
           const html = (part.input as { html?: string } | undefined)?.html ?? ''
           const building =
             part.state !== 'output-available' && part.state !== 'output-error'
-          // While the model is still typing the HTML, show it as plain text.
-          // Syntax-highlighting the whole growing document on every streamed
-          // token is O(n^2) and freezes the main thread, so we highlight only
-          // once the code is complete.
-          const isTypingCode = part.state === 'input-streaming'
 
+          // A published game is a full HTML document (often 15-20 KB).
+          // Syntax-highlighting it with Prism — twice, for light/dark — blocks
+          // the main thread long enough to freeze the tab, both per-token while
+          // streaming and in a single pass when it completes. Plain monospace
+          // text is cheap and never freezes, so we never highlight this code.
           return (
             <Tool key={key} defaultOpen={building}>
               <ToolHeader type={part.type} state={part.state} />
               <ToolContent>
-                {isTypingCode ? (
-                  <pre className="max-h-80 overflow-auto rounded-md border bg-background p-4 font-mono text-sm whitespace-pre-wrap break-words">
-                    {html}
-                  </pre>
-                ) : (
-                  <CodeBlock code={html} language="html" />
-                )}
+                <pre className="max-h-80 overflow-auto rounded-md border bg-background p-4 font-mono text-sm whitespace-pre-wrap break-words">
+                  {html}
+                </pre>
               </ToolContent>
             </Tool>
           )

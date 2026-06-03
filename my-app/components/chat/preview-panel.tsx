@@ -5,13 +5,14 @@ import {
   WebPreviewUrl,
   WebPreviewBody,
 } from '@/components/ai-elements/web-preview'
-import { RefreshCw, Monitor, Maximize, Minimize } from 'lucide-react'
+import { RefreshCw, Maximize, Minimize, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Chat {
   id: string
   demo?: string
   url?: string
+  demoUrl?: string
 }
 
 interface PreviewPanelProps {
@@ -29,6 +30,9 @@ export function PreviewPanel({
   refreshKey,
   setRefreshKey,
 }: PreviewPanelProps) {
+  const demoUrl = currentChat?.demoUrl
+  const hasPreview = Boolean(demoUrl)
+
   return (
     <div
       className={cn(
@@ -37,7 +41,7 @@ export function PreviewPanel({
       )}
     >
       <WebPreview
-        defaultUrl={currentChat?.demo || ''}
+        defaultUrl={demoUrl || ''}
         onUrlChange={(url) => {
           // Optional: Handle URL changes if needed
           console.log('Preview URL changed:', url)
@@ -50,19 +54,30 @@ export function PreviewPanel({
               setRefreshKey((prev) => prev + 1)
             }}
             tooltip="Refresh preview"
-            disabled={!currentChat?.demo}
+            disabled={!hasPreview}
           >
             <RefreshCw className="h-4 w-4" />
           </WebPreviewNavigationButton>
           <WebPreviewUrl
             readOnly
             placeholder="Your app will appear here..."
-            value={currentChat?.demo || ''}
+            value={demoUrl || ''}
           />
+          {demoUrl ? (
+            <a
+              href={demoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+              title="Open game in a new tab"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          ) : null}
           <WebPreviewNavigationButton
             onClick={() => setIsFullscreen(!isFullscreen)}
             tooltip={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            disabled={!currentChat?.demo}
+            disabled={!hasPreview}
           >
             {isFullscreen ? (
               <Minimize className="h-4 w-4" />
@@ -71,8 +86,8 @@ export function PreviewPanel({
             )}
           </WebPreviewNavigationButton>
         </WebPreviewNavigation>
-        {currentChat?.demo ? (
-          <WebPreviewBody key={refreshKey} src={currentChat.demo} />
+        {hasPreview ? (
+          <WebPreviewBody key={refreshKey} src={demoUrl} />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-black">
             <div className="text-center">

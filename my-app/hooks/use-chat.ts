@@ -7,6 +7,7 @@ interface Chat {
   id: string
   demo?: string
   url?: string
+  demoUrl?: string
   messages?: Array<{
     id: string
     role: 'user' | 'assistant'

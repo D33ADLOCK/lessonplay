@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import {
   type ImageAttachment,
   clearPromptFromStorage,
+  takeInitialPrompt,
 } from '@/components/ai-elements/prompt-input'
 
 interface ChatDetailClientProps {
@@ -63,6 +64,20 @@ export function ChatDetailClient({
     setMessage('')
     sendMessage({ text })
   }
+
+  // Approach X handoff: the home page stashed the first prompt and navigated
+  // here. Fire it once on mount for a brand-new chat. takeInitialPrompt clears
+  // the key, and the ref guards against a double-invoked effect.
+  const sentInitialRef = useRef(false)
+  useEffect(() => {
+    if (sentInitialRef.current || initialMessages.length > 0) return
+
+    const text = takeInitialPrompt(chatId)
+    if (text) {
+      sentInitialRef.current = true
+      sendMessage({ text })
+    }
+  }, [chatId, initialMessages.length, sendMessage])
 
   // Handle fullscreen keyboard shortcuts
   useEffect(() => {

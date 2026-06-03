@@ -10,17 +10,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { SYSTEM_PROMPT } from '@/lib/agent/skills'
 import { createGameTools } from '@/lib/agent/tools'
+import { validateChatRequest } from '@/lib/agent/validate-chat-request'
 import { addMessage, createChat, getChat } from '@/lib/db/queries'
 
 export const maxDuration = 300
-
-function createLegacyMessage(content: string): UIMessage {
-  return {
-    id: crypto.randomUUID(),
-    role: 'user',
-    parts: [{ type: 'text', text: content }],
-  }
-}
 
 function getLastUserMessage(messages: UIMessage[]) {
   return [...messages].reverse().find((message) => message.role === 'user')
@@ -41,30 +34,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const {
-    chatId: requestedChatId,
-    messages: requestMessages,
-    message: legacyMessage,
-  } = body as {
+  const { chatId: requestedChatId, messages: requestMessages } = body as {
     chatId?: string
-    messages?: UIMessage[]
-    message?: string
+    messages?: unknown
   }
 
+  const validation = await validateChatRequest({ messages: requestMessages })
+
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: 400 })
+  }
+
+  const messages = validation.messages
   const chatId = requestedChatId || crypto.randomUUID()
-  const messages =
-    Array.isArray(requestMessages) && requestMessages.length > 0
-      ? requestMessages
-      : typeof legacyMessage === 'string' && legacyMessage.trim()
-        ? [createLegacyMessage(legacyMessage.trim())]
-        : []
-
-  if (messages.length === 0) {
-    return NextResponse.json(
-      { error: 'At least one message is required' },
-      { status: 400 },
-    )
-  }
 
   const existingChat = await getChat({ id: chatId, clerkUserId: userId })
 

@@ -103,6 +103,42 @@ export const clearPromptFromStorage = () => {
   }
 }
 
+// Dedicated, one-shot handoff key for the home -> detail first prompt
+// (Approach X). Kept separate from the draft key above so the detail page's
+// input restore and the auto-send never read the same value twice.
+const INITIAL_PROMPT_KEY = 'v0-initial-prompt'
+
+export const saveInitialPrompt = (chatId: string, text: string) => {
+  try {
+    sessionStorage.setItem(INITIAL_PROMPT_KEY, JSON.stringify({ chatId, text }))
+  } catch (error) {
+    console.warn('Failed to save initial prompt to sessionStorage:', error)
+  }
+}
+
+/**
+ * Reads and clears the stashed first prompt, but only if it was stashed for
+ * this exact chat id. Returns null otherwise. Removing the key makes it a
+ * one-shot, so a double-invoked effect can't send the message twice.
+ */
+export const takeInitialPrompt = (chatId: string): string | null => {
+  try {
+    const stored = sessionStorage.getItem(INITIAL_PROMPT_KEY)
+    if (!stored) {
+      return null
+    }
+    const data = JSON.parse(stored) as { chatId?: string; text?: string }
+    if (data.chatId !== chatId || typeof data.text !== 'string') {
+      return null
+    }
+    sessionStorage.removeItem(INITIAL_PROMPT_KEY)
+    return data.text
+  } catch (error) {
+    console.warn('Failed to read initial prompt from sessionStorage:', error)
+    return null
+  }
+}
+
 export const createImageAttachmentFromStored = (
   stored: StoredPromptData['attachments'][0],
 ): ImageAttachment => {

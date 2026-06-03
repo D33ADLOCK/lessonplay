@@ -8,6 +8,7 @@ export const chats = pgTable(
     clerk_user_id: varchar('clerk_user_id', { length: 255 }).notNull(),
     title: varchar('title', { length: 255 }),
     latest_html: text('latest_html'),
+    demo_url: text('demo_url'),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at')
       .notNull()
@@ -52,6 +53,7 @@ export const game_versions = pgTable(
       .references(() => chats.id, { onDelete: 'cascade' }),
     title: varchar('title', { length: 255 }).notNull(),
     html: text('html').notNull(),
+    demo_url: text('demo_url'),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => ({

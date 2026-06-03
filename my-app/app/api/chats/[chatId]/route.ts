@@ -92,6 +92,7 @@ export async function GET(
     name: chat.title,
     title: chat.title,
     latestHtml: chat.latest_html,
+    demoUrl: latestGameVersion?.demoUrl ?? chat.demo_url ?? null,
     createdAt: chat.created_at.toISOString(),
     updatedAt: chat.updated_at.toISOString(),
     messages: messages.map(toResponseMessage),
@@ -134,6 +135,7 @@ export async function PATCH(
     name: chat.title,
     title: chat.title,
     latestHtml: chat.latest_html,
+    demoUrl: chat.demo_url ?? null,
     createdAt: chat.created_at.toISOString(),
     updatedAt: chat.updated_at.toISOString(),
   })

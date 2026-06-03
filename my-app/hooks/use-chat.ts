@@ -194,7 +194,8 @@ export function useChat(chatId: string) {
       if (response.ok) {
         const chatDetails = await response.json()
 
-        const demoUrl = chatDetails?.latestVersion?.demoUrl || chatDetails?.demo
+        const demoUrl =
+          chatDetails?.latestGameVersion?.demoUrl ?? chatDetails?.demoUrl
 
         // Update SWR cache with the latest chat data
         mutate(
@@ -267,7 +268,7 @@ export function useChat(chatId: string) {
             console.log('Chat details:', chatDetails)
 
             const demoUrl =
-              chatDetails?.latestVersion?.demoUrl || chatDetails?.demo
+              chatDetails?.latestGameVersion?.demoUrl ?? chatDetails?.demoUrl
             console.log('Demo URL from chat details:', demoUrl)
 
             // Update SWR cache with new chat data

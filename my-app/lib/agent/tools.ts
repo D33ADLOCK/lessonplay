@@ -7,9 +7,11 @@ import { z } from 'zod'
 import {
   addGameVersion,
   getChat,
+  setGameVersionDemoUrl,
   updateChatTitle,
   updateChatLatestHtml,
 } from '@/lib/db/queries'
+import { uploadGameHtml } from '@/lib/storage'
 import { SKILLS_DIR } from './skills'
 
 async function readSafeSkillFile(relativePath: string) {
@@ -80,7 +82,16 @@ export function createGameTools({
         await updateChatTitle({ id: chatId, clerkUserId, title })
         await updateChatLatestHtml({ id: chatId, clerkUserId, latestHtml: html })
 
-        return { ok: true, versionId: version.id }
+        const { url: demoUrl } = await uploadGameHtml({ chatId, html })
+
+        await setGameVersionDemoUrl({
+          versionId: version.id,
+          chatId,
+          clerkUserId,
+          demoUrl,
+        })
+
+        return { ok: true, versionId: version.id, demoUrl }
       },
     },
   }

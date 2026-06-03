@@ -216,11 +216,13 @@ export async function addGameVersion({
   clerkUserId,
   title,
   html,
+  demoUrl,
 }: {
   chatId: string
   clerkUserId: string
   title: string
   html: string
+  demoUrl?: string | null
 }) {
   try {
     const chat = await getChat({ id: chatId, clerkUserId })
@@ -235,6 +237,7 @@ export async function addGameVersion({
         chat_id: chatId,
         title,
         html,
+        ...(demoUrl !== undefined ? { demo_url: demoUrl } : {}),
       })
       .returning()
 
@@ -243,13 +246,50 @@ export async function addGameVersion({
       .set({
         title,
         latest_html: html,
+        ...(demoUrl !== undefined ? { demo_url: demoUrl } : {}),
         updated_at: new Date(),
       })
       .where(eq(chats.id, chatId))
 
-    return version
+    return version ? { ...version, demoUrl: version.demo_url } : version
   } catch (error) {
     console.error('Failed to add game version to database')
+    throw error
+  }
+}
+
+export async function setGameVersionDemoUrl({
+  versionId,
+  chatId,
+  clerkUserId,
+  demoUrl,
+}: {
+  versionId: string
+  chatId: string
+  clerkUserId: string
+  demoUrl: string
+}) {
+  try {
+    const chat = await getChat({ id: chatId, clerkUserId })
+
+    if (!chat) {
+      return undefined
+    }
+
+    const [version] = await requireDb()
+      .update(game_versions)
+      .set({ demo_url: demoUrl })
+      .where(eq(game_versions.id, versionId))
+      .returning()
+
+    await requireDb()
+      .update(chats)
+      .set({ demo_url: demoUrl })
+      .where(eq(chats.id, chatId))
+
+    return version ? { ...version, demoUrl: version.demo_url } : version
+  } catch (error) {
+    console.error('Failed to update game version demo URL in database')
     throw error
   }
 }
@@ -275,7 +315,7 @@ export async function getLatestGameVersion({
       .orderBy(desc(game_versions.created_at))
       .limit(1)
 
-    return version
+    return version ? { ...version, demoUrl: version.demo_url } : version
   } catch (error) {
     console.error('Failed to get latest game version from database')
     throw error

@@ -1,55 +1,67 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport, type UIMessage } from 'ai'
+
 import { AppHeader } from '@/components/shared/app-header'
-import { ChatMessages } from '@/components/chat/chat-messages'
+import { ChatConversation } from '@/components/chat/chat-conversation'
 import { ChatInput } from '@/components/chat/chat-input'
 import { PreviewPanel } from '@/components/chat/preview-panel'
 import { ResizableLayout } from '@/components/shared/resizable-layout'
 import { BottomToolbar } from '@/components/shared/bottom-toolbar'
-import { useChat } from '@/hooks/use-chat'
-import { useStreaming } from '@/contexts/streaming-context'
+import { selectDemoUrl } from '@/lib/agent/select-demo-url'
 import { cn } from '@/lib/utils'
 import {
   type ImageAttachment,
   clearPromptFromStorage,
 } from '@/components/ai-elements/prompt-input'
 
-export function ChatDetailClient() {
-  const params = useParams()
-  const chatId = params.chatId as string
+interface ChatDetailClientProps {
+  chatId: string
+  initialMessages: UIMessage[]
+  initialDemoUrl: string | null
+}
+
+export function ChatDetailClient({
+  chatId,
+  initialMessages,
+  initialDemoUrl,
+}: ChatDetailClientProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [attachments, setAttachments] = useState<ImageAttachment[]>([])
   const [activePanel, setActivePanel] = useState<'chat' | 'preview'>('chat')
+  const [message, setMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const { handoff } = useStreaming()
-  const {
-    message,
-    setMessage,
-    currentChat,
-    isLoading,
-    setIsLoading,
-    isStreaming,
-    chatHistory,
-    isLoadingChat,
-    handleSendMessage,
-    handleStreamingComplete,
-    handleChatData,
-  } = useChat(chatId)
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: '/api/chat', body: { chatId } }),
+    [chatId],
+  )
 
-  // Wrapper function to handle attachments
-  const handleSubmitWithAttachments = (
-    e: React.FormEvent<HTMLFormElement>,
-    attachmentUrls?: Array<{ url: string }>,
-  ) => {
-    // Clear sessionStorage immediately upon submission
+  const { messages, sendMessage, status } = useChat({
+    id: chatId,
+    messages: initialMessages,
+    transport,
+  })
+
+  const isLoading = status === 'submitted' || status === 'streaming'
+
+  // The preview always reflects the latest completed game derived from the live
+  // message stream, falling back to the server-seeded url before any new game.
+  const demoUrl = selectDemoUrl(messages) ?? initialDemoUrl ?? undefined
+  const currentChat = { id: chatId, demoUrl }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const text = message.trim()
+    if (!text || isLoading) return
+
     clearPromptFromStorage()
-    // Clear attachments after sending
     setAttachments([])
-    return handleSendMessage(e, attachmentUrls)
+    setMessage('')
+    sendMessage({ text })
   }
 
   // Handle fullscreen keyboard shortcuts
@@ -66,10 +78,8 @@ export function ChatDetailClient() {
 
   // Auto-focus the textarea on page load
   useEffect(() => {
-    if (textareaRef.current && !isLoadingChat) {
-      textareaRef.current.focus()
-    }
-  }, [isLoadingChat])
+    textareaRef.current?.focus()
+  }, [])
 
   return (
     <div
@@ -88,20 +98,13 @@ export function ChatDetailClient() {
           leftPanel={
             <div className="flex flex-col h-full">
               <div className="flex-1 overflow-y-auto">
-                <ChatMessages
-                  chatHistory={chatHistory}
-                  isLoading={isLoading}
-                  currentChat={currentChat || null}
-                  onStreamingComplete={handleStreamingComplete}
-                  onChatData={handleChatData}
-                  onStreamingStarted={() => setIsLoading(false)}
-                />
+                <ChatConversation messages={messages} isLoading={isLoading} />
               </div>
 
               <ChatInput
                 message={message}
                 setMessage={setMessage}
-                onSubmit={handleSubmitWithAttachments}
+                onSubmit={handleSubmit}
                 isLoading={isLoading}
                 showSuggestions={false}
                 attachments={attachments}
@@ -112,7 +115,7 @@ export function ChatDetailClient() {
           }
           rightPanel={
             <PreviewPanel
-              currentChat={currentChat || null}
+              currentChat={currentChat}
               isFullscreen={isFullscreen}
               setIsFullscreen={setIsFullscreen}
               refreshKey={refreshKey}
@@ -125,7 +128,7 @@ export function ChatDetailClient() {
           <BottomToolbar
             activePanel={activePanel}
             onPanelChange={setActivePanel}
-            hasPreview={!!currentChat}
+            hasPreview={Boolean(demoUrl)}
           />
         </div>
       </div>

@@ -26,12 +26,12 @@ async function importStorage() {
 describe('uploadGameHtml', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.SUPABASE_URL = 'https://example.supabase.co'
-    process.env.SUPABASE_S3_ENDPOINT =
-      'https://example.storage.supabase.co/storage/v1/s3'
-    process.env.SUPABASE_S3_REGION = 'ap-northeast-1'
-    process.env.SUPABASE_S3_ACCESS_KEY_ID = 'access-key-id'
-    process.env.SUPABASE_S3_SECRET_ACCESS_KEY = 'secret-access-key'
+    process.env.R2_S3_ENDPOINT = 'https://acct.r2.cloudflarestorage.com'
+    process.env.R2_S3_REGION = 'auto'
+    process.env.R2_ACCESS_KEY_ID = 'access-key-id'
+    process.env.R2_SECRET_ACCESS_KEY = 'secret-access-key'
+    process.env.R2_BUCKET_NAME = 'GameBot'
+    process.env.R2_PUBLIC_BASE_URL = 'https://pub-test.r2.dev'
     sendMock.mockResolvedValue({})
   })
 
@@ -56,12 +56,8 @@ describe('uploadGameHtml', () => {
     expect(command.ContentType).toBe('text/html')
 
     expect(result.path).toBe(command.Key)
-    expect(result.url).toBe(
-      `https://example.supabase.co/storage/v1/object/public/GameBot/${result.path}`,
-    )
-    expect(result.url).toMatch(
-      /^https:\/\/example\.supabase\.co\/storage\/v1\/object\/public\/GameBot\/.+\.html$/,
-    )
+    expect(result.url).toBe(`https://pub-test.r2.dev/${result.path}`)
+    expect(result.url).toMatch(/^https:\/\/pub-test\.r2\.dev\/chat-1\/.+\.html$/)
   })
 
   it('produces a unique path per call', async () => {

@@ -52,12 +52,23 @@ export function MessageParts({ message }: { message: UIMessage }) {
           const html = (part.input as { html?: string } | undefined)?.html ?? ''
           const building =
             part.state !== 'output-available' && part.state !== 'output-error'
+          // While the model is still typing the HTML, show it as plain text.
+          // Syntax-highlighting the whole growing document on every streamed
+          // token is O(n^2) and freezes the main thread, so we highlight only
+          // once the code is complete.
+          const isTypingCode = part.state === 'input-streaming'
 
           return (
             <Tool key={key} defaultOpen={building}>
               <ToolHeader type={part.type} state={part.state} />
               <ToolContent>
-                <CodeBlock code={html} language="html" />
+                {isTypingCode ? (
+                  <pre className="max-h-80 overflow-auto rounded-md border bg-background p-4 font-mono text-sm whitespace-pre-wrap break-words">
+                    {html}
+                  </pre>
+                ) : (
+                  <CodeBlock code={html} language="html" />
+                )}
               </ToolContent>
             </Tool>
           )

@@ -45,6 +45,9 @@ export function ChatDetailClient({
     id: chatId,
     messages: initialMessages,
     transport,
+    // Batch streamed updates so a fast token stream re-renders the message list
+    // ~20x/sec instead of on every chunk.
+    experimental_throttle: 50,
   })
 
   const isLoading = status === 'submitted' || status === 'streaming'

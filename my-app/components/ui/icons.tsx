@@ -1,17 +1,3 @@
-export function VercelIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M12 2L2 19.777h20L12 2z" />
-    </svg>
-  )
-}
-
 export function GitHubIcon({ size = 16 }: { size?: number }) {
   return (
     <svg

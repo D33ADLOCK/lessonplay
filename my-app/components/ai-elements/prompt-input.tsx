@@ -51,7 +51,7 @@ export const createImageAttachment = async (
 }
 
 // SessionStorage utilities for prompt persistence
-const PROMPT_STORAGE_KEY = 'v0-prompt-data'
+const PROMPT_STORAGE_KEY = 'game-builder-prompt-data'
 
 export interface StoredPromptData {
   message: string
@@ -106,7 +106,7 @@ export const clearPromptFromStorage = () => {
 // Dedicated, one-shot handoff key for the home -> detail first prompt
 // (Approach X). Kept separate from the draft key above so the detail page's
 // input restore and the auto-send never read the same value twice.
-const INITIAL_PROMPT_KEY = 'v0-initial-prompt'
+const INITIAL_PROMPT_KEY = 'game-builder-initial-prompt'
 
 export const saveInitialPrompt = (chatId: string, text: string) => {
   try {

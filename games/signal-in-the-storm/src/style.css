@@ -1,0 +1,150 @@
+:root {
+  color: #eef5ff;
+  background: #07101f;
+  font-family: Inter, ui-rounded, "Segoe UI", system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 10%, #28466d 0, transparent 28%),
+    linear-gradient(160deg, #101b32, #050b16 70%);
+}
+
+button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 20px;
+  color: #172036;
+  background: #f5c76f;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.portrait-frame {
+  position: relative;
+  width: min(100%, 430px);
+  min-height: min(820px, calc(100vh - 32px));
+  overflow: hidden;
+  border: 1px solid #53729a;
+  border-radius: 28px;
+  background: #101b32;
+  box-shadow: 0 28px 70px #000b;
+}
+
+.story-header {
+  position: absolute;
+  z-index: 3;
+  inset: 0 0 auto;
+  padding: 20px 24px;
+  background: linear-gradient(#07101fe8, transparent);
+  pointer-events: none;
+}
+
+.story-header p,
+.story-header h1 {
+  margin: 0;
+}
+
+.story-header p {
+  color: #f5c76f;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.story-header h1 {
+  font-size: 24px;
+}
+
+.game-canvas {
+  width: 100%;
+  height: min(620px, 74vh);
+}
+
+.game-canvas canvas {
+  display: block;
+}
+
+.message-box,
+.status {
+  position: absolute;
+  z-index: 4;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  margin: 0;
+  border: 2px solid #7d9bc3;
+  border-radius: 20px;
+  padding: 16px;
+  background: #132542f2;
+  box-shadow: 0 14px 34px #0008;
+}
+
+.message-box {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 14px;
+}
+
+.message-box p {
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.portrait {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 68px;
+  border: 3px solid #f5c76f;
+  border-radius: 18px 18px 24px 24px;
+  color: #1a2740;
+  background: #e47e5b;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.speaker {
+  color: #f5c76f;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status {
+  text-align: center;
+}
+
+.consequence {
+  border-color: #f5c76f;
+}
+
+@media (max-height: 700px) {
+  .portrait-frame {
+    min-height: calc(100vh - 16px);
+  }
+
+  .game-canvas {
+    height: 100vh;
+  }
+}
+

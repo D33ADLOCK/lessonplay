@@ -1,0 +1,85 @@
+:root {
+  /* Festival warmth vs. storm-cool village (PRD art direction). */
+  --storm-night: #0b1733;
+  --storm-deep: #060d1f;
+  --lantern-glow: #ffb547;
+  --lantern-warm: #ff8a3d;
+  --festival-rose: #ff5d73;
+  --paper-cream: #f6e7c1;
+  --ui-ink: #10203b;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--storm-deep);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--paper-cream);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Responsive playfield: a centered stage that letterboxes on any aspect
+   ratio. The canvas and overlay share the same box so DOM controls line up
+   with the rendered world. */
+#stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    120% 120% at 50% 0%,
+    var(--storm-night) 0%,
+    var(--storm-deep) 70%
+  );
+}
+
+#game,
+#overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#game canvas {
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+}
+
+/* The overlay never blocks gameplay input unless a panel opts in. */
+#overlay {
+  pointer-events: none;
+}
+
+#overlay .panel,
+#overlay button,
+#overlay [data-interactive] {
+  pointer-events: auto;
+}
+
+/* When a modal panel is open it must block gameplay input beneath it. */
+#overlay[data-modal="true"] {
+  pointer-events: auto;
+}
+
+.lr-hidden {
+  display: none !important;
+}
+
+/* Honour the OS reduced-motion preference as a baseline; the in-game
+   setting can also force it on (Slice 6 / #16). */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -6,6 +6,7 @@ import {
   advanceStory,
   applyConsequence,
   createStoryState,
+  skipStory,
 } from "../src/domain/story";
 import { createRepairAttemptEvents } from "../src/domain/repairAttempt";
 
@@ -16,7 +17,9 @@ describe("walking skeleton", () => {
     bridge.onCommand(commandListener);
 
     let story = createStoryState(introScene);
-    story = advanceStory(story, introScene);
+    for (const _beat of introScene.beats) {
+      story = advanceStory(story, introScene);
+    }
     bridge.send({ type: "load-level", level: torchLevel });
 
     const events = createRepairAttemptEvents(torchLevel);
@@ -40,6 +43,13 @@ describe("walking skeleton", () => {
       mode: "consequence",
       consequenceText: torchLevel.consequence.description,
     });
+  });
+
+  it("follows typed beat references and can skip directly to repair", () => {
+    let story = createStoryState(introScene);
+    story = advanceStory(story, introScene);
+    expect(introScene.beats[story.beatIndex]?.id).toBe("mira-checks-in");
+    expect(skipStory(story).mode).toBe("repair");
   });
 
   it("delivers commands sent before the Phaser adapter is ready", () => {

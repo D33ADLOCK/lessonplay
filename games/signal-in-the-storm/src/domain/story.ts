@@ -18,10 +18,19 @@ export function advanceStory(
   const beat = scene.beats[state.beatIndex];
   if (!beat) throw new Error(`Missing beat ${state.beatIndex} in "${scene.id}".`);
   if (beat.next === "repair") return { ...state, mode: "repair" };
+  const nextIndex = scene.beats.findIndex((candidate) => candidate.id === beat.next);
+  if (nextIndex < 0) {
+    throw new Error(`Beat "${beat.id}" points to missing beat "${beat.next}".`);
+  }
   return {
     ...state,
-    beatIndex: Math.min(state.beatIndex + 1, scene.beats.length - 1),
+    beatIndex: nextIndex,
   };
+}
+
+export function skipStory(state: StoryState): StoryState {
+  if (state.mode !== "story") return state;
+  return { ...state, mode: "repair" };
 }
 
 export function applyConsequence(
@@ -30,4 +39,3 @@ export function applyConsequence(
 ): StoryState {
   return { ...state, mode: "consequence", consequenceText: description };
 }
-

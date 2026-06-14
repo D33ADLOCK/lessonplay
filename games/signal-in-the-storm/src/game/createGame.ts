@@ -25,6 +25,9 @@ export function createGame(parent: HTMLElement, bridge: GameBridge): MountedGame
       mouse: true,
       keyboard: true,
     },
+    audio: {
+      noAudio: true,
+    },
     scene: [scene],
   });
   return {

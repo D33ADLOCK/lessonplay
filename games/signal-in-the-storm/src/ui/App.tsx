@@ -6,8 +6,10 @@ import {
   advanceStory,
   applyConsequence,
   createStoryState,
+  skipStory,
 } from "../domain/story";
 import { createGame } from "../game/createGame";
+import { MessageBox } from "./MessageBox";
 
 export function App() {
   const bridge = useMemo(() => new GameBridge(), []);
@@ -35,38 +37,63 @@ export function App() {
     [bridge],
   );
 
-  const openRepair = (): void => {
-    setStory((current) => advanceStory(current, introScene));
+  const loadRepair = (): void => {
     bridge.send({ type: "load-level", level: torchLevel });
+  };
+
+  const advanceDialogue = (): void => {
+    setStory((current) => {
+      const next = advanceStory(current, introScene);
+      if (next.mode === "repair") loadRepair();
+      return next;
+    });
+  };
+
+  const skipIntroduction = (): void => {
+    setStory((current) => skipStory(current));
+    loadRepair();
   };
 
   return (
     <main className="app-shell">
-      <section className="portrait-frame" aria-label="Signal in the Storm game">
+      <section
+        className={`portrait-frame mode-${story.mode}`}
+        aria-label="Signal in the Storm game"
+      >
         <header className="story-header">
           <p>Field Station · Storm Warning</p>
           <h1>Signal in the Storm</h1>
         </header>
 
+        {story.mode === "story" && beat ? (
+          <div
+            className={`story-scene ${beat.backgroundState} transition-${beat.transition ?? "cut"}`}
+            style={{ backgroundImage: "url('/assets/backgrounds/field-station-blackout.svg')" }}
+            aria-label="School field station during a storm and blackout"
+          >
+            <div className="storm-clouds" aria-hidden="true" />
+            <div className="rain" aria-hidden="true" />
+            <div className="lightning-flash" aria-hidden="true" />
+            <div className="blackout-vignette" aria-hidden="true" />
+            <div className="story-objective">
+              <span>Emergency objective</span>
+              Restore the torch
+            </div>
+          </div>
+        ) : null}
+
         <div
-          className="game-canvas"
+          className={`game-canvas ${story.mode === "story" ? "is-hidden" : ""}`}
           ref={gameHost}
           aria-label="Emergency torch repair board"
         />
 
         {story.mode === "story" && beat ? (
-          <section className="message-box" aria-live="polite">
-            <div className="portrait" aria-hidden="true">
-              M
-            </div>
-            <div>
-              <p className="speaker">{beat.speaker}</p>
-              <p>{beat.text}</p>
-              <button type="button" onClick={openRepair}>
-                Check the torch
-              </button>
-            </div>
-          </section>
+          <MessageBox
+            beat={beat}
+            onAdvance={advanceDialogue}
+            onSkip={skipIntroduction}
+          />
         ) : null}
 
         {story.mode === "repair" ? (
@@ -79,8 +106,8 @@ export function App() {
 
         {story.mode === "consequence" ? (
           <section className="message-box consequence" aria-live="polite">
-            <div className="portrait" aria-hidden="true">
-              K
+            <div className="consequence-icon" aria-hidden="true">
+              ✦
             </div>
             <div>
               <p className="speaker">Kabir</p>

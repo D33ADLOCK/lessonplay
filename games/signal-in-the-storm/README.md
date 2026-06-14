@@ -7,6 +7,11 @@ typed React story beat opens a Phaser repair board, which evaluates a
 framework-independent circuit and returns typed evidence and world-consequence
 events to the React shell.
 
+The introduction now includes a reusable visual-novel presentation with typed
+multi-beat dialogue, five expression states for Mira and Kabir, Ms. Rao's radio
+state, typewriter/tap/keyboard progression, skip behavior, storm transitions,
+and locally bundled project-original assets. See `ASSETS.md`.
+
 ## Run
 
 ```bash
@@ -31,4 +36,3 @@ npm run build
 - `src/bridge/`: narrow command/event channel shared by React and Phaser.
 - `src/game/`: disposable Phaser presentation and input adaptation.
 - `src/ui/`: React story presentation and application coordination.
-

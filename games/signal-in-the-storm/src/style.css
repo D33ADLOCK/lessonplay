@@ -1,7 +1,14 @@
 :root {
+  --ink: #eef5ff;
+  --night: #07101f;
+  --panel: #132542f2;
+  --panel-edge: #7898bc;
+  --amber: #f4c66d;
+  --coral: #dc6c50;
+  --teal: #58b2aa;
   color: #eef5ff;
   background: #07101f;
-  font-family: Inter, ui-rounded, "Segoe UI", system-ui, sans-serif;
+  font-family: "Trebuchet MS", Avenir Next, ui-rounded, system-ui, sans-serif;
   font-synthesis: none;
 }
 
@@ -24,7 +31,7 @@ button {
   border-radius: 14px;
   padding: 0 20px;
   color: #172036;
-  background: #f5c76f;
+  background: var(--amber);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
@@ -48,9 +55,94 @@ button {
   box-shadow: 0 28px 70px #000b;
 }
 
+.story-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background-position: center;
+  background-size: cover;
+  animation: scene-enter 440ms ease-out both;
+}
+
+.storm-clouds {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 42%;
+  background:
+    radial-gradient(ellipse at 15% 20%, #bacce12b 0 15%, transparent 17%),
+    radial-gradient(ellipse at 55% 8%, #b9cce02b 0 18%, transparent 20%),
+    linear-gradient(#0a1425aa, transparent);
+  transform: translateX(-3%);
+  animation: cloud-drift 9s ease-in-out infinite alternate;
+}
+
+.rain {
+  position: absolute;
+  inset: 72px 190px auto 25px;
+  height: 255px;
+  opacity: 0.55;
+  background: repeating-linear-gradient(
+    112deg,
+    transparent 0 15px,
+    #d8ecff 16px 18px,
+    transparent 19px 32px
+  );
+  clip-path: inset(0 round 12px);
+  animation: rain-slide 900ms linear infinite;
+}
+
+.lightning-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #ddecff;
+  opacity: 0;
+}
+
+.lightning .lightning-flash {
+  animation: lightning 3.7s ease-out infinite;
+}
+
+.blackout-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 72% 50%, transparent 0 12%, #07101f30 32%, #020711b8 100%),
+    linear-gradient(transparent 55%, #0207118f);
+  pointer-events: none;
+}
+
+.blackout .blackout-vignette {
+  background: radial-gradient(circle at 78% 48%, transparent 0 6%, #020711aa 34%, #01040adc 100%);
+}
+
+.story-objective {
+  position: absolute;
+  top: 92px;
+  right: 20px;
+  max-width: 180px;
+  border: 1px solid #f4c66d99;
+  border-radius: 13px;
+  padding: 9px 12px;
+  color: #fff4d7;
+  background: #111d32d9;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 8px 20px #0006;
+}
+
+.story-objective span {
+  display: block;
+  color: var(--amber);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .story-header {
   position: absolute;
-  z-index: 3;
+  z-index: 5;
   inset: 0 0 auto;
   padding: 20px 24px;
   background: linear-gradient(#07101fe8, transparent);
@@ -79,6 +171,10 @@ button {
   height: min(620px, 74vh);
 }
 
+.game-canvas.is-hidden {
+  visibility: hidden;
+}
+
 .game-canvas canvas {
   display: block;
 }
@@ -86,22 +182,50 @@ button {
 .message-box,
 .status {
   position: absolute;
-  z-index: 4;
+  z-index: 6;
   right: 16px;
   bottom: 16px;
   left: 16px;
   margin: 0;
-  border: 2px solid #7d9bc3;
+  border: 2px solid var(--panel-edge);
   border-radius: 20px;
   padding: 16px;
-  background: #132542f2;
+  background: var(--panel);
   box-shadow: 0 14px 34px #0008;
 }
 
 .message-box {
+  min-height: 194px;
   display: grid;
-  grid-template-columns: 58px 1fr;
-  gap: 14px;
+  grid-template-columns: 104px 1fr;
+  gap: 12px;
+  overflow: visible;
+  backdrop-filter: blur(10px);
+}
+
+.message-box.portrait-right {
+  grid-template-columns: 1fr 104px;
+}
+
+.message-box.portrait-right .character-portrait {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.message-box.portrait-right .dialogue-copy {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.message-box.portrait-radio {
+  grid-template-columns: 82px 1fr;
+  border-color: var(--teal);
+  background: #102c3bec;
+}
+
+.message-box.urgent {
+  border-color: var(--coral);
+  background: #271a2aeF;
 }
 
 .message-box p {
@@ -109,25 +233,78 @@ button {
   line-height: 1.45;
 }
 
-.portrait {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 68px;
-  border: 3px solid #f5c76f;
-  border-radius: 18px 18px 24px 24px;
-  color: #1a2740;
-  background: #e47e5b;
-  font-size: 30px;
-  font-weight: 900;
+.character-portrait {
+  align-self: end;
+  width: 116px;
+  height: 145px;
+  margin: -35px -8px -16px;
+  filter: drop-shadow(0 9px 8px #0007);
+}
+
+.radio-portrait {
+  align-self: center;
+  width: 78px;
+  height: 78px;
+  filter: drop-shadow(0 8px 7px #0007);
 }
 
 .speaker {
-  color: #f5c76f;
+  color: var(--amber);
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.dialogue-copy {
+  min-width: 0;
+}
+
+.dialogue-text {
+  min-height: 58px;
+  color: #f7f9ff;
+  font-size: 16px;
+}
+
+.text-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -2px;
+  background: var(--amber);
+  animation: cursor-blink 700ms steps(1) infinite;
+}
+
+.dialogue-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.advance-button {
+  min-height: 44px;
+  flex: 1;
+  padding: 0 12px;
+}
+
+.skip-button {
+  min-height: 44px;
+  padding: 0 10px;
+  color: #dbe9ff;
+  background: transparent;
+  font-size: 12px;
+}
+
+.skip-button:hover,
+.skip-button:focus-visible {
+  background: #ffffff12;
+}
+
+.advance-button:focus-visible,
+.skip-button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
 }
 
 .status {
@@ -136,6 +313,61 @@ button {
 
 .consequence {
   border-color: #f5c76f;
+  grid-template-columns: 58px 1fr;
+  min-height: auto;
+}
+
+.consequence-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  color: #20304a;
+  background: var(--amber);
+  font-size: 28px;
+}
+
+@keyframes scene-enter {
+  from {
+    opacity: 0;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes cloud-drift {
+  to {
+    transform: translateX(4%);
+  }
+}
+
+@keyframes rain-slide {
+  to {
+    background-position: 16px 36px;
+  }
+}
+
+@keyframes lightning {
+  0%,
+  91%,
+  100% {
+    opacity: 0;
+  }
+  92% {
+    opacity: 0.38;
+  }
+  93% {
+    opacity: 0.06;
+  }
+  94% {
+    opacity: 0.24;
+  }
+}
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 @media (max-height: 700px) {
@@ -146,5 +378,23 @@ button {
   .game-canvas {
     height: 100vh;
   }
+
+  .message-box {
+    min-height: 168px;
+    padding: 12px;
+  }
+
+  .character-portrait {
+    height: 125px;
+  }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

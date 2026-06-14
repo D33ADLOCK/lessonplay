@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import "./style.css";
 
-import { BootScene } from "./game/scenes/BootScene";
+import { GameScene } from "./game/scenes/GameScene";
 import { OverlayShell } from "./platform/overlay/OverlayShell";
 import { SettingsStore } from "./platform/settings/Settings";
 import { SemanticInput } from "./platform/input/SemanticInput";
@@ -40,7 +40,7 @@ function bootstrap(): void {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [BootScene],
+    scene: [GameScene],
   });
 }
 

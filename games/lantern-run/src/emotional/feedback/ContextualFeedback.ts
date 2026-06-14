@@ -27,8 +27,31 @@ export interface Feedback {
 
 export type FeedbackComposer = (ctx: FeedbackContext) => Feedback;
 
-/** Placeholder composer; Slice 3 (#13) replaces with surface-aware copy. */
 export const defaultFeedbackComposer: FeedbackComposer = (ctx) => ({
-  message: `The cart came to rest on the ${ctx.surfaceName}.`,
+  message: feedbackMessage(ctx),
   predictionError: ctx.actual - ctx.predicted,
 });
+
+function feedbackMessage(ctx: FeedbackContext): string {
+  const prediction =
+    Math.abs(ctx.actual - ctx.predicted) < 0.04
+      ? "Your prediction was close."
+      : ctx.actual > ctx.predicted
+        ? "It travelled farther than your marker."
+        : "It stopped before your marker.";
+
+  switch (ctx.quality) {
+    case "perfect":
+      return `Perfect delivery on ${ctx.surfaceName}. ${prediction}`;
+    case "success":
+      return `The lantern arrived safely. ${prediction}`;
+    case "nearMiss":
+      return `So close! The ${ctx.surfaceName} changed its stopping distance.`;
+    case "undershoot":
+      return `The ${ctx.surfaceName} slowed it early. Try a stronger push.`;
+    case "overshoot":
+      return `It kept moving across ${ctx.surfaceName}. Try a gentler push.`;
+    case "crash":
+      return `A dramatic landing! Reduce the push and predict again.`;
+  }
+}

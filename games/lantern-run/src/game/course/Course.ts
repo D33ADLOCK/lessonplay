@@ -47,6 +47,10 @@ export function surfaceAt(course: Course, position: number): Surface {
   return (last && SURFACES[last.surfaceId]) || SURFACES.wood;
 }
 
+export function createSurfaceResolver(course: Course): (position: number) => Surface {
+  return (position) => surfaceAt(course, position);
+}
+
 /** A simple demo course used by the Slice 2 tracer scene. */
 export const DEMO_COURSE: Course = {
   length: 100,

@@ -5,6 +5,8 @@ import { celebrationFor } from "../src/emotional/celebration/CelebrationIntensit
 import { SaveService } from "../src/platform/save/SaveService";
 import { SemanticInput } from "../src/platform/input/SemanticInput";
 import { SURFACES } from "../src/game/sim/SurfaceModel";
+import { ReactionDirector } from "../src/emotional/reactions/ReactionDirector";
+import { WorldTransformer } from "../src/emotional/world/WorldTransformer";
 
 /**
  * Slice 1 smoke tests: prove the reusable contracts compose and are pure
@@ -51,6 +53,34 @@ describe("walking skeleton contracts", () => {
     input.on("launch", () => (got += 1));
     input.emit({ action: "launch", source: "keyboard" });
     expect(got).toBe(1);
+  });
+
+  it("maps touch, pointer, and keyboard into the same semantic launch", () => {
+    const input = new SemanticInput();
+    const sources: string[] = [];
+    input.on("launch", (event) => sources.push(event.source));
+    (["touch", "pointer", "keyboard"] as const).forEach((source) =>
+      input.emit({ action: "launch", source }),
+    );
+    expect(sources).toEqual(["touch", "pointer", "keyboard"]);
+  });
+
+  it("drives reactions and world changes from game-neutral events", () => {
+    const events = new GameplayEventStream();
+    const reactions = new ReactionDirector();
+    const world = new WorldTransformer();
+    reactions.attach(events);
+    world.attach(events, () => [{ id: "area-one", kind: "light" }]);
+    events.emit({ type: "launch", force: 0.6, from: 0 });
+    expect(reactions.reaction.kind).toBe("hope");
+    events.emit({
+      type: "success",
+      position: 0.7,
+      quality: "perfect",
+      deliveryAccuracy: 1,
+    });
+    expect(reactions.reaction.kind).toBe("celebration");
+    expect(world.restored).toEqual(["area-one"]);
   });
 
   it("defines three distinct surfaces with different friction", () => {

@@ -50,6 +50,9 @@ export class SaveService<T> {
       }
       let { version } = parsed;
       let data = parsed.data;
+      if (!Number.isInteger(version) || version < 0 || version > this.version) {
+        return this.recover();
+      }
       while (version < this.version) {
         const migrate = this.migrations[version];
         if (!migrate) return this.recover();

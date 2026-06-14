@@ -10,9 +10,11 @@ Tracking issue: [#10](https://github.com/D33ADLOCK/game-code/issues/10).
 
 ## Status
 
-Built slice by slice (see issues #11–#18). **Slice 1 (#11)** establishes the
-walking skeleton: it boots a Phaser scene under a DOM overlay shell and lays
-down the reusable module boundaries every later slice builds on.
+The complete PRD #10 vertical slice is implemented across issues #11–#18:
+three connected levels, deterministic force/friction simulation, prediction and
+contextual feedback, data-authored content, persistence, emotional reactions,
+world restoration, game feel, responsive input, accessibility settings, and
+automated browser coverage.
 
 ## Run
 
@@ -70,6 +72,9 @@ src/
     celebration/   # CelebrationIntensity — scaled by result quality
   game/            # Lantern Run specific
     sim/           # deterministic cart sim + surface/friction model
+    content/       # validated three-level story data
+    outcome/       # prediction and delivery classification
+    save/          # concrete versioned Lantern Run save
     scenes/        # Phaser scenes
 ```
 
@@ -80,6 +85,42 @@ src/
   this game's mechanics.
 - Provide an `AssetManifest`, a content `Validator`, and a `Scorer`; the platform
   layer handles loading, validation, persistence and progression generically.
+
+## Content authoring
+
+Levels live in `src/game/content/LevelContent.ts` and pass through
+`validateLevel()` before play. A level declares its story need, learning
+objective, course and target geometry, safe/risky routes, force range,
+prediction prompt, reaction keys, transformations, and star thresholds.
+
+Validation rejects missing identifiers, absent targets, invalid segment
+geometry, unsupported reaction keys, force ranges outside `0..1`, and
+contradictory score thresholds with a path-specific developer error.
+
+## Controls
+
+- Pointer/touch: tap the track or move the Prediction slider, adjust Push
+  strength, then Launch.
+- Keyboard: Left/Right moves the prediction, Up/Down changes force, Space
+  launches, `R` retries, and Escape pauses.
+- Pause and Settings are always available as large DOM controls.
+
+All devices emit the same semantic actions; simulation code never reads raw
+device events.
+
+## Persistence
+
+Versioned `localStorage` under `lantern-run-save` stores completed levels,
+personal bests, restored-world transformations, audio, and reduced-motion
+settings. Corrupt or unsupported saves recover to defaults.
+
+## Adding a future game
+
+Reuse `platform/` for input, overlay, save, settings, content validation,
+progression, audio, and debug contracts. Reuse `emotional/` for gameplay events,
+reaction selection, contextual feedback, celebration intensity, and persistent
+transformations. Keep the next game's simulation and story vocabulary under its
+own `game/` boundary.
 
 ## License / credits
 

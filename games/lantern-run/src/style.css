@@ -69,10 +69,209 @@ body {
 /* When a modal panel is open it must block gameplay input beneath it. */
 #overlay[data-modal="true"] {
   pointer-events: auto;
+  background: rgb(4 10 25 / 48%);
 }
 
 .lr-hidden {
   display: none !important;
+}
+
+.game-hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+
+.game-hud button,
+.game-hud input,
+.game-hud dialog,
+.pause-card {
+  pointer-events: auto;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.level-progress,
+.control-dock,
+.route-picker,
+.pause-card {
+  border: 1px solid rgb(255 213 106 / 45%);
+  background: rgb(7 20 47 / 88%);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 25%);
+  backdrop-filter: blur(8px);
+}
+
+.level-progress {
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+
+.hud-actions {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  min-height: 44px;
+  border: 1px solid rgb(255 213 106 / 55%);
+  border-radius: 12px;
+  background: #152d53;
+  color: var(--paper-cream);
+  padding: 8px 15px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover,
+button:focus-visible,
+.route-picker button.selected {
+  background: #28517c;
+  outline: 2px solid #76e6ff;
+  outline-offset: 2px;
+}
+
+button.primary {
+  background: linear-gradient(180deg, #ffb547, #e46f35);
+  color: #1b2035;
+  border-color: #ffe29a;
+}
+
+.control-dock {
+  width: min(720px, calc(100vw - 28px));
+  margin: 0 auto;
+  border-radius: 18px;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px 16px;
+  align-items: center;
+}
+
+.control-dock label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.control-dock input[type="range"] {
+  width: 100%;
+  min-height: 30px;
+  accent-color: #ffb547;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.control-dock output {
+  grid-column: 1 / -1;
+  color: #c8d8ef;
+  text-align: center;
+  font-size: 13px;
+}
+
+.route-picker {
+  position: absolute;
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 14px;
+}
+
+.settings-dialog {
+  width: min(360px, calc(100vw - 32px));
+  border: 1px solid #ffcf73;
+  border-radius: 18px;
+  background: #0b1c3d;
+  color: var(--paper-cream);
+  padding: 22px;
+}
+
+.settings-dialog::backdrop {
+  background: rgb(3 8 20 / 70%);
+}
+
+.settings-dialog label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+}
+
+.pause-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  border-radius: 18px;
+  padding: 24px;
+  text-align: center;
+}
+
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (max-width: 680px), (max-height: 520px) {
+  .game-hud {
+    padding: 8px;
+  }
+
+  .hud-actions button {
+    min-height: 38px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .level-progress {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .route-picker {
+    top: 54px;
+  }
+
+  .route-picker button {
+    min-height: 38px;
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+
+  .control-dock {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+    padding: 8px 10px;
+  }
+
+  .control-buttons {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .control-buttons button {
+    min-height: 40px;
+  }
 }
 
 /* Honour the OS reduced-motion preference as a baseline; the in-game

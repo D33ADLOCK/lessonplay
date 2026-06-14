@@ -5,7 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 // config is established here so downstream slices can add specs freely.
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  fullyParallel: false,
+  workers: 1,
+  timeout: 90_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
@@ -14,8 +16,14 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
+    {
+      name: "desktop-chrome",
+      use: { ...devices["Desktop Chrome"], channel: "chrome" },
+    },
+    {
+      name: "mobile-chrome",
+      use: { ...devices["Pixel 7"], channel: "chrome" },
+    },
   ],
   webServer: {
     command: "npm run dev",

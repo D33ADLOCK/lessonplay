@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5181",
     "build": "tsc --noEmit && vite build",
+    "e2e": "playwright test",
     "preview": "vite preview --port 5181",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -19,6 +20,7 @@
     "vite": "^8.0.16"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",

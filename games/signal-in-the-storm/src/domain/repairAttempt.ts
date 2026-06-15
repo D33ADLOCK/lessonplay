@@ -1,11 +1,13 @@
 import type { GameEvent } from "../contracts/events";
+import type { CircuitGraph } from "../contracts/circuit";
 import type { RepairLevelDefinition } from "../contracts/level";
 import { evaluateCircuit } from "./circuit";
 
 export function createRepairAttemptEvents(
   level: RepairLevelDefinition,
+  graph: CircuitGraph = level.circuit,
 ): readonly GameEvent[] {
-  const evidence = evaluateCircuit(level.circuit);
+  const evidence = evaluateCircuit(graph);
   const events: GameEvent[] = [
     { type: "attempt-evaluated", levelId: level.id, evidence },
   ];
@@ -23,4 +25,3 @@ export function createRepairAttemptEvents(
   }
   return events;
 }
-

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GameBridge } from "../bridge/GameBridge";
+import type { GameEvent } from "../contracts/events";
 import { introScene } from "../content/intro";
 import { torchLevel } from "../content/levels";
 import {
@@ -16,6 +17,8 @@ export function App() {
   const gameHost = useRef<HTMLDivElement>(null);
   const [story, setStory] = useState(() => createStoryState(introScene));
   const [boardReady, setBoardReady] = useState(false);
+  const [sequenceStage, setSequenceStage] =
+    useState<Extract<GameEvent, { type: "sequence-stage" }>["stage"]>();
   const beat = introScene.beats[story.beatIndex];
 
   useEffect(() => {
@@ -28,6 +31,7 @@ export function App() {
     () =>
       bridge.onEvent((event) => {
         if (event.type === "board-ready") setBoardReady(true);
+        if (event.type === "sequence-stage") setSequenceStage(event.stage);
         if (event.type === "consequence-triggered") {
           setStory((current) =>
             applyConsequence(current, event.consequence.description),
@@ -57,7 +61,7 @@ export function App() {
   return (
     <main className="app-shell">
       <section
-        className={`portrait-frame mode-${story.mode}`}
+        className={`portrait-frame mode-${story.mode} stage-${sequenceStage ?? "idle"}`}
         aria-label="Signal in the Storm game"
       >
         <header className="story-header">
@@ -98,9 +102,15 @@ export function App() {
 
         {story.mode === "repair" ? (
           <p className="status" aria-live="polite">
-            {boardReady
-              ? "The board is ready. Test the circuit."
-              : "Preparing the repair board..."}
+            {sequenceStage === "current"
+              ? "Current is moving around the loop."
+              : sequenceStage === "device"
+                ? "The torch is beginning to glow."
+                : sequenceStage === "room"
+                  ? "The repair bench is visible again."
+                  : boardReady
+                    ? "Place the cell, close the switch, then Test."
+                    : "Preparing the repair board..."}
           </p>
         ) : null}
 

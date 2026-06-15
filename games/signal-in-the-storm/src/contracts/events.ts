@@ -8,6 +8,11 @@ export type GameCommand =
 export type GameEvent =
   | { readonly type: "board-ready"; readonly levelId: string }
   | {
+      readonly type: "sequence-stage";
+      readonly levelId: string;
+      readonly stage: "current" | "device" | "room" | "response";
+    }
+  | {
       readonly type: "attempt-evaluated";
       readonly levelId: string;
       readonly evidence: CircuitEvidence;
@@ -18,4 +23,3 @@ export type GameEvent =
       readonly consequence: WorldConsequence;
     }
   | { readonly type: "level-completed"; readonly levelId: string };
-

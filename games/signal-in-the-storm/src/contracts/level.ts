@@ -7,6 +7,10 @@ export interface RepairLevelDefinition {
   readonly circuit: CircuitGraph;
   readonly successDeviceId: string;
   readonly consequence: WorldConsequence;
+  readonly interaction: {
+    readonly cellComponentId: string;
+    readonly switchComponentId: string;
+  };
 }
 
 export interface WorldConsequence {
@@ -15,4 +19,3 @@ export interface WorldConsequence {
   readonly targetId: string;
   readonly description: string;
 }
-

@@ -179,6 +179,11 @@ button {
   display: block;
 }
 
+.stage-room .game-canvas,
+.stage-response .game-canvas {
+  filter: brightness(1.08) saturate(1.08);
+}
+
 .message-box,
 .status {
   position: absolute;

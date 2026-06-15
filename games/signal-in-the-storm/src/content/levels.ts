@@ -5,6 +5,10 @@ export const torchLevel: RepairLevelDefinition = {
   title: "Emergency Torch",
   objective: "Test the closed low-voltage torch circuit.",
   successDeviceId: "torch-lamp",
+  interaction: {
+    cellComponentId: "cell",
+    switchComponentId: "switch",
+  },
   circuit: {
     components: [
       { id: "cell", kind: "cell", terminalIds: ["cell-positive", "cell-negative"] },
@@ -33,4 +37,3 @@ export const torchLevel: RepairLevelDefinition = {
     description: "The emergency torch glows, revealing the repair bench.",
   },
 };
-

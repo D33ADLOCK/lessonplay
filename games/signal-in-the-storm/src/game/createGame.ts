@@ -8,6 +8,7 @@ export interface MountedGame {
 }
 
 export function createGame(parent: HTMLElement, bridge: GameBridge): MountedGame {
+  parent.replaceChildren();
   const scene = new RepairScene(bridge);
   const game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -34,6 +35,7 @@ export function createGame(parent: HTMLElement, bridge: GameBridge): MountedGame
     game,
     destroy(): void {
       scene.dispose();
+      game.canvas?.remove();
       game.destroy(true);
     },
   };

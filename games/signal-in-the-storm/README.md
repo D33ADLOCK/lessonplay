@@ -12,6 +12,11 @@ multi-beat dialogue, five expression states for Mira and Kabir, Ms. Rao's radio
 state, typewriter/tap/keyboard progression, skip behavior, storm transitions,
 and locally bundled project-original assets. See `ASSETS.md`.
 
+Level 1 provides a complete tactile success path: drag the safe 3V cell into
+its holder, close the large switch, press Test, watch current pulses travel
+around the deterministic circuit, and see the torch illuminate the repair
+bench before Kabir reacts to the evidence.
+
 ## Run
 
 ```bash
@@ -27,6 +32,7 @@ Open `http://localhost:5181`.
 npm run typecheck
 npm test
 npm run build
+npm run e2e
 ```
 
 ## Boundaries

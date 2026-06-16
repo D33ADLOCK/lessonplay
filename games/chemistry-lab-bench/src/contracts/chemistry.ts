@@ -36,11 +36,11 @@ export interface PourAction {
 
 export type Action = PourAction;
 
-/** Before/after thermometer readings, in degrees Celsius. */
-export interface TemperatureChange {
-  readonly from: number;
-  readonly to: number;
-}
+/**
+ * Qualitative direction the thermometer moves. We deliberately show direction,
+ * not a precise value — an exact figure would imply a measurement we do not have.
+ */
+export type TemperatureTrend = "rising" | "falling";
 
 /**
  * The outcome of resolving an action against a vessel. Rendering-free: the UI
@@ -54,7 +54,7 @@ export interface ReactionResult {
   /** Liquid colour after the reaction, if it changed. */
   readonly newColor?: string;
   /** Thermometer movement, if the reaction was exo/endothermic. */
-  readonly temperature?: TemperatureChange;
+  readonly temperature?: TemperatureTrend;
   /** Plain-language "why it happened" text, revealed in the Explain phase. */
   readonly explanation?: string;
 }

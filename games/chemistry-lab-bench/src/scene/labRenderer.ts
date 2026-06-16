@@ -12,17 +12,12 @@ export interface LabScene {
   readonly fromColor: string;
   /** Liquid colour at anim=1 (after the reaction); same as from if no change. */
   readonly toColor: string;
-  /** Thermometer reading at anim=0, in °C. */
-  readonly fromTemp: number;
-  /** Thermometer reading at anim=1, in °C. */
-  readonly toTemp: number;
+  /** Direction the thermometer moves as the reaction resolves; null = steady. */
+  readonly tempTrend: "rising" | "falling" | null;
   /** Logical scene size; the canvas is scaled to fit its element. */
   readonly width: number;
   readonly height: number;
 }
-
-const TEMP_MIN = 0;
-const TEMP_MAX = 60;
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -96,9 +91,16 @@ export function draw(
   ctx.arc(tx + tubeW / 2, tubeTop + tubeH + bulbR - 2, bulbR, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Mercury column scaled to the current reading.
-  const temp = lerp(scene.fromTemp, scene.toTemp, t);
-  const frac = (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
+  // Mercury column: a baseline level that visibly rises (warmer) or falls
+  // (cooler). We show direction, not a numeric reading.
+  const baseFrac = 0.45;
+  const targetFrac =
+    scene.tempTrend === "rising"
+      ? 0.78
+      : scene.tempTrend === "falling"
+        ? 0.18
+        : baseFrac;
+  const frac = lerp(baseFrac, targetFrac, t);
   const colH = Math.max(0, Math.min(1, frac)) * (tubeH - 6);
   ctx.fillStyle = "#e8508f";
   ctx.beginPath();
@@ -112,9 +114,12 @@ export function draw(
   ctx.fill();
   ctx.fillRect(tx + 4, tubeTop + tubeH - colH, tubeW - 8, colH);
 
-  // Numeric reading.
-  ctx.fillStyle = "#eaf1fb";
-  ctx.font = "600 20px system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(`${Math.round(temp)}°C`, tx + tubeW / 2, tubeTop - 10);
+  // Direction label instead of a (fabricated) exact value.
+  if (scene.tempTrend) {
+    ctx.fillStyle = scene.tempTrend === "rising" ? "#ff9d6b" : "#7fbfff";
+    ctx.font = "600 16px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    const label = scene.tempTrend === "rising" ? "▲ Warmer" : "▼ Cooler";
+    ctx.fillText(label, tx + tubeW / 2, tubeTop - 10);
+  }
 }

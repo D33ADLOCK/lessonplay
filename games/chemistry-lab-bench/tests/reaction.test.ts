@@ -15,8 +15,7 @@ describe("simulateReaction", () => {
     );
     expect(result.visibleChange).toBe(true);
     expect(result.newColor).toBe("#e8508f");
-    expect(result.temperature).toBeDefined();
-    expect(result.temperature!.to).toBeGreaterThan(result.temperature!.from);
+    expect(result.temperature).toBe("rising");
   });
 
   it("nudges with no visible change when the distractor is poured", () => {

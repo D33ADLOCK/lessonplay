@@ -58,7 +58,7 @@ export const acidBaseExperiment: Experiment = {
           "The liquid turns pink and the beaker feels warmer.",
         visibleChange: true,
         newColor: PINK,
-        temperature: { from: 25, to: 33 },
+        temperature: "rising",
         explanation:
           "The base neutralised the acid to form a salt and water. " +
           "Phenolphthalein is pink in a basic/neutral solution, and the " +

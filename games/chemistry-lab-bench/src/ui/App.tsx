@@ -14,7 +14,6 @@ import { ReagentShelf } from "./ReagentShelf";
 const SCENE_W = 360;
 const SCENE_H = 360;
 const DEFAULT_COLOR = "#dfe9f5";
-const DEFAULT_TEMP = 25;
 
 function lookup(experiment: LabSessionState["experiment"]) {
   const byId = new Map<string, Chemical>(
@@ -37,8 +36,7 @@ export function App() {
   const scene: LabScene = {
     fromColor: DEFAULT_COLOR,
     toColor: result?.newColor ?? DEFAULT_COLOR,
-    fromTemp: result?.temperature?.from ?? DEFAULT_TEMP,
-    toTemp: result?.temperature?.to ?? DEFAULT_TEMP,
+    tempTrend: result?.temperature ?? null,
     width: SCENE_W,
     height: SCENE_H,
   };

@@ -1,0 +1,16 @@
+Chemistry Lab Bench
+===================
+
+The reaction-engine pattern and declarative reaction-rule schema in this game
+(src/domain/reaction.ts, src/contracts/experiment.ts) are adapted to TypeScript
+from the MIT-licensed project:
+
+    chem_lab — https://github.com/nsriram/chem_lab
+    Copyright (c) nsriram, MIT License
+
+Only the engine pattern (first-match-wins rule registry resolving a vessel +
+action to a reaction result) and the rule-schema shape were ported. The original
+project's AS-level chemistry content, exam-marking engine, i18n, PDF export, and
+DOM/emoji UI are not used here. The NCERT Class 9 curriculum content, the
+mobile-first Canvas presentation, and the experiment data are original to this
+project.

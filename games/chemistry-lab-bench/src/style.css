@@ -169,6 +169,14 @@ body {
   border: 2px solid transparent;
   border-radius: 12px;
   cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.08s ease;
+}
+
+.option:active {
+  transform: scale(0.98);
 }
 
 .option.correct {
@@ -201,6 +209,14 @@ body {
   border-radius: 12px;
   cursor: pointer;
   font-size: 0.95rem;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.08s ease;
+}
+
+.reagent:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .reagent.selected {
@@ -234,9 +250,56 @@ body {
   border: none;
   border-radius: 12px;
   cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    transform 0.08s ease;
+}
+
+.primary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .primary:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.picker-tab {
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+/* The emission note fades in so a released gas reads as an event. */
+.emission {
+  animation: fade-in 0.4s ease both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option,
+  .reagent,
+  .primary,
+  .picker-tab,
+  .emission {
+    transition: none;
+    animation: none;
+  }
+
+  .option:active,
+  .reagent:active:not(:disabled),
+  .primary:active:not(:disabled) {
+    transform: none;
+  }
 }

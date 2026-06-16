@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { acidBaseExperiment } from "../content/acidBase";
 import { metalAcidExperiment } from "../content/metalAcid";
 import type { Chemical } from "../contracts/chemistry";
@@ -55,9 +55,22 @@ export function App() {
   );
 }
 
+/** How long the pour stream animates before the reaction resolves (ms). */
+const POUR_MS = 600;
+
 function LabSession({ experiment }: { readonly experiment: Experiment }) {
   const [state, dispatch] = useReducer(reduce, experiment, createLabSession);
   const chemicals = useMemo(() => chemicalMap(experiment), [experiment]);
+
+  // The reagent whose pour stream is currently in flight, if any.
+  const [pouring, setPouring] = useState<string | null>(null);
+  const pourTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (pourTimer.current) window.clearTimeout(pourTimer.current);
+    },
+    [],
+  );
 
   const bId = beakerId(experiment);
   const initialColor = experiment.stations[bId].color;
@@ -65,11 +78,25 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
   const result = state.result;
   const step = currentStep(state);
 
+  const startPour = (reagent: string) => {
+    if (pouring) return;
+    setPouring(reagent);
+    pourTimer.current = window.setTimeout(() => {
+      dispatch({
+        type: "perform",
+        action: { type: "pour", reagent, target: bId },
+      });
+      setPouring(null);
+      pourTimer.current = null;
+    }, POUR_MS);
+  };
+
   const scene: LabScene = {
     fromColor: initialColor,
     toColor: result?.newColor ?? beaker.color,
     heat: beaker.heat,
     emitting: Boolean(result?.emits?.length),
+    pour: pouring ? { color: chemicals.get(pouring)?.color ?? "#cfe6f5" } : null,
     width: SCENE_W,
     height: SCENE_H,
   };
@@ -133,24 +160,16 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
               onSelect={(id) =>
                 dispatch({ type: "select-reagent", reagent: id })
               }
-              disabled={false}
+              disabled={Boolean(pouring)}
             />
             <button
               className="primary"
-              disabled={!state.selectedReagent}
+              disabled={!state.selectedReagent || Boolean(pouring)}
               onClick={() =>
-                state.selectedReagent &&
-                dispatch({
-                  type: "perform",
-                  action: {
-                    type: "pour",
-                    reagent: state.selectedReagent,
-                    target: bId,
-                  },
-                })
+                state.selectedReagent && startPour(state.selectedReagent)
               }
             >
-              Pour into beaker
+              {pouring ? "Pouring…" : "Pour into beaker"}
             </button>
           </section>
         ))}

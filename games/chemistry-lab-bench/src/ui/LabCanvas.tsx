@@ -46,7 +46,10 @@ export function LabCanvas({ scene, target }: LabCanvasProps) {
       // Ease current progress toward the target.
       const p = progressRef.current;
       progressRef.current = p + (targetRef.current - p) * 0.12;
-      draw(ctx, scene, progressRef.current, performance.now() / 1000);
+      const reduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      draw(ctx, scene, progressRef.current, performance.now() / 1000, reduced);
       raf = requestAnimationFrame(render);
     };
     raf = requestAnimationFrame(render);

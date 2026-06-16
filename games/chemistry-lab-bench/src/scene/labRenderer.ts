@@ -1,9 +1,12 @@
 /**
  * Canvas renderer for the lab bench. Draws one beaker with a liquid level and a
- * thermometer, plus bubbles when a reaction releases gas. Colour and heat are
- * interpolated by an `anim` progress value (0 → 1) so the UI can tween a pour
- * without the renderer holding state; `time` (seconds) drives the looping
- * bubble motion.
+ * thermometer, plus the tactile beats that make a pour feel alive: a falling
+ * pour stream, a soft reaction glint, rising bubbles when gas is released, a
+ * warm/cool aura behind the glass, and a gently rippling liquid surface.
+ *
+ * `anim` (0 → 1) tweens colour + heat as the reaction resolves; `time` (seconds)
+ * drives the looping ambient motion. With `reduced` true (prefers-reduced-
+ * motion) the time-based motion is dropped but every end-state still reads.
  *
  * Pure drawing: no DOM lookups, no game state — give it a context and a scene
  * description and it paints one frame.
@@ -20,6 +23,8 @@ export interface LabScene {
   readonly heat: HeatLevel;
   /** True when the latest result released a gas — draw rising bubbles. */
   readonly emitting: boolean;
+  /** Present while a pour is in flight — draws a falling stream of this colour. */
+  readonly pour?: { readonly color: string } | null;
   /** Logical scene size; the canvas is scaled to fit its element. */
   readonly width: number;
   readonly height: number;
@@ -38,6 +43,14 @@ const HEAT_LABEL: Record<HeatLevel, string> = {
   room: "Room temp",
   warm: "Warm",
   hot: "Hot",
+};
+
+/** Aura tint behind the beaker for a heat level (null = no aura at room temp). */
+const HEAT_AURA: Record<HeatLevel, [number, number, number] | null> = {
+  cool: [110, 170, 255],
+  room: null,
+  warm: [255, 150, 90],
+  hot: [255, 95, 70],
 };
 
 function lerp(a: number, b: number, t: number): number {
@@ -61,15 +74,17 @@ function mixColor(from: string, to: string, t: number): string {
 
 /**
  * Paint one frame of the lab scene. `anim` is the tween progress (0 → 1);
- * `time` is a free-running clock in seconds used for the bubble animation.
+ * `time` is a free-running clock in seconds; `reduced` drops ambient motion.
  */
 export function draw(
   ctx: CanvasRenderingContext2D,
   scene: LabScene,
   anim: number,
   time = 0,
+  reduced = false,
 ): void {
   const t = Math.max(0, Math.min(1, anim));
+  const clock = reduced ? 0 : time;
   const { width, height } = scene;
 
   ctx.clearRect(0, 0, width, height);
@@ -83,19 +98,53 @@ export function draw(
 
   const liquidTop = beakerY + beakerH * 0.32;
   const liquidH = beakerY + beakerH - liquidTop;
+  const cx = beakerX + beakerW / 2;
+
+  // --- Heat aura behind the glass (warm/cool), strength tied to the tween. ---
+  const aura = HEAT_AURA[scene.heat];
+  if (aura && t > 0.02) {
+    const [r, g, b] = aura;
+    const pulse = reduced ? 1 : 0.85 + 0.15 * Math.sin(clock * 2);
+    const radius = beakerW * 0.95;
+    const grad = ctx.createRadialGradient(cx, liquidTop + liquidH * 0.5, 0, cx, liquidTop + liquidH * 0.5, radius);
+    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${0.32 * t * pulse})`);
+    grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(beakerX - radius, liquidTop - radius, beakerW + radius * 2, liquidH + radius * 2);
+  }
+
+  // --- Liquid fill ---
   ctx.fillStyle = liquidColor;
   ctx.fillRect(beakerX + 4, liquidTop, beakerW - 8, liquidH);
 
-  // Liquid surface highlight.
+  // Rippling surface highlight (a gentle sine wobble keeps the liquid alive).
+  const ripple = reduced ? 0 : Math.sin(clock * 1.6) * 1.5;
   ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
-  ctx.fillRect(beakerX + 4, liquidTop, beakerW - 8, 6);
+  ctx.fillRect(beakerX + 4, liquidTop + ripple, beakerW - 8, 6);
 
   // --- Bubbles (gas leaving the liquid) ---
   if (scene.emitting) {
-    drawBubbles(ctx, beakerX + 4, liquidTop, beakerW - 8, liquidH, time, t);
+    drawBubbles(ctx, beakerX + 4, liquidTop, beakerW - 8, liquidH, clock, t);
   }
 
-  // Beaker glass outline (drawn over the liquid so the rim reads cleanly).
+  // --- Reaction glint: a soft reward bloom once the change has resolved. ---
+  if (scene.toColor !== scene.fromColor && t > 0.15) {
+    const sheen = reduced ? 0.18 : 0.12 + 0.06 * Math.sin(clock * 3);
+    const glint = ctx.createRadialGradient(
+      cx,
+      liquidTop + liquidH * 0.4,
+      0,
+      cx,
+      liquidTop + liquidH * 0.4,
+      beakerW * 0.5,
+    );
+    glint.addColorStop(0, `rgba(255, 255, 255, ${sheen * t})`);
+    glint.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = glint;
+    ctx.fillRect(beakerX + 4, liquidTop, beakerW - 8, liquidH);
+  }
+
+  // Beaker glass outline (over the liquid so the rim reads cleanly).
   ctx.strokeStyle = "#9fc2e8";
   ctx.lineWidth = 4;
   ctx.strokeRect(beakerX, beakerY, beakerW, beakerH);
@@ -104,7 +153,22 @@ export function draw(
   ctx.lineTo(beakerX - 12, beakerY - 10);
   ctx.stroke();
 
+  // --- Pour stream (anticipation: reagent falling in before it reacts). ---
+  if (scene.pour) {
+    drawPour(ctx, beakerX, beakerY, liquidTop, scene.pour.color, clock, reduced);
+  }
+
   // --- Thermometer ---
+  drawThermometer(ctx, width, height, scene.heat, t);
+}
+
+function drawThermometer(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  heat: HeatLevel,
+  t: number,
+): void {
   const tx = width * 0.74;
   const tubeTop = height * 0.22;
   const tubeH = height * 0.5;
@@ -120,7 +184,7 @@ export function draw(
 
   // Mercury column tweens from room temperature to the scene's heat level. We
   // show a named level, never a fabricated numeric reading.
-  const targetFrac = HEAT_FRACTION[scene.heat];
+  const targetFrac = HEAT_FRACTION[heat];
   const frac = lerp(HEAT_FRACTION.room, targetFrac, t);
   const colH = Math.max(0, Math.min(1, frac)) * (tubeH - 6);
   ctx.fillStyle = "#e8508f";
@@ -130,11 +194,11 @@ export function draw(
   ctx.fillRect(tx + 4, tubeTop + tubeH - colH, tubeW - 8, colH);
 
   // Named level label (only once the reaction has visibly moved the level).
-  if (scene.heat !== "room" && t > 0.05) {
+  if (heat !== "room" && t > 0.05) {
     ctx.fillStyle = targetFrac > HEAT_FRACTION.room ? "#ff9d6b" : "#7fbfff";
     ctx.font = "600 16px system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(HEAT_LABEL[scene.heat], tx + tubeW / 2, tubeTop - 10);
+    ctx.fillText(HEAT_LABEL[heat], tx + tubeW / 2, tubeTop - 10);
   }
 }
 
@@ -149,18 +213,57 @@ function drawBubbles(
   intensity: number,
 ): void {
   if (intensity <= 0.02) return;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
   const count = 7;
   for (let i = 0; i < count; i++) {
     const seed = i * 0.618;
     const colX = x + ((seed * 7.3) % 1) * w;
-    // Each bubble loops up the column at its own speed/phase.
     const speed = 0.35 + (i % 3) * 0.15;
     const phase = (time * speed + seed) % 1;
     const by = top + h - phase * h;
-    const r = (1.6 + (i % 3)) * intensity;
+    // Shrink and fade as the bubble nears the surface (a soft "pop").
+    const life = 1 - phase;
+    const r = (1.6 + (i % 3)) * intensity * (0.5 + life * 0.5);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.55 * (0.4 + life * 0.6)})`;
     ctx.beginPath();
     ctx.arc(colX, by, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** A falling stream of reagent droplets from above the beaker lip. */
+function drawPour(
+  ctx: CanvasRenderingContext2D,
+  beakerX: number,
+  beakerY: number,
+  liquidTop: number,
+  color: string,
+  time: number,
+  reduced: boolean,
+): void {
+  const streamX = beakerX - 6;
+  const fromY = beakerY - 26;
+  ctx.fillStyle = color;
+  if (reduced) {
+    ctx.fillRect(streamX - 2, fromY, 4, liquidTop - fromY);
+    return;
+  }
+  // Several droplets staggered down the stream, looping.
+  const drops = 5;
+  for (let i = 0; i < drops; i++) {
+    const phase = (time * 1.8 + i / drops) % 1;
+    const y = fromY + phase * (liquidTop - fromY);
+    const r = 3;
+    ctx.beginPath();
+    ctx.ellipse(streamX, y, r * 0.7, r, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Splash dots at the surface.
+  for (let i = 0; i < 3; i++) {
+    const sp = (time * 4 + i * 0.4) % 1;
+    const sx = streamX + (i - 1) * 5 * sp;
+    const sy = liquidTop - 4 * Math.sin(sp * Math.PI);
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.6 * (1 - sp), 0, Math.PI * 2);
     ctx.fill();
   }
 }

@@ -1,0 +1,143 @@
+/**
+ * The experiment contract — the heart of the templating bet. An `Experiment` is
+ * pure data: apparatus, reagents, a declarative reaction-rule registry, and an
+ * ordered list of guided steps. Adding the next experiment means writing one of
+ * these, with no engine changes.
+ *
+ * Rules are data-only (no functions) so an experiment stays serialisable and
+ * authorable by a teacher — or, later, drafted by an AI for human review.
+ */
+
+import type { ActionType } from "./actions";
+import type {
+  Chemical,
+  ChemicalId,
+  HeatLevel,
+  Station,
+  StationId,
+} from "./chemistry";
+
+/**
+ * What a matched rule does to a station. The full vocabulary is locked; only
+ * `react` is implemented in v2. The validator rejects any rule that uses a
+ * reserved transform kind.
+ */
+export type Transform =
+  | ReactTransform
+  | SplitTransform
+  | EvaporateTransform
+  | MoveAllTransform;
+
+/**
+ * Implemented. Remove `consume`d chemicals from the station, add the `produce`d
+ * products to it, release any `emits` gases (they leave the liquid), and set the
+ * station's colour and heat level if given.
+ */
+export interface ReactTransform {
+  readonly kind: "react";
+  readonly consume: readonly ChemicalId[];
+  readonly produce: readonly ChemicalId[];
+  /** Gases released — routed to the result's emissions, never left in contents. */
+  readonly emits?: readonly ChemicalId[];
+  readonly newColor?: string;
+  readonly heat?: HeatLevel;
+}
+
+/** Reserved — split a station into solid + liquid (filtration). */
+export interface SplitTransform {
+  readonly kind: "split";
+  readonly solidTo: StationId;
+  readonly liquidTo: StationId;
+}
+
+/** Reserved — boil a station dry, leaving a residue. */
+export interface EvaporateTransform {
+  readonly kind: "evaporate";
+  readonly leaves: readonly ChemicalId[];
+}
+
+/** Reserved — move all contents to another station (transfer). */
+export interface MoveAllTransform {
+  readonly kind: "moveAll";
+  readonly to: StationId;
+}
+
+export type TransformKind = Transform["kind"];
+
+/** Transform kinds the v2 engine actually runs. The validator guards the rest. */
+export const IMPLEMENTED_TRANSFORMS: readonly TransformKind[] = ["react"];
+
+/**
+ * One declarative reaction rule. The engine matches the first rule whose `on`
+ * matches the action type and whose `requires` set is fully present in the
+ * acted-on station, then applies its `transform`.
+ */
+export interface ReactionRule {
+  readonly id: string;
+  /** Which action triggers this rule (only "pour" is implemented). */
+  readonly on: ActionType;
+  /** Which station the rule reads/writes; defaults to the action's target. */
+  readonly at?: "target" | "source";
+  /** Chemical ids that must all be present in the station for this rule to fire. */
+  readonly requires: readonly ChemicalId[];
+  readonly transform: Transform;
+  /** Student-facing observation of what happened. */
+  readonly observation: string;
+  /** Plain-language "why" text, surfaced in the Explain phase. */
+  readonly explanation?: string;
+}
+
+/** A single tappable prediction choice. */
+export interface PredictionOption {
+  readonly label: string;
+  readonly correct: boolean;
+  /** Feedback shown after the student taps this option (non-blocking). */
+  readonly feedback: string;
+}
+
+/** The action a step expects the student to perform to advance. */
+export interface ExpectedAction {
+  readonly type: ActionType;
+  readonly reagent?: ChemicalId;
+  readonly target?: StationId;
+}
+
+/**
+ * One guided step: its own Predict → Observe → Explain task, plus the action the
+ * student must perform to advance. An experiment is an ordered list of these.
+ */
+export interface Step {
+  readonly id: string;
+  readonly predictPrompt: string;
+  readonly options: readonly PredictionOption[];
+  /** Instruction shown during the Observe phase ("Pour the base into the beaker"). */
+  readonly actionPrompt: string;
+  readonly expect: ExpectedAction;
+  /** The "why" text revealed in the Explain phase. */
+  readonly explanation: string;
+}
+
+export interface Experiment {
+  readonly id: string;
+  readonly title: string;
+  /** Concept tag, e.g. "Acids, Bases & Salts — neutralisation". */
+  readonly concept: string;
+  /** Target grade, e.g. 9. */
+  readonly grade: number;
+  /** Every chemical referenced anywhere in this experiment. */
+  readonly chemicals: readonly Chemical[];
+  /** Reagent ids offered to the student, in shelf order. */
+  readonly shelf: readonly ChemicalId[];
+  /** Starting state of every station, keyed by id. */
+  readonly stations: Readonly<Record<StationId, Station>>;
+  /** Declarative reaction registry, evaluated first-match-wins. */
+  readonly rules: readonly ReactionRule[];
+  /** Ordered guided steps. */
+  readonly steps: readonly Step[];
+}
+
+/** Result of validating an experiment before it reaches a student. */
+export interface ValidationResult {
+  readonly ok: boolean;
+  readonly errors: readonly string[];
+}

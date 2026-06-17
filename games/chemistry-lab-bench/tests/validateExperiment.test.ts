@@ -3,6 +3,7 @@ import type { Experiment } from "../src/contracts/experiment";
 import { validateExperiment } from "../src/domain/validateExperiment";
 import { acidBaseExperiment } from "../src/content/acidBase";
 import { metalAcidExperiment } from "../src/content/metalAcid";
+import { saltSandExperiment } from "../src/content/saltSand";
 
 /** Clone the shipped experiment so each test can mutate freely. */
 function draft(): Experiment {
@@ -18,6 +19,12 @@ describe("validateExperiment", () => {
 
   it("accepts the shipped metal+acid experiment", () => {
     const result = validateExperiment(metalAcidExperiment);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("accepts the shipped salt+sand separation experiment", () => {
+    const result = validateExperiment(saltSandExperiment);
     expect(result.ok).toBe(true);
     expect(result.errors).toEqual([]);
   });
@@ -93,11 +100,11 @@ describe("validateExperiment", () => {
     expect(result.errors.some((e) => /exactly one correct/i.test(e))).toBe(true);
   });
 
-  it("rejects an experiment that uses a reserved, unimplemented action type", () => {
+  it("rejects an experiment that uses a still-reserved action type", () => {
     const broken = draft();
     const result = validateExperiment({
       ...broken,
-      rules: [{ ...broken.rules[0], on: "filter" }],
+      rules: [{ ...broken.rules[0], on: "stir" }],
     });
     expect(result.ok).toBe(false);
     expect(result.errors.some((e) => /unimplemented action/i.test(e))).toBe(
@@ -105,14 +112,14 @@ describe("validateExperiment", () => {
     );
   });
 
-  it("rejects an experiment that uses a reserved, unimplemented transform kind", () => {
+  it("rejects an experiment that uses a still-reserved transform kind", () => {
     const broken = draft();
     const result = validateExperiment({
       ...broken,
       rules: [
         {
           ...broken.rules[0],
-          transform: { kind: "evaporate", leaves: ["water"] },
+          transform: { kind: "moveAll", to: "beaker" },
         },
       ],
     });
@@ -120,5 +127,59 @@ describe("validateExperiment", () => {
     expect(result.errors.some((e) => /unimplemented transform/i.test(e))).toBe(
       true,
     );
+  });
+
+  it("rejects a split transform routing to an undeclared station", () => {
+    const broken = structuredClone(saltSandExperiment);
+    const result = validateExperiment({
+      ...broken,
+      rules: broken.rules.map((r) =>
+        r.transform.kind === "split"
+          ? { ...r, transform: { ...r.transform, solidTo: "nowhere" } }
+          : r,
+      ),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /nowhere/.test(e))).toBe(true);
+  });
+
+  it("rejects an evaporate transform that leaves an undeclared chemical", () => {
+    const broken = structuredClone(saltSandExperiment);
+    const result = validateExperiment({
+      ...broken,
+      rules: broken.rules.map((r) =>
+        r.transform.kind === "evaporate"
+          ? { ...r, transform: { ...r.transform, leaves: ["phantom-salt"] } }
+          : r,
+      ),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /phantom-salt/.test(e))).toBe(true);
+  });
+
+  it("rejects a filter step whose source station is undeclared", () => {
+    const broken = structuredClone(saltSandExperiment);
+    const result = validateExperiment({
+      ...broken,
+      steps: broken.steps.map((s) =>
+        s.expect.type === "filter"
+          ? { ...s, expect: { ...s.expect, source: "ghost-vessel" } }
+          : s,
+      ),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /ghost-vessel/.test(e))).toBe(true);
+  });
+
+  it("allows an empty shelf when no step asks for a pour", () => {
+    const broken = structuredClone(saltSandExperiment);
+    // Drop the pour step and its only shelf reagent; keep filter + heat.
+    const result = validateExperiment({
+      ...broken,
+      shelf: [],
+      steps: broken.steps.filter((s) => s.expect.type !== "pour"),
+      rules: broken.rules.filter((r) => r.on !== "pour"),
+    });
+    expect(result.errors.some((e) => /shelf is empty/i.test(e))).toBe(false);
   });
 });

@@ -6,11 +6,13 @@
  * NOTICE): iterate a declarative, first-match-wins rule registry. One action
  * resolves at most one reaction (no auto-cascade): the first rule whose `on`
  * matches the action and whose `requires` are all present in the acted-on
- * station fires. A `react` transform consumes reagents, produces persistent
- * products in the station, routes emitted gases into a separate emissions list
- * (gas leaves the liquid — it is not added to contents), and sets the station's
- * colour and heat level. Multi-step chemistry emerges from the student taking
- * multiple actions, never from cascading here.
+ * station fires. Three transforms are implemented: `react` (consume reagents,
+ * produce products, emit gas, set colour + heat), `split` (filtration — route a
+ * station's contents to a residue + filtrate by solubility), and `evaporate`
+ * (boil down to the chemicals that `leaves`, driving the rest off as vapour).
+ * Emitted gases and vapours go to a separate emissions list — they leave the
+ * liquid, never added to contents. Multi-step chemistry emerges from the student
+ * taking multiple actions, never from cascading here.
  */
 
 import type { Action } from "../contracts/actions";
@@ -32,10 +34,11 @@ export interface ApplyResult {
 /** The station a rule reads/writes for a given action. */
 function stationIdFor(action: Action, rule: ReactionRule): StationId | null {
   const where = rule.at ?? "target";
-  if (where === "target") {
-    return "target" in action ? action.target : null;
-  }
-  return "source" in action ? action.source : null;
+  if (where === "source" && "source" in action) return action.source;
+  if (where === "target" && "target" in action) return action.target;
+  // Fall back to whichever station the action carries, so a `filter` rule (no
+  // target) resolves to its `source` even when `at` is left at its default.
+  return primaryStationId(action);
 }
 
 /** The station an action primarily lands on (for empty / pour handling). */
@@ -137,18 +140,38 @@ function fire(
   const transform = rule.transform;
   const station = workspace.stations[stationId] ?? emptyStation();
 
-  // Only `react` is implemented; the validator guarantees we never reach here
-  // with another kind, but we guard defensively.
-  if (transform.kind !== "react") {
-    return {
-      workspace,
-      result: {
-        observation: rule.observation,
-        visibleChange: false,
-        ...(rule.explanation ? { explanation: rule.explanation } : {}),
-      },
-    };
+  switch (transform.kind) {
+    case "react":
+      return fireReact(workspace, rule, stationId, station, pouredReagent, chemicals);
+    case "split":
+      return fireSplit(workspace, rule, stationId, station, chemicals);
+    case "evaporate":
+      return fireEvaporate(workspace, rule, stationId, station, chemicals);
+    default:
+      // The validator guarantees we never reach here with a reserved kind, but
+      // we guard defensively rather than throw.
+      return {
+        workspace,
+        result: {
+          observation: rule.observation,
+          visibleChange: false,
+          ...(rule.explanation ? { explanation: rule.explanation } : {}),
+        },
+      };
   }
+}
+
+/** `react`: consume reagents, produce products, emit gas, set colour + heat. */
+function fireReact(
+  workspace: Workspace,
+  rule: ReactionRule,
+  stationId: StationId,
+  station: Station,
+  pouredReagent: string | null,
+  chemicals: readonly Chemical[],
+): ApplyResult {
+  const transform = rule.transform;
+  if (transform.kind !== "react") return { workspace, result: nudge(rule) };
 
   // New contents: station + poured reagent, minus consumed, plus produced.
   // Emitted gases never go in — they leave the liquid.
@@ -157,10 +180,7 @@ function fire(
   for (const id of transform.consume) next.delete(id);
   for (const id of transform.produce) next.add(id);
 
-  const emits: Emission[] = (transform.emits ?? []).map((gasId) => ({
-    gas: gasId,
-    observation: gasObservation(gasId, chemicals),
-  }));
+  const emits = emissionsFor(transform.emits, chemicals);
 
   const nextStation: Station = {
     ...station,
@@ -179,6 +199,130 @@ function fire(
   };
 
   return { workspace: withStation(workspace, stationId, nextStation), result };
+}
+
+/**
+ * `split` (filtration): route the source station's contents by solubility —
+ * insoluble chemicals collect in `solidTo` (residue), everything else passes to
+ * `liquidTo` (filtrate). Destination contents are merged, not overwritten, and
+ * the source empties.
+ */
+function fireSplit(
+  workspace: Workspace,
+  rule: ReactionRule,
+  sourceId: StationId,
+  source: Station,
+  chemicals: readonly Chemical[],
+): ApplyResult {
+  const transform = rule.transform;
+  if (transform.kind !== "split") return { workspace, result: nudge(rule) };
+
+  const solubilityOf = (id: string) =>
+    chemicals.find((c) => c.id === id)?.solubility;
+
+  const toSolid: string[] = [];
+  const toLiquid: string[] = [];
+  for (const id of source.contents) {
+    if (solubilityOf(id) === "insoluble") toSolid.push(id);
+    else toLiquid.push(id);
+  }
+
+  const solidStation = workspace.stations[transform.solidTo] ?? emptyStation();
+  const liquidStation = workspace.stations[transform.liquidTo] ?? emptyStation();
+
+  const stations: Record<StationId, Station> = {
+    ...workspace.stations,
+    [sourceId]: { ...source, contents: [], phase: "empty" },
+    [transform.solidTo]: {
+      ...solidStation,
+      contents: mergeContents(solidStation.contents, toSolid),
+      phase: "solid",
+    },
+    [transform.liquidTo]: {
+      ...liquidStation,
+      // The filtrate takes on the source's liquid colour so the solution reads.
+      color: source.color,
+      contents: mergeContents(liquidStation.contents, toLiquid),
+      phase: "solution",
+    },
+  };
+
+  const result: ReactionResult = {
+    observation: rule.observation,
+    visibleChange: true,
+    ...(rule.explanation ? { explanation: rule.explanation } : {}),
+  };
+
+  return { workspace: { stations }, result };
+}
+
+/**
+ * `evaporate`: keep only the `leaves` chemicals (e.g. salt crystals); drive off
+ * everything else, routing `emits` to the result's emissions (the solvent
+ * leaving as vapour). Sets the station's colour and heat.
+ */
+function fireEvaporate(
+  workspace: Workspace,
+  rule: ReactionRule,
+  stationId: StationId,
+  station: Station,
+  chemicals: readonly Chemical[],
+): ApplyResult {
+  const transform = rule.transform;
+  if (transform.kind !== "evaporate") return { workspace, result: nudge(rule) };
+
+  const leaves = new Set(transform.leaves);
+  const kept = station.contents.filter((id) => leaves.has(id));
+  const emits = emissionsFor(transform.emits, chemicals);
+
+  const nextStation: Station = {
+    ...station,
+    contents: kept,
+    color: transform.newColor ?? station.color,
+    heat: transform.heat ?? station.heat,
+    phase: "solid",
+  };
+
+  const result: ReactionResult = {
+    observation: rule.observation,
+    visibleChange: true,
+    ...(transform.newColor ? { newColor: transform.newColor } : {}),
+    ...(transform.heat ? { heat: transform.heat } : {}),
+    ...(emits.length ? { emits } : {}),
+    ...(rule.explanation ? { explanation: rule.explanation } : {}),
+  };
+
+  return { workspace: withStation(workspace, stationId, nextStation), result };
+}
+
+/** Map a transform's gas ids into labelled emissions. */
+function emissionsFor(
+  gases: readonly string[] | undefined,
+  chemicals: readonly Chemical[],
+): Emission[] {
+  return (gases ?? []).map((gasId) => ({
+    gas: gasId,
+    observation: gasObservation(gasId, chemicals),
+  }));
+}
+
+/** Add ids to a station's contents without duplicating what is already there. */
+function mergeContents(
+  existing: readonly string[],
+  added: readonly string[],
+): string[] {
+  const set = new Set(existing);
+  for (const id of added) set.add(id);
+  return [...set];
+}
+
+/** A non-visible fallback result (used only on the defensive guard paths). */
+function nudge(rule: ReactionRule): ReactionResult {
+  return {
+    observation: rule.observation,
+    visibleChange: false,
+    ...(rule.explanation ? { explanation: rule.explanation } : {}),
+  };
 }
 
 function gasObservation(

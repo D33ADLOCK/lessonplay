@@ -35,12 +35,23 @@ export function validateExperiment(experiment: Experiment): ValidationResult {
     }
   };
 
-  if (experiment.shelf.length === 0) {
-    errors.push("The reagent shelf is empty.");
+  const stationIds = Object.keys(experiment.stations);
+  const knownStations = new Set(stationIds);
+  const refStation = (id: string, where: string) => {
+    if (!knownStations.has(id)) {
+      errors.push(`${where} references unknown station "${id}".`);
+    }
+  };
+
+  // A shelf may legitimately be empty for a pure filter/heat experiment; it is
+  // only an error when a step actually asks the student to pour.
+  const shelf = new Set(experiment.shelf);
+  const hasPourStep = experiment.steps.some((s) => s.expect.type === "pour");
+  if (experiment.shelf.length === 0 && hasPourStep) {
+    errors.push("A step expects a pour but the reagent shelf is empty.");
   }
   for (const id of experiment.shelf) ref(id, "Shelf reagent");
 
-  const stationIds = Object.keys(experiment.stations);
   if (stationIds.length === 0) {
     errors.push("Experiment has no stations.");
   }
@@ -72,6 +83,14 @@ export function validateExperiment(experiment: Experiment): ValidationResult {
       for (const id of t.produce) ref(id, `Rule "${rule.id}" produce`);
       for (const id of t.emits ?? []) ref(id, `Rule "${rule.id}" emits`);
     }
+    if (t.kind === "split") {
+      refStation(t.solidTo, `Rule "${rule.id}" split solidTo`);
+      refStation(t.liquidTo, `Rule "${rule.id}" split liquidTo`);
+    }
+    if (t.kind === "evaporate") {
+      for (const id of t.leaves) ref(id, `Rule "${rule.id}" evaporate leaves`);
+      for (const id of t.emits ?? []) ref(id, `Rule "${rule.id}" evaporate emits`);
+    }
   }
 
   if (experiment.steps.length === 0) {
@@ -96,11 +115,19 @@ export function validateExperiment(experiment: Experiment): ValidationResult {
         `Step "${step.id}" expects an unimplemented action "${step.expect.type}".`,
       );
     }
-    if (step.expect.reagent) ref(step.expect.reagent, `Step "${step.id}" expect`);
-    if (step.expect.target && !experiment.stations[step.expect.target]) {
-      errors.push(
-        `Step "${step.id}" expects unknown station "${step.expect.target}".`,
-      );
+    if (step.expect.reagent) {
+      ref(step.expect.reagent, `Step "${step.id}" expect`);
+      if (step.expect.type === "pour" && !shelf.has(step.expect.reagent)) {
+        errors.push(
+          `Step "${step.id}" pours "${step.expect.reagent}", which is not on the shelf.`,
+        );
+      }
+    }
+    if (step.expect.target) {
+      refStation(step.expect.target, `Step "${step.id}" expect target`);
+    }
+    if (step.expect.source) {
+      refStation(step.expect.source, `Step "${step.id}" expect source`);
     }
   }
 

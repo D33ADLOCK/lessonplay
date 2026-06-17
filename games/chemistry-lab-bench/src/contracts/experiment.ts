@@ -18,9 +18,9 @@ import type {
 } from "./chemistry";
 
 /**
- * What a matched rule does to a station. The full vocabulary is locked; only
- * `react` is implemented in v2. The validator rejects any rule that uses a
- * reserved transform kind.
+ * What a matched rule does to a station. The full vocabulary is locked;
+ * `react`, `split`, and `evaporate` are implemented. The validator rejects any
+ * rule that uses a still-reserved transform kind.
  */
 export type Transform =
   | ReactTransform
@@ -43,17 +43,31 @@ export interface ReactTransform {
   readonly heat?: HeatLevel;
 }
 
-/** Reserved — split a station into solid + liquid (filtration). */
+/**
+ * Implemented — filtration. Route the acted-on (source) station's contents by
+ * each chemical's solubility: insoluble chemicals collect in `solidTo` (the
+ * residue), everything else — soluble solutes plus the solvent — passes to
+ * `liquidTo` (the filtrate). The source station empties.
+ */
 export interface SplitTransform {
   readonly kind: "split";
   readonly solidTo: StationId;
   readonly liquidTo: StationId;
 }
 
-/** Reserved — boil a station dry, leaving a residue. */
+/**
+ * Implemented — boil a station down. Keep only the `leaves` chemicals (e.g. the
+ * dissolved salt as crystals); everything else is driven off, with any `emits`
+ * routed to the result's emissions (the solvent leaving as vapour). Sets the
+ * station's colour and heat if given.
+ */
 export interface EvaporateTransform {
   readonly kind: "evaporate";
   readonly leaves: readonly ChemicalId[];
+  /** Vapours driven off — routed to the result's emissions, never left behind. */
+  readonly emits?: readonly ChemicalId[];
+  readonly newColor?: string;
+  readonly heat?: HeatLevel;
 }
 
 /** Reserved — move all contents to another station (transfer). */
@@ -64,8 +78,12 @@ export interface MoveAllTransform {
 
 export type TransformKind = Transform["kind"];
 
-/** Transform kinds the v2 engine actually runs. The validator guards the rest. */
-export const IMPLEMENTED_TRANSFORMS: readonly TransformKind[] = ["react"];
+/** Transform kinds the engine actually runs. The validator guards the rest. */
+export const IMPLEMENTED_TRANSFORMS: readonly TransformKind[] = [
+  "react",
+  "split",
+  "evaporate",
+];
 
 /**
  * One declarative reaction rule. The engine matches the first rule whose `on`
@@ -74,7 +92,7 @@ export const IMPLEMENTED_TRANSFORMS: readonly TransformKind[] = ["react"];
  */
 export interface ReactionRule {
   readonly id: string;
-  /** Which action triggers this rule (only "pour" is implemented). */
+  /** Which action triggers this rule (pour / filter / heat are implemented). */
   readonly on: ActionType;
   /** Which station the rule reads/writes; defaults to the action's target. */
   readonly at?: "target" | "source";
@@ -100,6 +118,8 @@ export interface ExpectedAction {
   readonly type: ActionType;
   readonly reagent?: ChemicalId;
   readonly target?: StationId;
+  /** The station a non-target action (e.g. filter) reads from. */
+  readonly source?: StationId;
 }
 
 /**

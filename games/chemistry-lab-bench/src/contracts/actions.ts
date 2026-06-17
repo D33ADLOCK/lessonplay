@@ -1,15 +1,19 @@
 /**
  * The full vocabulary of things a student can do at the bench.
  *
- * The whole union is locked now so future apparatus drops into an obvious slot
- * without reshaping the schema — but only `pour` is implemented in v2. The
- * engine runs `pour`; the validator rejects any experiment that asks for a
- * reserved action, so we never ship data the engine cannot run.
+ * The whole union is locked so future apparatus drops into an obvious slot
+ * without reshaping the schema. `pour`, `filter`, and `heat` are implemented; the
+ * validator rejects any experiment that asks for a still-reserved action, so we
+ * never ship data the engine cannot run.
+ *
+ * An action is only the student's *gesture* (which station they act on). The
+ * chemistry it triggers — products, routing destinations, emissions — lives on
+ * the matched rule's transform, never on the action itself.
  */
 
 import type { ChemicalId, StationId } from "./chemistry";
 
-/** The only action the v2 engine resolves. */
+/** Implemented — drop a reagent from the shelf into a station. */
 export interface PourAction {
   readonly type: "pour";
   readonly reagent: ChemicalId;
@@ -23,15 +27,17 @@ export interface TransferAction {
   readonly target: StationId;
 }
 
-/** Reserved — filter a station, splitting solid residue from liquid filtrate. */
+/**
+ * Implemented — filter a station. Just the gesture: which station is poured
+ * through the funnel. A matched `split` transform carries where the residue and
+ * filtrate go.
+ */
 export interface FilterAction {
   readonly type: "filter";
   readonly source: StationId;
-  readonly residue: StationId;
-  readonly filtrate: StationId;
 }
 
-/** Reserved — apply heat to a station. */
+/** Implemented — apply heat to a station (may trigger an evaporate transform). */
 export interface HeatAction {
   readonly type: "heat";
   readonly target: StationId;
@@ -52,5 +58,9 @@ export type Action =
 
 export type ActionType = Action["type"];
 
-/** Action types the v2 engine actually runs. The validator guards the rest. */
-export const IMPLEMENTED_ACTIONS: readonly ActionType[] = ["pour"];
+/** Action types the engine actually runs. The validator guards the rest. */
+export const IMPLEMENTED_ACTIONS: readonly ActionType[] = [
+  "pour",
+  "filter",
+  "heat",
+];

@@ -4,6 +4,7 @@ import type { ReactionRule } from "../src/contracts/experiment";
 import { applyAction } from "../src/domain/reaction";
 import { acidBaseExperiment } from "../src/content/acidBase";
 import { metalAcidExperiment } from "../src/content/metalAcid";
+import { saltSandExperiment } from "../src/content/saltSand";
 
 /** A fresh workspace from an experiment's starting stations. */
 function freshWorkspace(stations: Workspace["stations"]): Workspace {
@@ -84,6 +85,103 @@ describe("applyAction — metal + acid", () => {
     );
     expect(result.visibleChange).toBe(false);
     expect(result.emits).toBeUndefined();
+  });
+});
+
+describe("applyAction — filtration (split)", () => {
+  const { rules, chemicals } = saltSandExperiment;
+
+  /** A mixture of dissolved salt + water + suspended sand, plus empty vessels. */
+  function dissolvedWorkspace(): Workspace {
+    return {
+      stations: {
+        mixture: {
+          contents: ["salt", "sand", "water"],
+          color: "#d9d2c0",
+          heat: "room",
+          phase: "solution",
+        },
+        filtrate: { contents: [], color: "#dfe9f5", heat: "room", phase: "empty" },
+        residue: { contents: [], color: "#dfe9f5", heat: "room", phase: "empty" },
+      },
+    };
+  }
+
+  it("routes insoluble sand to the residue and the salt solution to the filtrate", () => {
+    const { workspace, result } = applyAction(
+      dissolvedWorkspace(),
+      { type: "filter", source: "mixture" },
+      rules,
+      chemicals,
+    );
+
+    expect(result.visibleChange).toBe(true);
+
+    // Source emptied.
+    expect(workspace.stations.mixture.contents).toEqual([]);
+    // Insoluble → residue.
+    expect(workspace.stations.residue.contents).toEqual(["sand"]);
+    // Soluble solute + solvent → filtrate.
+    expect(workspace.stations.filtrate.contents).toContain("salt");
+    expect(workspace.stations.filtrate.contents).toContain("water");
+    expect(workspace.stations.filtrate.contents).not.toContain("sand");
+  });
+
+  it("merges into any contents the destination stations already hold", () => {
+    const ws = dissolvedWorkspace();
+    const seeded: Workspace = {
+      stations: {
+        ...ws.stations,
+        residue: { ...ws.stations.residue, contents: ["grit"] },
+      },
+    };
+    const { workspace } = applyAction(
+      seeded,
+      { type: "filter", source: "mixture" },
+      rules,
+      chemicals,
+    );
+    // Existing residue content is kept, not overwritten.
+    expect(workspace.stations.residue.contents).toContain("grit");
+    expect(workspace.stations.residue.contents).toContain("sand");
+  });
+});
+
+describe("applyAction — evaporation", () => {
+  const { rules, chemicals } = saltSandExperiment;
+
+  /** A filtrate of dissolved salt + water, ready to boil down. */
+  function filtrateWorkspace(): Workspace {
+    return {
+      stations: {
+        filtrate: {
+          contents: ["salt", "water"],
+          color: "#d9d2c0",
+          heat: "room",
+          phase: "solution",
+        },
+      },
+    };
+  }
+
+  it("keeps the salt, drives the water off as a vapour emission, and runs hot", () => {
+    const { workspace, result } = applyAction(
+      filtrateWorkspace(),
+      { type: "heat", target: "filtrate" },
+      rules,
+      chemicals,
+    );
+
+    expect(result.visibleChange).toBe(true);
+    expect(result.heat).toBe("hot");
+    expect(result.emits?.map((e) => e.gas)).toEqual(["water-vapour"]);
+
+    const dish = workspace.stations.filtrate;
+    expect(dish.heat).toBe("hot");
+    // Salt left behind; water gone from the liquid (it left as vapour).
+    expect(dish.contents).toEqual(["salt"]);
+    expect(dish.contents).not.toContain("water");
+    expect(dish.contents).not.toContain("water-vapour");
   });
 });
 

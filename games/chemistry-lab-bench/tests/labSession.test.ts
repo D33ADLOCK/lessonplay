@@ -7,6 +7,7 @@ import {
   type LabSessionState,
 } from "../src/domain/labSession";
 import { acidBaseExperiment } from "../src/content/acidBase";
+import { saltSandExperiment } from "../src/content/saltSand";
 
 /** A minimal two-step experiment to exercise multi-step advancement. */
 const twoStep: Experiment = {
@@ -156,6 +157,48 @@ describe("lab session reducer", () => {
     state = reduce(state, next); // complete
     expect(state.phase).toBe("complete");
     expect(currentStep(state)).toBeNull();
+  });
+
+  it("runs the salt+sand separation across stations: pour → filter → heat", () => {
+    let state = createLabSession(saltSandExperiment);
+
+    // Step 1 — pour water into the mixture; salt dissolves (visible change).
+    state = reduce(state, next); // observe
+    state = reduce(state, {
+      type: "perform",
+      action: { type: "pour", reagent: "water", target: "mixture" },
+    });
+    expect(state.result?.visibleChange).toBe(true);
+    expect(state.workspace.stations.mixture.contents).toContain("water");
+    state = reduce(state, next); // explain
+    state = reduce(state, next); // step 2 predict
+
+    // Step 2 — filter the mixture; sand → residue, salt solution → filtrate.
+    state = reduce(state, next); // observe
+    state = reduce(state, {
+      type: "perform",
+      action: { type: "filter", source: "mixture" },
+    });
+    expect(state.result?.visibleChange).toBe(true);
+    expect(state.workspace.stations.residue.contents).toEqual(["sand"]);
+    expect(state.workspace.stations.filtrate.contents).toContain("salt");
+    expect(state.workspace.stations.mixture.contents).toEqual([]);
+    state = reduce(state, next); // explain
+    state = reduce(state, next); // step 3 predict
+
+    // Step 3 — heat the carried-forward filtrate; water leaves, salt remains.
+    state = reduce(state, next); // observe
+    state = reduce(state, {
+      type: "perform",
+      action: { type: "heat", target: "filtrate" },
+    });
+    expect(state.result?.emits?.map((e) => e.gas)).toEqual(["water-vapour"]);
+    expect(state.workspace.stations.filtrate.contents).toEqual(["salt"]);
+    expect(state.workspace.stations.filtrate.heat).toBe("hot");
+
+    state = reduce(state, next); // explain
+    state = reduce(state, next); // complete
+    expect(state.phase).toBe("complete");
   });
 
   it("runs the real acid+base experiment end to end", () => {

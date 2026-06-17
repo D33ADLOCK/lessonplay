@@ -142,6 +142,14 @@ export const saltSandExperiment: Experiment = {
             "Not quite — salt is soluble and does dissolve into the water.",
         },
       ],
+      goal: "Separate the salt from the sand — what's your first move?",
+      hints: {
+        filter:
+          "Nothing to filter yet — the salt and sand are still dry grains. " +
+          "Wet the mixture first so they can come apart.",
+        heat:
+          "Heating the dry mixture won't separate it. Try dissolving it first.",
+      },
       actionPrompt: "Pour the water into the mixture.",
       expect: { type: "pour", reagent: "water", target: "mixture" },
       explanation:
@@ -174,6 +182,15 @@ export const saltSandExperiment: Experiment = {
             "Not quite — more water cannot separate the insoluble sand.",
         },
       ],
+      goal: "The salt's dissolved but the sand isn't. Get the sand out.",
+      hints: {
+        pour:
+          "Adding more water won't remove the sand — you need to separate the " +
+          "solid from the liquid.",
+        heat:
+          "Heating now would boil off the water and leave the sand mixed back " +
+          "in with the salt. Remove the sand first.",
+      },
       actionPrompt: "Filter the mixture to catch the sand.",
       expect: { type: "filter", source: "mixture" },
       explanation:
@@ -206,6 +223,15 @@ export const saltSandExperiment: Experiment = {
             "Not quite — cooling alone will not drive off the water.",
         },
       ],
+      goal: "Now recover the dissolved salt as a solid.",
+      hints: {
+        pour:
+          "Adding water just dilutes the salt further — you need to get the " +
+          "water out, not in.",
+        filter:
+          "The salt is dissolved, so it would pass straight through the filter " +
+          "paper. Filtering can't catch it.",
+      },
       actionPrompt: "Heat the filtrate to recover the salt.",
       expect: { type: "heat", target: "filtrate" },
       explanation:

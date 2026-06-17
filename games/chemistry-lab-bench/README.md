@@ -86,9 +86,17 @@ npm run build
   validator, and the per-step session reducer. No React, no Canvas.
 - `src/content/`: experiments authored as data (`acidBase.ts`, `metalAcid.ts`,
   `saltSand.ts`).
-- `src/scene/`: the Canvas renderer (`draw(ctx, scene, anim, time)`);
-  rendering-only — a row of stations, per-station heat aura + flame + bubbles.
-- `src/ui/`: React presentation wiring the reducer to the renderer and panels.
+- `src/scene/`: the scene's rendering core — a pure geometry module
+  (`layout.ts`, `computeStationLayout`) that is the single source of truth for
+  where each station sits, the **Canvas fluid/energy** renderer
+  (`labRenderer.ts`, `draw(ctx, scene, anim, time)` — liquid, bubbles, flame,
+  pour stream), and the apparatus-shape lookup (`apparatus.ts`).
+- `src/ui/`: React presentation. The stage stacks three layers that share the
+  one logical coordinate space: a static SVG **diorama** behind (`LabDiorama` —
+  wall + bench + calm props), the animated **Canvas** fluid in the middle
+  (`LabCanvas`), and the static SVG **apparatus** in front (`Apparatus` — beaker
+  / funnel + filter paper, captions, heat label, active ring). Because the glass
+  and the liquid are both placed by `computeStationLayout`, they cannot drift.
 
 ## Adding an experiment
 

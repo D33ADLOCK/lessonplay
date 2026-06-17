@@ -19,3 +19,13 @@ curriculum content, the multi-station mobile-first Canvas presentation, and the
 experiment data are original to this project. The original project's
 AS-level chemistry content, exam-marking engine, i18n, PDF export, and DOM/emoji
 UI are not used here.
+
+Assets
+------
+
+All scene artwork — the lab diorama (back wall, bench, shelf, window, wall chart)
+and the SVG apparatus (beakers, funnel and filter paper, sand mound) — is original
+vector art authored for this project and drawn directly in code (no external image
+files). It carries no third-party licence obligations. Should any pre-made
+third-party asset be vendored in future, it will be CC0 (or CC-BY with credit) and
+listed here.

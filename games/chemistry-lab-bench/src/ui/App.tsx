@@ -4,11 +4,14 @@ import { metalAcidExperiment } from "../content/metalAcid";
 import { saltSandExperiment } from "../content/saltSand";
 import type { Chemical } from "../contracts/chemistry";
 import { createLabSession, currentStep, reduce } from "../domain/labSession";
+import { gateTap, hintTargetFor } from "../domain/tapGate";
 import type { Experiment, Step } from "../contracts/experiment";
 import type { LabScene, StationView } from "../scene/labRenderer";
+import { apparatusFor } from "../scene/apparatus";
 import { LabCanvas } from "./LabCanvas";
-import { PredictionPanel } from "./PredictionPanel";
-import { ReagentShelf } from "./ReagentShelf";
+import { Apparatus } from "./Apparatus";
+import { LabDiorama } from "./LabDiorama";
+import { ToolTray } from "./ToolTray";
 
 const SCENE_W = 360;
 const SCENE_H = 360;
@@ -78,6 +81,8 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
   // The reagent whose pour stream is in flight, and any in-flight filter/heat.
   const [pouring, setPouring] = useState<string | null>(null);
   const [busy, setBusy] = useState<"filter" | "heat" | null>(null);
+  // The nudge shown after the student taps a wrong tool (off-family). Resets per step.
+  const [errNudge, setErrNudge] = useState<string | null>(null);
   const actTimer = useRef<number | null>(null);
   useEffect(
     () => () => {
@@ -90,6 +95,17 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
   const step = currentStep(state);
   const activeId = activeStationOf(step);
   const inFlight = Boolean(pouring) || Boolean(busy);
+
+  // The action is the decision: never show a guess screen — auto-advance out of
+  // the predict phase so the student lands straight on the live bench.
+  useEffect(() => {
+    if (state.phase === "predict") dispatch({ type: "advance-phase" });
+  }, [state.phase]);
+
+  // A fresh step clears any lingering wrong-tap nudge (the reducer clears result).
+  useEffect(() => {
+    setErrNudge(null);
+  }, [state.stepIndex]);
 
   /** Run any action after a short animation beat, then resolve it. */
   const runAfter = (action: Parameters<typeof dispatch>[0], delay: number) => {
@@ -119,12 +135,24 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
     runAfter({ type: "perform", action: { type: "heat", target } }, ACT_MS);
   };
 
+  // The step has produced its visible effect — show the merged effect + why panel.
+  const resolved = state.phase === "observe" && Boolean(result?.visibleChange);
+  // Still choosing a move (predict is transient; observe before a visible change).
+  const working = !resolved && state.phase !== "complete";
+  // The student has erred this step (an off-family nudge, or an in-family pour
+  // that the engine judged inert) — the safety-net hint kicks in.
+  const errored = errNudge !== null || Boolean(result && !result.visibleChange);
+  // The cue's secondary line: the wrong-tap nudge, if any.
+  const nudgeText =
+    errNudge ?? (result && !result.visibleChange ? result.observation : null);
+
   const stations: StationView[] = stationOrder.map((id) => {
     const st = state.workspace.stations[id];
     const isActive = id === activeId;
     return {
       id,
       label: titleCase(id),
+      apparatus: apparatusFor(experiment.id, id),
       color: st.color,
       heat: st.heat,
       empty: st.contents.length === 0,
@@ -153,12 +181,41 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
     .filter((c): c is Chemical => Boolean(c));
 
   const stepNumber = Math.min(state.stepIndex + 1, experiment.steps.length);
-  const activeLabel = activeId ? titleCase(activeId) : "beaker";
+
+  // The experiment's full toolkit.
+  const hasFilter = experiment.steps.some((s) => s.expect.type === "filter");
+  const hasHeat = experiment.steps.some((s) => s.expect.type === "heat");
+
+  /** Tapping a tool is the decision: gate it, then run the engine or nudge. */
+  const onTap = (action: "pour" | "filter" | "heat", reagentId?: string) => {
+    if (!step || inFlight) return;
+    const outcome = gateTap(step, action);
+    if (outcome.kind === "nudge") {
+      setErrNudge(outcome.text);
+      return;
+    }
+    setErrNudge(null);
+    if (action === "pour") {
+      startPour(reagentId ?? "", step.expect.target ?? activeId ?? "");
+    } else if (action === "filter" && step.expect.source) {
+      startFilter(step.expect.source);
+    } else if (action === "heat" && step.expect.target) {
+      startHeat(step.expect.target);
+    }
+  };
+
+  /** Resolved → advance across observe → explain → next step in one beat. */
+  const finishStep = () => {
+    dispatch({ type: "advance-phase" });
+    dispatch({ type: "advance-phase" });
+  };
 
   return (
     <>
       <div className="stage">
+        <LabDiorama scene={scene} />
         <LabCanvas scene={scene} target={target} />
+        <Apparatus scene={scene} />
       </div>
 
       {state.phase !== "complete" && step && (
@@ -167,115 +224,55 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
         </p>
       )}
 
-      {state.phase === "predict" && step && (
-        <PredictionPanel
-          prompt={step.predictPrompt}
-          options={step.options}
-          chosen={state.prediction}
-          onChoose={(option) =>
-            dispatch({ type: "submit-prediction", option })
-          }
-          onContinue={() => dispatch({ type: "advance-phase" })}
-        />
-      )}
+      <div className="workbench">
+        {working && step && (
+          <section className="panel cue">
+            <p className="prompt">{step.goal ?? step.actionPrompt}</p>
+            {nudgeText && <p className="observation nudge">{nudgeText}</p>}
+          </section>
+        )}
 
-      {state.phase === "observe" &&
-        step &&
-        (result?.visibleChange ? (
-          <section className="panel">
-            <p className="observation">{result.observation}</p>
-            {result.emits?.map((e) => (
+        {resolved && step && (
+          <section className="panel result">
+            <p className="observation">{result?.observation}</p>
+            {result?.emits?.map((e) => (
               <p key={e.gas} className="emission">
                 {e.observation}
               </p>
             ))}
-            <button
-              className="primary"
-              onClick={() => dispatch({ type: "advance-phase" })}
-            >
-              Why did this happen?
+            <p className="explanation">{result?.explanation ?? step.explanation}</p>
+            <button className="primary" onClick={finishStep}>
+              {state.stepIndex + 1 < experiment.steps.length
+                ? "Next step"
+                : "Finish"}
             </button>
           </section>
-        ) : (
+        )}
+
+        {state.phase === "complete" && (
           <section className="panel">
-            <p className={result ? "observation nudge" : "prompt"}>
-              {result ? result.observation : step.actionPrompt}
+            <h2>Experiment complete</h2>
+            <p className="explanation">
+              Nicely done — you worked through every step. Pick another experiment
+              above to keep exploring.
             </p>
-
-            {step.expect.type === "pour" && (
-              <>
-                <ReagentShelf
-                  reagents={shelf}
-                  selected={state.selectedReagent}
-                  onSelect={(id) =>
-                    dispatch({ type: "select-reagent", reagent: id })
-                  }
-                  disabled={inFlight}
-                />
-                <button
-                  className="primary"
-                  disabled={!state.selectedReagent || inFlight}
-                  onClick={() =>
-                    state.selectedReagent &&
-                    startPour(state.selectedReagent, step.expect.target ?? activeId ?? "")
-                  }
-                >
-                  {pouring ? "Pouring…" : `Pour into the ${activeLabel}`}
-                </button>
-              </>
-            )}
-
-            {step.expect.type === "filter" && (
-              <button
-                className="primary"
-                disabled={inFlight}
-                onClick={() =>
-                  step.expect.source && startFilter(step.expect.source)
-                }
-              >
-                {busy === "filter" ? "Filtering…" : "Filter the mixture"}
-              </button>
-            )}
-
-            {step.expect.type === "heat" && (
-              <button
-                className="primary"
-                disabled={inFlight}
-                onClick={() =>
-                  step.expect.target && startHeat(step.expect.target)
-                }
-              >
-                {busy === "heat" ? "Heating…" : `Heat the ${activeLabel}`}
-              </button>
-            )}
           </section>
-        ))}
+        )}
+      </div>
 
-      {state.phase === "explain" && step && (
-        <section className="panel">
-          <h2>Explanation</h2>
-          <p className="explanation">
-            {result?.explanation ?? step.explanation}
-          </p>
-          <button
-            className="primary"
-            onClick={() => dispatch({ type: "advance-phase" })}
-          >
-            {state.stepIndex + 1 < experiment.steps.length
-              ? "Next step"
-              : "Finish"}
-          </button>
-        </section>
-      )}
-
-      {state.phase === "complete" && (
-        <section className="panel">
-          <h2>Experiment complete</h2>
-          <p className="explanation">
-            Nicely done — you worked through every step. Pick another experiment
-            above to keep exploring.
-          </p>
-        </section>
+      {step && state.phase !== "complete" && (
+        <ToolTray
+          reagents={shelf}
+          hasFilter={hasFilter}
+          hasHeat={hasHeat}
+          hint={errored ? hintTargetFor(step) : null}
+          pendingReagent={pouring}
+          busy={busy}
+          disabled={inFlight || resolved}
+          onPour={(id) => onTap("pour", id)}
+          onFilter={() => onTap("filter")}
+          onHeat={() => onTap("heat")}
+        />
       )}
     </>
   );

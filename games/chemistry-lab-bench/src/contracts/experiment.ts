@@ -123,13 +123,29 @@ export interface ExpectedAction {
 }
 
 /**
- * One guided step: its own Predict → Observe → Explain task, plus the action the
- * student must perform to advance. An experiment is an ordered list of these.
+ * One guided step. The student is dropped at the live bench and must choose the
+ * action that advances it — the *action is the decision*. An experiment is an
+ * ordered list of these.
+ *
+ * `predictPrompt` / `options` are retained as authored data (the validator still
+ * requires options) but are no longer surfaced as a guess screen.
  */
 export interface Step {
   readonly id: string;
   readonly predictPrompt: string;
   readonly options: readonly PredictionOption[];
+  /**
+   * Tool-agnostic cue shown at the bench, naming the *goal* not the tool
+   * ("Get the sand out"). Falls back to `actionPrompt` when absent. Presentation
+   * only — ignored by the engine and validator.
+   */
+  readonly goal?: string;
+  /**
+   * Per-wrong-tool nudge: tapping a tool whose action isn't this step's move
+   * shows the matching message and changes nothing on the bench. Keyed by the
+   * tapped action type. Presentation only — ignored by the engine and validator.
+   */
+  readonly hints?: Partial<Record<ActionType, string>>;
   /** Instruction shown during the Observe phase ("Pour the base into the beaker"). */
   readonly actionPrompt: string;
   readonly expect: ExpectedAction;

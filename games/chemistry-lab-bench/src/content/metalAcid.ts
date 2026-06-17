@@ -99,6 +99,7 @@ export const metalAcidExperiment: Experiment = {
             "Not quite — zinc is above hydrogen in the reactivity series, so it reacts.",
         },
       ],
+      goal: "Get the dilute acid to react with a metal.",
       actionPrompt: "Drop the zinc into the beaker.",
       expect: { type: "pour", reagent: "zinc", target: "beaker" },
       explanation:

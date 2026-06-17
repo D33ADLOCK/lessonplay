@@ -94,6 +94,7 @@ export const acidBaseExperiment: Experiment = {
             "Not quite — a base added to an acid does react. Pour it and see.",
         },
       ],
+      goal: "Neutralise the acid in the beaker.",
       actionPrompt: "Pour the base into the beaker.",
       expect: { type: "pour", reagent: "sodium-hydroxide", target: "beaker" },
       explanation:

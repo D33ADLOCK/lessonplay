@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import {
   PromptInput,
   PromptInputImageButton,
@@ -216,15 +215,7 @@ export function HomeClient() {
 
           {/* Footer */}
           <div className="mt-8 md:mt-16 text-center text-sm text-muted-foreground">
-            <p>
-              Powered by{' '}
-              <Link
-                href="https://v0-sdk.dev"
-                className="text-foreground hover:underline"
-              >
-                v0 SDK
-              </Link>
-            </p>
+            <p>Design and build fun educational mini-games with AI.</p>
           </div>
         </div>
       </div>

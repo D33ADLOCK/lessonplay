@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'v0 Clone',
+  title: 'Game Builder',
   description:
-    'A clone of v0.dev built with the v0 SDK - Generate and preview React components with AI',
+    'Design and build fun, interactive educational mini-games with AI.',
 }
 
 export default function RootLayout({

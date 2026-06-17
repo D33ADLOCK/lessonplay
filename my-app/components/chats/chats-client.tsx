@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 import { AppHeader } from '@/components/shared/app-header'
 import useSWR from 'swr'
 
-interface V0Chat {
+interface ChatSummary {
   id: string
   object: 'chat'
   name?: string
@@ -19,14 +19,14 @@ interface V0Chat {
 
 interface ChatsResponse {
   object: 'list'
-  data: V0Chat[]
+  data: ChatSummary[]
 }
 
 export function ChatsClient() {
   const { data, error, isLoading } = useSWR<ChatsResponse>('/api/chats')
   const chats = data?.data || []
 
-  const getFirstUserMessage = (chat: V0Chat) => {
+  const getFirstUserMessage = (chat: ChatSummary) => {
     const firstUserMessage = chat.messages?.find((msg) => msg.role === 'user')
     return firstUserMessage?.content || 'No messages'
   }

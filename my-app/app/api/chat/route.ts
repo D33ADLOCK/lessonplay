@@ -1,5 +1,4 @@
 import { auth } from '@clerk/nextjs/server'
-import { openai } from '@ai-sdk/openai'
 import {
   convertToModelMessages,
   stepCountIs,
@@ -11,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { SYSTEM_PROMPT } from '@/lib/agent/skills'
 import { createGameTools } from '@/lib/agent/tools'
 import { validateChatRequest } from '@/lib/agent/validate-chat-request'
+import { getModel } from '@/lib/codex-oauth/getModel'
 import { addMessage, createChat, getChat } from '@/lib/db/queries'
 
 export const maxDuration = 300
@@ -65,12 +65,17 @@ export async function POST(request: NextRequest) {
   const tools = createGameTools({ chatId, clerkUserId: userId })
 
   const result = streamText({
-    model: openai('gpt-5.5'),
+    model: await getModel(),
     system: SYSTEM_PROMPT,
     messages: convertToModelMessages(messages),
     tools,
     stopWhen: stepCountIs(16),
     maxOutputTokens: 24000,
+    providerOptions: {
+      openai: {
+        reasoningEffort: 'medium',
+      },
+    },
   })
 
   return result.toUIMessageStreamResponse({

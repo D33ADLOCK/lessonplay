@@ -1,0 +1,38 @@
+{
+  "name": "@learn-loop/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Domain-agnostic 'guided-sim' learning-game engine: the Predict → Observe → Explain loop, a first-match-wins rule engine with declarative transforms, a scenario validator, the session reducer, tap-gating, stage geometry, and (opt-in) React UI shells. Consumed source-only by member games via the workspace; not built to dist or published.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ui": "./src/ui/index.ts",
+    "./ui/styles.css": "./src/ui/sandboxLab.css"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^26.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.7.3",
+    "vitest": "^4.1.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
+  }
+}

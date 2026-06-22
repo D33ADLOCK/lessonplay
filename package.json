@@ -7,6 +7,7 @@
     "packages/*",
     "games/separation-bench",
     "games/mixture-methods-lab",
-    "games/mixture-agent-preview"
+    "games/mixture-agent-preview",
+    "games/pink-point-lab"
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "name": "game-code-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Scoped npm workspace for opt-in guided learning games and the shared @learn-loop/core package. Standalone games keep their own node_modules unless explicitly listed here.",
+  "workspaces": [
+    "packages/*",
+    "games/separation-bench",
+    "games/mixture-methods-lab",
+    "games/mixture-agent-preview"
+  ]
+}

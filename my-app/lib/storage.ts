@@ -31,31 +31,7 @@ function getS3Client() {
   return client
 }
 
-export async function uploadGameHtml({
-  chatId,
-  html,
-}: {
-  chatId: string
-  html: string
-}): Promise<{ url: string; path: string }> {
-  const bucket = process.env.R2_BUCKET_NAME ?? 'animeroom'
-  const s3 = getS3Client()
-  const path = `${chatId}/${nanoid()}.html`
-
-  try {
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: path,
-        Body: html,
-        ContentType: 'text/html',
-      }),
-    )
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    throw new Error(`Failed to upload game HTML to storage: ${message}`)
-  }
-
+function getPublicUrl(path: string) {
   const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL
 
   if (!publicBaseUrl) {
@@ -63,7 +39,51 @@ export async function uploadGameHtml({
   }
 
   const baseUrl = publicBaseUrl.replace(/\/+$/, '')
-  const url = `${baseUrl}/${path}`
+  return `${baseUrl}/${path}`
+}
 
-  return { url, path }
+export async function uploadTextObject({
+  path,
+  body,
+  contentType,
+}: {
+  path: string
+  body: string
+  contentType: string
+}): Promise<{ url: string; path: string }> {
+  const bucket = process.env.R2_BUCKET_NAME ?? 'animeroom'
+  const s3 = getS3Client()
+
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: path,
+        Body: body,
+        ContentType: contentType,
+      }),
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to upload text object to storage: ${message}`)
+  }
+
+  return { url: getPublicUrl(path), path }
+}
+
+export async function uploadGameHtml({
+  chatId,
+  html,
+}: {
+  chatId: string
+  html: string
+}): Promise<{ url: string; path: string }> {
+  const path = `${chatId}/${nanoid()}.html`
+
+  try {
+    return await uploadTextObject({ path, body: html, contentType: 'text/html' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to upload game HTML to storage: ${message}`)
+  }
 }

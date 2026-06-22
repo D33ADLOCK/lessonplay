@@ -20,6 +20,12 @@ This repo ships reusable game-design/build skills ported from
 - `developing-with-crisp-game-lib` — build browser mini-games with crisp-game-lib
 - `evaluating-gameplay-balance` — diagnose and improve balance from telemetry
 - `maximizing-game-feel` — add tactile polish
+- `chapter-to-game` — turn chapter material into a guided-sim, contraption, sort/classify,
+  or arcade game plan/scaffold
+
+Guided-sim chapter games use `@learn-loop/core` with `Scenario` data,
+`GuidedLabMissionPresentation` metadata, and the shared `GuidedLabViewport` 9:16
+template.
 
 They are installed in two mirrored locations so both tools find them:
 

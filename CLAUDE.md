@@ -10,6 +10,23 @@ under `games/<slug>/` and is self-contained (its own `package.json`, source, bui
 - `games/moon-jump-vs-earth-jump/` — React + Vite game comparing Moon vs Earth jump
   physics. Run with `npm install && npm run dev` inside that folder. This game does
   **not** use crisp-game-lib and is **not** subject to the one-button validation gate below.
+- `games/physics-quest-lab-escape/` — "Physics Quest: Lab Escape", a JSON-driven,
+  mission-based physics puzzle game for Class 6–7 (Force & Friction chapter). Vanilla
+  JS + Canvas, no build; run with `npm run dev` (or `python3 -m http.server`) inside the
+  folder. New chapters are added as JSON files under `chapters/` with no engine changes.
+  Also **not** a crisp-game-lib game and **not** subject to the one-button validation gate.
+- `games/physics-forge-rescue-lab/` — a TypeScript + Vite + Matter.js construction
+  puzzle for Class 7. Players build wheeled contraptions, predict their behavior, and
+  rescue a capsule across six physics missions. Run with `npm install && npm run dev`
+  inside the folder. This game is not subject to the one-button validation gate.
+- `games/separation-bench/` — a React + Vite guided-sim game for separation of
+  mixtures. It is an explicit exception to the fully self-contained game rule:
+  it imports the shared `@learn-loop/core` package through the scoped root npm
+  workspace. Run workspace commands from the repo root or `npm install && npm run dev`
+  inside the folder.
+- `games/mixture-methods-lab/` — a React + Vite guided-sim chapter game using
+  `@learn-loop/core` scenarios plus the shared `GuidedLabViewport` 9:16 template.
+  It is also an explicit scoped-workspace consumer.
 
 ## Game-creation skills
 
@@ -25,6 +42,8 @@ for designing and building games, ported from
 | `developing-with-crisp-game-lib` | Implement a browser mini-game with crisp-game-lib. |
 | `evaluating-gameplay-balance` | Diagnose and structurally improve balance from telemetry. |
 | `maximizing-game-feel` | Add tactile polish to a game that runs but feels flat. |
+| `physics-contraption-level-generator` | Convert Class 6–7 physics topics into validated JSON contraption-game levels. |
+| `chapter-to-game` | Convert chapter material into a mechanic choice and scaffolded learning game. |
 
 - **Claude Code** auto-discovers these from `.claude/skills/` (invoke via the Skill tool).
 - **Codex** and other agents should read the `SKILL.md` files under `.agents/skills/`
@@ -64,6 +83,14 @@ The two directories hold identical content; keep them in sync if you edit a skil
 Use `.agents/skills/designing-mini-games/SKILL.md` only when the task explicitly allows
 multiple inputs. Use `.agents/skills/maximizing-game-feel/SKILL.md` after core rules and
 balance are stable, or when visual polish/readability changes could affect play.
+
+## Workflow: create a chapter-to-game learning game
+
+Use `.agents/skills/chapter-to-game/SKILL.md` when starting from an NCERT chapter,
+chapter summary, textbook activity, or target concept. For the guided-sim archetype,
+new games should import `@learn-loop/core`, author `Scenario` data plus
+`GuidedLabMissionPresentation` metadata, and render with `GuidedLabViewport` from
+`@learn-loop/core/ui`. Keep `games/chemistry-lab-bench/` reference-only and untouched.
 
 ## Stable project constraints (one-button crisp-game-lib games)
 

@@ -1,0 +1,171 @@
+import type { SandboxLabMission } from "../../src";
+import { saltSandScenario } from "./saltSand";
+
+export const sandboxSaltSandMission: SandboxLabMission = {
+  scenario: saltSandScenario,
+  presentation: {
+    scenarioId: saltSandScenario.id,
+    badge: "Sandbox separation",
+    question: "How can we get sand and salt apart?",
+    materials: [
+      {
+        id: "mixture",
+        label: "Salt + sand mixture",
+        stationId: "mixture",
+        description: "A dry mixture with soluble salt and insoluble sand.",
+      },
+      {
+        id: "filtrate",
+        label: "Salt water filtrate",
+        stationId: "filtrate",
+      },
+    ],
+    tools: [
+      {
+        id: "add-water",
+        label: "Add water",
+        action: { type: "pour", reagent: "water" },
+      },
+      {
+        id: "filter",
+        label: "Filter",
+        action: { type: "filter" },
+      },
+      {
+        id: "heat",
+        label: "Heat",
+        action: { type: "heat" },
+      },
+      {
+        id: "wait",
+        label: "Wait",
+        action: { type: "wait" },
+      },
+    ],
+    interactions: [
+      {
+        id: "dissolve",
+        materialId: "mixture",
+        toolId: "add-water",
+        evidenceId: "salt-dissolved",
+        feedbackCard: {
+          action: "You added water to the salt and sand.",
+          result: "Salt dissolves into the water. Sand stays as grains.",
+          why: "Water changes the salt, but not the sand.",
+          next: "Now use a filter to catch the solid grains.",
+          notebook: "Water dissolves salt. Sand does not dissolve.",
+        },
+        soundCue: "pour",
+        reactionEffect: "dissolve",
+        effectTags: ["dissolve"],
+      },
+      {
+        id: "sand-residue",
+        materialId: "mixture",
+        toolId: "filter",
+        evidenceId: "sand-residue",
+        feedbackCard: {
+          action: "You filtered the wet mixture.",
+          result: "The filter catches sand. Salt water passes through.",
+          why: "A filter catches insoluble solid pieces.",
+          next: "Heat the salt water to get the salt back.",
+          notebook: "Filtration catches sand while salt water passes through.",
+        },
+        soundCue: "filter",
+        reactionEffect: "filter-residue",
+        effectTags: ["trap-residue", "filter-residue"],
+      },
+      {
+        id: "water-vapour",
+        materialId: "filtrate",
+        toolId: "heat",
+        evidenceId: "salt-crystals",
+        feedbackCard: {
+          action: "You heated the salt water.",
+          result: "Water leaves as vapour. Salt stays behind.",
+          why: "Heating removes the water but not the salt.",
+          next: "Use your evidence to choose the best conclusion.",
+          notebook: "Heating salt water leaves salt crystals behind.",
+        },
+        soundCue: "heat",
+        reactionEffect: "vapour",
+        effectTags: ["distil-vapour", "gas-up-arrow"],
+        gasLabel: "H2O↑",
+      },
+      {
+        id: "wait-no-separation",
+        materialId: "mixture",
+        toolId: "wait",
+        evidenceId: "wait-did-not-separate",
+        feedbackCard: {
+          action: "You waited without adding water.",
+          result: "The dry mixture still has salt and sand together.",
+          why: "Waiting alone does not use a useful property difference.",
+          next: "Try adding water so one solid changes.",
+          notebook: "Waiting alone does not separate dry salt and sand.",
+        },
+        soundCue: "wait",
+        reactionEffect: "settle",
+        observation: "Waiting alone does not separate the dissolved salt from sand.",
+        explanation: "This is useful evidence: a method must exploit a property difference.",
+      },
+    ],
+    stages: [
+      {
+        id: "dissolve",
+        title: "Make only salt change",
+        goal: "Add water and watch which solid dissolves.",
+        materialIds: ["mixture"],
+        toolIds: ["add-water", "wait"],
+        requiredEvidence: ["salt-dissolved"],
+        nextPrompt: "Try water first. Salt can dissolve; sand cannot.",
+      },
+      {
+        id: "filter",
+        title: "Catch the solid",
+        goal: "Use a filter to remove the sand.",
+        materialIds: ["mixture"],
+        toolIds: ["filter"],
+        requiredEvidence: ["sand-residue"],
+        nextPrompt: "Now trap the solid grains with the filter.",
+      },
+      {
+        id: "recover",
+        title: "Get the salt back",
+        goal: "Heat the salt water so water leaves.",
+        materialIds: ["filtrate"],
+        toolIds: ["heat"],
+        requiredEvidence: ["salt-crystals"],
+        nextPrompt: "Heat the liquid that passed through the filter.",
+      },
+    ],
+    conclusions: [
+      {
+        id: "correct",
+        label: "Dissolve salt, filter sand, then evaporate water.",
+        correct: true,
+        requiresEvidence: ["salt-dissolved", "sand-residue", "salt-crystals"],
+        feedback: "Yes. Each tool used a different property to separate the mixture.",
+      },
+      {
+        id: "wait-only",
+        label: "Waiting is enough to separate salt and sand.",
+        correct: false,
+        requiresEvidence: ["wait-did-not-separate"],
+        feedback: "Waiting gave evidence, but it did not complete the separation.",
+      },
+    ],
+    notebook: {
+      goal: "Find a sequence that separates salt from sand and recovers the salt.",
+      hints: ["Try water before filtering.", "Heat the filtrate, not the dry mixture."],
+      explanation:
+        "Salt dissolves in water, sand is trapped by a filter, and dissolved salt returns when water evaporates.",
+    },
+    stationVisuals: [
+      { stationId: "mixture", kind: "beaker", label: "Mixture" },
+      { stationId: "residue", kind: "filter", label: "Residue" },
+      { stationId: "filtrate", kind: "dish", label: "Filtrate" },
+    ],
+    completionMessage: "Salt and sand separated.",
+  },
+};

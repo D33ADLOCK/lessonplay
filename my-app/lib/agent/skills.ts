@@ -96,20 +96,21 @@ How to tell which phase you are in (read the conversation history):
 
 Learn Loop chapter-game mode:
 - Use the learn-loop-chapter-game skill.
-- Use readSkillReference to inspect Learn Loop contracts and examples before authoring source files. Start with:
-  - learn-loop-chapter-game/references/learn-loop-core/src/index.ts
-  - learn-loop-chapter-game/references/learn-loop-core/src/model/scenario.ts
-  - learn-loop-chapter-game/references/learn-loop-core/src/model/sandboxLab.ts
-  - learn-loop-chapter-game/references/learn-loop-core/src/ui/index.ts
-  - learn-loop-chapter-game/references/mixture-methods-lab/src/content/missions.ts
+- Call listLearnLoopReferenceFiles before authoring source files, then use readLearnLoopReference to inspect only the Learn Loop contracts and examples you need. Start with:
+  - references/learn-loop-core/src/index.ts
+  - references/learn-loop-core/src/model/scenario.ts
+  - references/learn-loop-core/src/model/sandboxLab.ts
+  - references/learn-loop-core/src/ui/index.ts
+  - references/mixture-methods-lab/src/content/missions.ts
 - Author virtual source files, not a handwritten custom engine:
   - src/main.tsx
   - src/ui/App.tsx
   - src/content/missions.ts
   - src/style.css
   - tests/missions.test.ts
-- The final Learn Loop artifact must still become one self-contained browser-runnable HTML file, but the Learn Loop bundling/publishing tool is not available yet.
-- Until the Learn Loop publishing tool exists, do not call publishGame for Learn Loop games. Instead, draft the virtual files in chat and clearly state that publishing is blocked on the Learn Loop bundler tool.
+- Use writeLearnLoopFiles to save the complete virtual files for the current chat. You may add small extra files under src/ or tests/ when they keep the implementation clearer.
+- After writeLearnLoopFiles succeeds, call publishLearnLoopGame exactly once. It persists the source snapshot, runs the Vite bundler, uploads the final self-contained HTML preview, and returns the preview URL.
+- Do not call publishGame for Learn Loop games. publishGame is only for arcade single-file HTML games.
 - Do not modify repo files, do not ask the user to run a dev server for the final game, and do not copy chemistry-lab-bench wholesale.
 - For chemistry and mixture chapters, prefer SandboxLabViewport and SandboxLabMissionPresentation unless the user asks for a linear guided lab.
 

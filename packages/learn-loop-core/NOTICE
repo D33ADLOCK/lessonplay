@@ -1,0 +1,22 @@
+@learn-loop/core
+================
+
+The rule-engine pattern and declarative rule schema in this package
+(src/engine/applyAction.ts, src/model/scenario.ts) are adapted to TypeScript from
+the MIT-licensed project:
+
+    chem_lab — https://github.com/nsriram/chem_lab
+    Copyright (c) nsriram, MIT License
+
+Only the engine pattern (a first-match-wins rule registry resolving an action
+against a station's contents into a result) and the rule-schema shape were ported.
+This package generalises and de-chemistry's that core into a domain-agnostic
+"guided-sim" engine — a workspace of named stations holding entities, an
+action/transform vocabulary (react / split / evaporate / distil), the per-step
+Predict → Observe → Explain session loop, tap-gating, and stage geometry. That
+generalisation, the neutral model (Scenario / Entity / Rule / StepResult), and the
+React UI shells are original to this project.
+
+Design lineage: this package was authored fresh, informed by the shipped
+chemistry-lab-bench game in this repository (which carries its own NOTICE). No code
+was extracted by modifying that game; it was left untouched as a reference.

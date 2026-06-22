@@ -30,6 +30,28 @@ button {
   font: inherit;
 }
 
+.mixture-template-app {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 12px;
+  background:
+    linear-gradient(145deg, rgba(53, 74, 86, 0.85), rgba(15, 22, 30, 0.98)),
+    #111820;
+}
+
+.mixture-template-app .learn-loop-template {
+  width: min(100%, 430px);
+  max-height: calc(100dvh - 24px);
+  min-height: 0;
+  height: min(calc(100dvh - 24px), calc((100vw - 24px) * 16 / 9));
+  border-radius: 8px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.38);
+}
+
 .guided-lab-app {
   width: 100vw;
   height: 100dvh;

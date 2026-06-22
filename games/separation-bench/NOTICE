@@ -1,0 +1,31 @@
+Chemistry Lab Bench
+===================
+
+The reaction-engine pattern and declarative reaction-rule schema in this game
+(src/domain/reaction.ts, src/contracts/experiment.ts) are adapted to TypeScript
+from the MIT-licensed project:
+
+    chem_lab — https://github.com/nsriram/chem_lab
+    Copyright (c) nsriram, MIT License
+
+Only the engine pattern (first-match-wins rule registry resolving an action
+against contents into a result) and the rule-schema shape were ported. The engine
+was generalised to transform a workspace of named stations — consuming reagents,
+producing persistent products, emitting gas, setting a named heat level, and
+(in the separation toolkit) routing a station's contents by solubility for
+filtration and boiling a solution down by evaporation; that generalisation, the
+action/transform vocabulary, the per-step guided flow, the NCERT Class 9
+curriculum content, the multi-station mobile-first Canvas presentation, and the
+experiment data are original to this project. The original project's
+AS-level chemistry content, exam-marking engine, i18n, PDF export, and DOM/emoji
+UI are not used here.
+
+Assets
+------
+
+All scene artwork — the lab diorama (back wall, bench, shelf, window, wall chart)
+and the SVG apparatus (beakers, funnel and filter paper, sand mound) — is original
+vector art authored for this project and drawn directly in code (no external image
+files). It carries no third-party licence obligations. Should any pre-made
+third-party asset be vendored in future, it will be CC0 (or CC-BY with credit) and
+listed here.

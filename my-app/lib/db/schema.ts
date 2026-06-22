@@ -9,6 +9,9 @@ export const chats = pgTable(
     title: varchar('title', { length: 255 }),
     latest_html: text('latest_html'),
     demo_url: text('demo_url'),
+    source_snapshot_id: text('source_snapshot_id'),
+    source_manifest_key: text('source_manifest_key'),
+    source_manifest_url: text('source_manifest_url'),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at')
       .notNull()
@@ -54,6 +57,9 @@ export const game_versions = pgTable(
     title: varchar('title', { length: 255 }).notNull(),
     html: text('html').notNull(),
     demo_url: text('demo_url'),
+    source_snapshot_id: text('source_snapshot_id'),
+    source_manifest_key: text('source_manifest_key'),
+    source_manifest_url: text('source_manifest_url'),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => ({

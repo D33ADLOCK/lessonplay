@@ -1,0 +1,445 @@
+.sandbox-lab-app {
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.sandbox-lab-frame {
+  position: relative;
+  width: min(100vw, calc(100dvh * 9 / 16));
+  height: min(100dvh, calc(100vw * 16 / 9));
+  max-width: 430px;
+  max-height: 100dvh;
+  display: grid;
+  grid-template-rows: 74px 58px minmax(0, 1fr) 116px 76px 20px;
+  gap: 8px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.sandbox-lab-hud,
+.sandbox-objective-card,
+.sandbox-observation-card {
+  min-width: 0;
+  border-radius: 8px;
+}
+
+.sandbox-lab-hud {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.sandbox-title-block {
+  min-width: 0;
+}
+
+.sandbox-lab-hud h1,
+.sandbox-objective-card h2,
+.sandbox-observation-card h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sandbox-icon-button {
+  width: 54px;
+  min-width: 54px;
+  height: 54px;
+  border-radius: 8px;
+}
+
+.sandbox-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border: 0;
+  background: rgba(13, 20, 24, 0.28);
+}
+
+.sandbox-overlay-panel {
+  position: absolute;
+  z-index: 40;
+}
+
+.sandbox-overlay-panel[hidden],
+.sandbox-mission-drawer[hidden] {
+  display: none !important;
+}
+
+.sandbox-briefing-modal,
+.sandbox-feedback-card,
+.notebook-panel {
+  left: 18px;
+  right: 18px;
+  top: 92px;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.sandbox-mission-drawer {
+  top: 76px;
+  bottom: 12px;
+  left: 10px;
+  width: min(310px, calc(100% - 20px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border-radius: 8px;
+}
+
+.drawer-list {
+  min-height: 0;
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.drawer-list button {
+  min-width: 0;
+  min-height: 48px;
+  border-radius: 8px;
+}
+
+.sandbox-objective-card,
+.sandbox-observation-card {
+  display: grid;
+  align-content: center;
+}
+
+.sandbox-objective-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.stage.sandbox-lab-stage {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.sandbox-lab-scene,
+.sandbox-effect-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.sandbox-lab-wall {
+  position: absolute;
+  inset: 0 0 42%;
+}
+
+.sandbox-lab-bench {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: 0;
+  height: 48%;
+}
+
+.sandbox-station-row {
+  position: absolute;
+  inset: 16px 18px 14px;
+  display: flex;
+  gap: 7px;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sandbox-station {
+  min-width: 0;
+  flex: 1 1 0;
+  max-width: 224px;
+  min-height: 218px;
+  display: grid;
+  grid-template-rows: minmax(138px, 1fr) auto auto;
+  gap: 4px;
+  align-items: end;
+  padding: 7px 5px;
+  border-radius: 8px;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.sandbox-station.active {
+  transform: translateY(-5px);
+}
+
+.sandbox-apparatus {
+  position: relative;
+  width: min(116px, 94%);
+  height: 156px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 3px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 24px 24px;
+}
+
+.station-beaker .sandbox-apparatus,
+.station-dish .sandbox-apparatus,
+.station-evaporating-dish .sandbox-apparatus {
+  height: 128px;
+  border-top: 3px solid currentColor;
+  border-radius: 10px 10px 24px 24px;
+}
+
+.station-dish .sandbox-apparatus,
+.station-evaporating-dish .sandbox-apparatus {
+  height: 88px;
+}
+
+.station-evaporating-dish .sandbox-apparatus {
+  border-radius: 999px 999px 28px 28px;
+}
+
+.station-filter .sandbox-apparatus {
+  border: 0;
+  background:
+    linear-gradient(150deg, transparent 0 30%, rgba(255, 255, 255, 0.86) 31% 69%, transparent 70%),
+    linear-gradient(180deg, transparent 0 62%, currentColor 63% 67%, transparent 68%);
+}
+
+.station-distillation .sandbox-apparatus {
+  border-top: 3px solid currentColor;
+  border-radius: 36px 36px 22px 22px;
+}
+
+.station-condenser .sandbox-apparatus {
+  height: 72px;
+  border: 3px solid currentColor;
+  border-radius: 999px;
+}
+
+.station-burner .sandbox-apparatus {
+  height: 92px;
+  border: 0;
+  border-radius: 0;
+}
+
+.station-burner .sandbox-apparatus::before {
+  content: "";
+  position: absolute;
+  left: 23%;
+  right: 23%;
+  bottom: 0;
+  height: 34px;
+  border-radius: 6px 6px 3px 3px;
+  background: currentColor;
+}
+
+.station-paper .sandbox-apparatus {
+  border: 2px solid currentColor;
+  border-radius: 5px;
+}
+
+.station-receiver .sandbox-apparatus {
+  height: 82px;
+}
+
+.station-magnet .sandbox-apparatus {
+  height: 96px;
+  border-width: 12px;
+  border-top: 0;
+  border-radius: 0 0 42px 42px;
+}
+
+.sandbox-liquid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 62%;
+  opacity: 0.9;
+}
+
+.phase-empty .sandbox-liquid {
+  height: 10%;
+  opacity: 0.18;
+}
+
+.phase-solid .sandbox-liquid {
+  height: 34%;
+}
+
+.sandbox-heat,
+.effect-distil-vapour .sandbox-apparatus::after,
+.effect-gas-bubbles .sandbox-apparatus::after,
+.effect-vapour .sandbox-apparatus::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 20%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    -20px -18px 0 rgba(255, 255, 255, 0.5),
+    18px -34px 0 rgba(255, 255, 255, 0.42);
+  animation: sandbox-rise 900ms ease-in-out infinite alternate;
+}
+
+.effect-scatter-light .sandbox-apparatus::before {
+  content: "";
+  position: absolute;
+  inset: 34% -20%;
+  height: 10px;
+  transform: rotate(-8deg);
+}
+
+.effect-settle-particles .sandbox-liquid::after,
+.effect-settle .sandbox-liquid::after,
+.effect-trap-residue .sandbox-apparatus::before,
+.effect-filter-residue .sandbox-apparatus::before,
+.effect-grow-crystals .sandbox-liquid::after,
+.effect-crystals .sandbox-liquid::after,
+.effect-chromatography-bands .sandbox-apparatus::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 8px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.effect-grow-crystals .sandbox-liquid::after,
+.effect-crystals .sandbox-liquid::after {
+  height: 18px;
+  background:
+    linear-gradient(135deg, transparent 0 45%, #167abc 46% 55%, transparent 56%),
+    linear-gradient(45deg, transparent 0 45%, #2d9cdb 46% 55%, transparent 56%);
+}
+
+.effect-dissolve .sandbox-liquid::before {
+  content: "";
+  position: absolute;
+  inset: 14% 18% 18%;
+  border-radius: 50%;
+  animation: sandbox-dissolve 850ms ease-in-out infinite alternate;
+}
+
+.effect-heat .sandbox-apparatus,
+.station-burner .sandbox-apparatus::after {
+  box-shadow:
+    0 0 0 4px rgba(224, 104, 55, 0.16),
+    0 12px 18px rgba(159, 70, 30, 0.18);
+}
+
+.effect-color-change .sandbox-liquid {
+  animation: sandbox-color-pulse 850ms ease-in-out infinite alternate;
+}
+
+.effect-magnetic-pull .sandbox-liquid::after {
+  content: "";
+  position: absolute;
+  inset: auto 18% 14px;
+  height: 10px;
+  border-radius: 999px;
+  animation: sandbox-magnetic-pull 800ms ease-in-out infinite alternate;
+}
+
+.effect-chromatography-bands .sandbox-apparatus::before {
+  inset: 18px 16px auto;
+  height: 70px;
+  border-radius: 0;
+}
+
+.gas-marker {
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  border-radius: 999px;
+  animation: sandbox-gas 900ms ease both;
+}
+
+.sandbox-station strong,
+.sandbox-station small {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sandbox-material-strip,
+.sandbox-tool-dock {
+  min-width: 0;
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.sandbox-tool-dock {
+  align-items: stretch;
+}
+
+.sandbox-tool-dock button {
+  min-width: 82px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+}
+
+.sandbox-material-strip::-webkit-scrollbar,
+.sandbox-tool-dock::-webkit-scrollbar,
+.sandbox-conclusion-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.sandbox-conclusion-strip {
+  position: absolute;
+  z-index: 6;
+  right: 9px;
+  bottom: 9px;
+  left: 9px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border-radius: 8px;
+}
+
+@keyframes sandbox-rise {
+  from { transform: translate(-50%, 6px); }
+  to { transform: translate(-50%, -8px); }
+}
+
+@keyframes sandbox-gas {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 28px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -8px);
+  }
+}
+
+@keyframes sandbox-dissolve {
+  from { transform: translateY(5px) rotate(-6deg); opacity: 0.55; }
+  to { transform: translateY(-5px) rotate(6deg); opacity: 0.95; }
+}
+
+@keyframes sandbox-color-pulse {
+  from { filter: saturate(0.8); }
+  to { filter: saturate(1.4) brightness(1.08); }
+}
+
+@keyframes sandbox-magnetic-pull {
+  from { transform: translateX(-12px); }
+  to { transform: translateX(12px); }
+}

@@ -217,12 +217,18 @@ export async function addGameVersion({
   title,
   html,
   demoUrl,
+  sourceSnapshotId,
+  sourceManifestKey,
+  sourceManifestUrl,
 }: {
   chatId: string
   clerkUserId: string
   title: string
   html: string
   demoUrl?: string | null
+  sourceSnapshotId?: string | null
+  sourceManifestKey?: string | null
+  sourceManifestUrl?: string | null
 }) {
   try {
     const chat = await getChat({ id: chatId, clerkUserId })
@@ -238,6 +244,9 @@ export async function addGameVersion({
         title,
         html,
         ...(demoUrl !== undefined ? { demo_url: demoUrl } : {}),
+        ...(sourceSnapshotId !== undefined ? { source_snapshot_id: sourceSnapshotId } : {}),
+        ...(sourceManifestKey !== undefined ? { source_manifest_key: sourceManifestKey } : {}),
+        ...(sourceManifestUrl !== undefined ? { source_manifest_url: sourceManifestUrl } : {}),
       })
       .returning()
 
@@ -247,11 +256,22 @@ export async function addGameVersion({
         title,
         latest_html: html,
         ...(demoUrl !== undefined ? { demo_url: demoUrl } : {}),
+        ...(sourceSnapshotId !== undefined ? { source_snapshot_id: sourceSnapshotId } : {}),
+        ...(sourceManifestKey !== undefined ? { source_manifest_key: sourceManifestKey } : {}),
+        ...(sourceManifestUrl !== undefined ? { source_manifest_url: sourceManifestUrl } : {}),
         updated_at: new Date(),
       })
       .where(eq(chats.id, chatId))
 
-    return version ? { ...version, demoUrl: version.demo_url } : version
+    return version
+      ? {
+          ...version,
+          demoUrl: version.demo_url,
+          sourceSnapshotId: version.source_snapshot_id,
+          sourceManifestKey: version.source_manifest_key,
+          sourceManifestUrl: version.source_manifest_url,
+        }
+      : version
   } catch (error) {
     console.error('Failed to add game version to database')
     throw error
@@ -287,7 +307,15 @@ export async function setGameVersionDemoUrl({
       .set({ demo_url: demoUrl })
       .where(eq(chats.id, chatId))
 
-    return version ? { ...version, demoUrl: version.demo_url } : version
+    return version
+      ? {
+          ...version,
+          demoUrl: version.demo_url,
+          sourceSnapshotId: version.source_snapshot_id,
+          sourceManifestKey: version.source_manifest_key,
+          sourceManifestUrl: version.source_manifest_url,
+        }
+      : version
   } catch (error) {
     console.error('Failed to update game version demo URL in database')
     throw error
@@ -315,7 +343,15 @@ export async function getLatestGameVersion({
       .orderBy(desc(game_versions.created_at))
       .limit(1)
 
-    return version ? { ...version, demoUrl: version.demo_url } : version
+    return version
+      ? {
+          ...version,
+          demoUrl: version.demo_url,
+          sourceSnapshotId: version.source_snapshot_id,
+          sourceManifestKey: version.source_manifest_key,
+          sourceManifestUrl: version.source_manifest_url,
+        }
+      : version
   } catch (error) {
     console.error('Failed to get latest game version from database')
     throw error

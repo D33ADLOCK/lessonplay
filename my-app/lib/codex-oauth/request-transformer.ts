@@ -38,7 +38,7 @@ export function sanitizeCodexInput(input: unknown) {
     return input;
   }
 
-  return input.flatMap((item) => {
+  const sanitizedItems = input.flatMap((item) => {
     if (!isJsonObject(item)) {
       return [item];
     }
@@ -47,8 +47,31 @@ export function sanitizeCodexInput(input: unknown) {
       return [];
     }
 
+    if (item.type !== "message") {
+      return [item];
+    }
+
     const { id: _id, ...itemWithoutId } = item;
     return [itemWithoutId];
+  });
+
+  const functionCallIds = new Set(
+    sanitizedItems
+      .filter(
+        (item): item is JsonObject =>
+          isJsonObject(item) &&
+          item.type === "function_call" &&
+          typeof item.call_id === "string",
+      )
+      .map((item) => item.call_id as string),
+  );
+
+  return sanitizedItems.filter((item) => {
+    if (!isJsonObject(item) || item.type !== "function_call_output") {
+      return true;
+    }
+
+    return typeof item.call_id === "string" && functionCallIds.has(item.call_id);
   });
 }
 

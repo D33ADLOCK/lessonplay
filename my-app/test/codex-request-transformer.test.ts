@@ -52,16 +52,62 @@ describe("transformCodexRequestBody", () => {
 });
 
 describe("sanitizeCodexInput", () => {
-  it("strips top-level item IDs and removes item references", () => {
+  it("strips message IDs and removes item references for store false requests", () => {
     const input = [
       { id: "msg_1", type: "message", role: "user", content: "hello" },
       { id: "ref_1", type: "item_reference" },
-      { id: "tool_1", type: "function_call", call_id: "call_abc" },
+      { type: "item_reference" },
+      { id: "reasoning_1", type: "reasoning", encrypted_content: "encrypted" },
     ];
 
     expect(sanitizeCodexInput(input)).toEqual([
       { type: "message", role: "user", content: "hello" },
-      { type: "function_call", call_id: "call_abc" },
+      { id: "reasoning_1", type: "reasoning", encrypted_content: "encrypted" },
     ]);
+  });
+
+  it("preserves paired function calls and outputs", () => {
+    const input = [
+      {
+        id: "tool_1",
+        type: "function_call",
+        call_id: "call_abc",
+        name: "readLearnLoopReference",
+      },
+      {
+        id: "output_1",
+        type: "function_call_output",
+        call_id: "call_abc",
+        output: "done",
+      },
+    ];
+
+    expect(sanitizeCodexInput(input)).toEqual([
+      {
+        id: "tool_1",
+        type: "function_call",
+        call_id: "call_abc",
+        name: "readLearnLoopReference",
+      },
+      {
+        id: "output_1",
+        type: "function_call_output",
+        call_id: "call_abc",
+        output: "done",
+      },
+    ]);
+  });
+
+  it("drops orphaned function call outputs", () => {
+    const input = [
+      {
+        id: "output_1",
+        type: "function_call_output",
+        call_id: "call_missing",
+        output: "done",
+      },
+    ];
+
+    expect(sanitizeCodexInput(input)).toEqual([]);
   });
 });

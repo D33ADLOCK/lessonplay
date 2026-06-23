@@ -98,12 +98,35 @@ describe("sanitizeCodexInput", () => {
     ]);
   });
 
-  it("drops orphaned function call outputs", () => {
+  it("converts orphaned function call outputs into model-visible context", () => {
     const input = [
       {
         id: "output_1",
         type: "function_call_output",
         call_id: "call_missing",
+        output: "done",
+      },
+    ];
+
+    expect(sanitizeCodexInput(input)).toEqual([
+      {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "Tool result for call_missing:\ndone",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("drops malformed function call outputs without call IDs", () => {
+    const input = [
+      {
+        id: "output_1",
+        type: "function_call_output",
         output: "done",
       },
     ];

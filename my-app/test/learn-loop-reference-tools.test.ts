@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  listChemQuestReferenceFiles,
   listLearnLoopReferenceFiles,
+  readChemQuestReferenceFile,
   readLearnLoopReferenceFile,
 } from '@/lib/agent/tools'
 
@@ -43,6 +45,50 @@ describe('Learn Loop reference tools', () => {
   it('returns a clear error for missing files', async () => {
     await expect(readLearnLoopReferenceFile('missing-file.md')).rejects.toThrow(
       /Learn Loop reference file not found: missing-file\.md/,
+    )
+  })
+})
+
+describe('ChemQuest reference tools', () => {
+  it('lists ChemQuest skill and reference files with stable relative paths', async () => {
+    const files = await listChemQuestReferenceFiles()
+
+    expect(files).toContain('SKILL.md')
+    expect(files).toContain('references/template-contract.md')
+    expect(files).toContain('references/scenario-contract.md')
+    expect(files).toContain('references/presentation-contract.md')
+    expect(files).toContain('references/implementation-pattern.md')
+    expect(files).toContain('references/validation-checklist.md')
+    expect(files).toEqual([...files].sort())
+  })
+
+  it('reads the ChemQuest skill file', async () => {
+    await expect(readChemQuestReferenceFile('SKILL.md')).resolves.toContain(
+      '# ChemQuest Lab Game',
+    )
+  })
+
+  it('reads ChemQuest reference files', async () => {
+    await expect(
+      readChemQuestReferenceFile('references/template-contract.md'),
+    ).resolves.toContain('ChemQuest Lab Template Contract')
+  })
+
+  it('rejects absolute ChemQuest paths', async () => {
+    await expect(readChemQuestReferenceFile('/tmp/secret.txt')).rejects.toThrow(
+      /path must be relative/,
+    )
+  })
+
+  it('rejects paths that escape the ChemQuest reference root', async () => {
+    await expect(
+      readChemQuestReferenceFile('../learn-loop-chapter-game/SKILL.md'),
+    ).rejects.toThrow(/escapes the allowed directory/)
+  })
+
+  it('returns a clear error for missing ChemQuest files', async () => {
+    await expect(readChemQuestReferenceFile('missing-file.md')).rejects.toThrow(
+      /ChemQuest reference file not found: missing-file\.md/,
     )
   })
 })

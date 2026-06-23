@@ -69,6 +69,53 @@ describe('bundleLearnLoopDraft', () => {
     await expect(listTempLearnLoopBuildDirs(tempParentDir)).resolves.toEqual([])
   })
 
+  it('bundles drafts that import the Learn Loop template package and styles', async () => {
+    writeLearnLoopDraftFiles({
+      chatId: CHAT_ID,
+      files: [
+        {
+          path: 'src/main.tsx',
+          content: `
+            import React from 'react'
+            import { createRoot } from 'react-dom/client'
+            import {
+              LEARN_LOOP_TEMPLATE_PALETTES,
+              normalizeLearnLoopTemplateConfig,
+            } from '@learn-loop/template'
+            import '@learn-loop/template/styles.css'
+
+            const { config } = normalizeLearnLoopTemplateConfig({
+              theme: { palette: 'clean-lab', accent: 'green' },
+            })
+
+            function App() {
+              return (
+                <main className="template-test">
+                  {LEARN_LOOP_TEMPLATE_PALETTES[0]}:{config.theme.accent}
+                </main>
+              )
+            }
+
+            createRoot(document.getElementById('root')!).render(<App />)
+          `,
+        },
+      ],
+    })
+
+    const html = await bundleLearnLoopDraft({
+      chatId: CHAT_ID,
+      title: 'ChemQuest Alias Test',
+      tempParentDir,
+    })
+
+    expect(html).toContain('<title>ChemQuest Alias Test</title>')
+    expect(html).toContain('clean-lab')
+    expect(html).toContain('learn-loop-template')
+    expect(html).not.toMatch(/src="\/assets\//)
+    expect(html).not.toMatch(/href="\/assets\//)
+    await expect(listTempLearnLoopBuildDirs(tempParentDir)).resolves.toEqual([])
+  })
+
   it('cleans up the temp build directory when Vite fails', async () => {
     writeLearnLoopDraftFiles({
       chatId: CHAT_ID,

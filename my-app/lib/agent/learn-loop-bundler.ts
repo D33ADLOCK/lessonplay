@@ -178,6 +178,7 @@ export async function bundleLearnLoopDraft({
 
   const workspaceRoot = findWorkspaceRoot()
   const learnLoopCoreRoot = path.join(workspaceRoot, 'packages', 'learn-loop-core')
+  const learnLoopTemplateRoot = path.join(workspaceRoot, 'packages', 'learn-loop-template')
   const tempDir = await realpath(await mkdtemp(path.join(tempParentDir, 'learn-loop-build-')))
   const distDir = path.join(tempDir, 'dist')
 
@@ -206,6 +207,14 @@ export async function bundleLearnLoopDraft({
             {
               find: '@learn-loop/core/ui/styles.css',
               replacement: path.join(learnLoopCoreRoot, 'src', 'ui', 'sandboxLab.css'),
+            },
+            {
+              find: '@learn-loop/template/styles.css',
+              replacement: path.join(learnLoopTemplateRoot, 'src', 'styles.css'),
+            },
+            {
+              find: '@learn-loop/template',
+              replacement: path.join(learnLoopTemplateRoot, 'src', 'index.ts'),
             },
             {
               find: '@learn-loop/core/ui',

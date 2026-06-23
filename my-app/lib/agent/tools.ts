@@ -18,6 +18,7 @@ import { persistLearnLoopSourceDraft } from './learn-loop-source-persistence'
 import { SKILLS_DIR } from './skills'
 
 const LEARN_LOOP_REFERENCE_DIR = path.join(SKILLS_DIR, 'learn-loop-chapter-game')
+const CHEMQUEST_REFERENCE_DIR = path.join(SKILLS_DIR, 'chemquest-lab-game')
 const EXCLUDED_REFERENCE_DIRS = new Set(['node_modules', 'dist', '.git'])
 
 async function resolveSafeFile(rootDir: string, relativePath: string, label: string) {
@@ -52,7 +53,15 @@ function shouldSkipReferenceEntry(entryName: string) {
 }
 
 export async function listLearnLoopReferenceFiles() {
-  const root = await realpath(LEARN_LOOP_REFERENCE_DIR)
+  return listReferenceFiles(LEARN_LOOP_REFERENCE_DIR)
+}
+
+export async function listChemQuestReferenceFiles() {
+  return listReferenceFiles(CHEMQUEST_REFERENCE_DIR)
+}
+
+async function listReferenceFiles(referenceDir: string) {
+  const root = await realpath(referenceDir)
   const files: string[] = []
 
   async function walk(currentDir: string) {
@@ -84,17 +93,37 @@ export async function listLearnLoopReferenceFiles() {
 }
 
 export async function readLearnLoopReferenceFile(relativePath: string) {
+  return readReferenceFile({
+    rootDir: LEARN_LOOP_REFERENCE_DIR,
+    relativePath,
+    label: 'Learn Loop reference',
+  })
+}
+
+export async function readChemQuestReferenceFile(relativePath: string) {
+  return readReferenceFile({
+    rootDir: CHEMQUEST_REFERENCE_DIR,
+    relativePath,
+    label: 'ChemQuest reference',
+  })
+}
+
+async function readReferenceFile({
+  rootDir,
+  relativePath,
+  label,
+}: {
+  rootDir: string
+  relativePath: string
+  label: string
+}) {
   try {
-    const resolvedPath = await resolveSafeFile(
-      LEARN_LOOP_REFERENCE_DIR,
-      relativePath,
-      'Learn Loop reference',
-    )
+    const resolvedPath = await resolveSafeFile(rootDir, relativePath, label)
 
     return await readFile(resolvedPath, 'utf8')
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      throw new Error(`Learn Loop reference file not found: ${relativePath}`)
+      throw new Error(`${label} file not found: ${relativePath}`)
     }
 
     throw error
@@ -145,6 +174,29 @@ export function createGameTools({
       }),
       execute: async ({ path: referencePath }: { path: string }) => {
         return readLearnLoopReferenceFile(referencePath)
+      },
+    },
+    listChemQuestReferenceFiles: {
+      description:
+        'List ChemQuest Lab skill and reference files available to read.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        return { files: await listChemQuestReferenceFiles() }
+      },
+    },
+    readChemQuestReference: {
+      description:
+        'Read a ChemQuest Lab skill or reference file by path relative to my-app/skills/chemquest-lab-game.',
+      inputSchema: z.object({
+        path: z
+          .string()
+          .min(1)
+          .describe(
+            'Path relative to chemquest-lab-game, for example references/template-contract.md',
+          ),
+      }),
+      execute: async ({ path: referencePath }: { path: string }) => {
+        return readChemQuestReferenceFile(referencePath)
       },
     },
     writeLearnLoopFiles: {

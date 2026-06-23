@@ -6,16 +6,8 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { Menu, X, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { GitHubIcon, VercelIcon } from '@/components/ui/icons'
-import { DEPLOY_URL } from '@/lib/constants'
 import { ChatSelector } from './chat-selector'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { OpenAIConnectButton } from './openai-connect-button'
 
 interface MobileMenuProps {
   onInfoDialogOpen: () => void
@@ -129,6 +121,8 @@ export function MobileMenu({ onInfoDialogOpen }: MobileMenuProps) {
 
                 {/* Menu items */}
                 <div className="space-y-2">
+                  <OpenAIConnectButton variant="menu" onAction={closeMenu} />
+
                   <Button
                     variant="ghost"
                     className="w-full justify-start h-auto p-3 text-left"
@@ -142,56 +136,10 @@ export function MobileMenu({ onInfoDialogOpen }: MobileMenuProps) {
                       <div className="flex-1">
                         <div className="font-medium">What's This?</div>
                         <div className="text-sm text-muted-foreground">
-                          Learn about v0 Clone
+                          Learn about Game Builder
                         </div>
                       </div>
                     </div>
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start h-auto p-3 text-left"
-                    asChild
-                  >
-                    <Link
-                      href="https://github.com/vercel/v0-sdk"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={closeMenu}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <GitHubIcon size={16} />
-                        <div className="flex-1">
-                          <div className="font-medium">GitHub</div>
-                          <div className="text-sm text-muted-foreground">
-                            vercel/v0-sdk
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start h-auto p-3 text-left"
-                    asChild
-                  >
-                    <Link
-                      href={DEPLOY_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={closeMenu}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <VercelIcon size={16} />
-                        <div className="flex-1">
-                          <div className="font-medium">Deploy with Vercel</div>
-                          <div className="text-sm text-muted-foreground">
-                            Get your own v0 clone
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
                   </Button>
                 </div>
               </div>

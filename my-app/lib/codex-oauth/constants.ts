@@ -1,0 +1,4 @@
+export const CODEX_CALLBACK_PORT = 1455;
+export const CODEX_CALLBACK_PATH = "/auth/callback";
+export const CODEX_CALLBACK_ORIGIN = `http://localhost:${CODEX_CALLBACK_PORT}`;
+export const CODEX_CALLBACK_REDIRECT_URI = `${CODEX_CALLBACK_ORIGIN}${CODEX_CALLBACK_PATH}`;

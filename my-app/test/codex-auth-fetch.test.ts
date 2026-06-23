@@ -49,6 +49,12 @@ describe("codexAuthFetch", () => {
             call_id: "call_abc",
             output: "done",
           },
+          {
+            id: "output_2",
+            type: "function_call_output",
+            call_id: "call_missing",
+            output: "orphan result",
+          },
         ],
       }),
     });
@@ -77,6 +83,16 @@ describe("codexAuthFetch", () => {
           type: "function_call_output",
           call_id: "call_abc",
           output: "done",
+        },
+        {
+          type: "message",
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: "Tool result for call_missing:\norphan result",
+            },
+          ],
         },
       ],
     });

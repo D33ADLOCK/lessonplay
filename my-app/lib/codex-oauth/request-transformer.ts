@@ -6,6 +6,34 @@ function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function stringifyToolOutput(output: unknown) {
+  if (typeof output === "string") {
+    return output;
+  }
+
+  try {
+    return JSON.stringify(output);
+  } catch {
+    return String(output);
+  }
+}
+
+function createToolOutputContextMessage(item: JsonObject) {
+  const callId = typeof item.call_id === "string" ? item.call_id : "unknown";
+  const output = stringifyToolOutput(item.output);
+
+  return {
+    type: "message",
+    role: "user",
+    content: [
+      {
+        type: "input_text",
+        text: `Tool result for ${callId}:\n${output}`,
+      },
+    ],
+  };
+}
+
 export function normalizeCodexModel(
   requestedModel: unknown,
   fallbackModel = "gpt-5.5",
@@ -66,12 +94,20 @@ export function sanitizeCodexInput(input: unknown) {
       .map((item) => item.call_id as string),
   );
 
-  return sanitizedItems.filter((item) => {
+  return sanitizedItems.flatMap((item) => {
     if (!isJsonObject(item) || item.type !== "function_call_output") {
-      return true;
+      return [item];
     }
 
-    return typeof item.call_id === "string" && functionCallIds.has(item.call_id);
+    if (typeof item.call_id !== "string") {
+      return [];
+    }
+
+    if (functionCallIds.has(item.call_id)) {
+      return [item];
+    }
+
+    return [createToolOutputContextMessage(item)];
   });
 }
 

@@ -9,11 +9,13 @@ from the MIT-licensed project:
     Copyright (c) nsriram, MIT License
 
 Only the engine pattern (first-match-wins rule registry resolving an action
-against contents into a result) and the rule-schema shape were ported. In v2 the
-engine was generalised to transform a workspace of named stations (consuming
-reagents, producing persistent products, emitting gas, and setting a named heat
-level); that generalisation, the action/transform vocabulary, the per-step guided
-flow, the NCERT Class 9 curriculum content, the mobile-first Canvas presentation,
-and the experiment data are original to this project. The original project's
+against contents into a result) and the rule-schema shape were ported. The engine
+was generalised to transform a workspace of named stations — consuming reagents,
+producing persistent products, emitting gas, setting a named heat level, and
+(in the separation toolkit) routing a station's contents by solubility for
+filtration and boiling a solution down by evaporation; that generalisation, the
+action/transform vocabulary, the per-step guided flow, the NCERT Class 9
+curriculum content, the multi-station mobile-first Canvas presentation, and the
+experiment data are original to this project. The original project's
 AS-level chemistry content, exam-marking engine, i18n, PDF export, and DOM/emoji
 UI are not used here.

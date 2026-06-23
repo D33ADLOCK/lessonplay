@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { acidBaseExperiment } from "../content/acidBase";
 import { metalAcidExperiment } from "../content/metalAcid";
+import { saltSandExperiment } from "../content/saltSand";
 import type { Chemical } from "../contracts/chemistry";
 import { createLabSession, currentStep, reduce } from "../domain/labSession";
-import type { Experiment } from "../contracts/experiment";
-import type { LabScene } from "../scene/labRenderer";
+import type { Experiment, Step } from "../contracts/experiment";
+import type { LabScene, StationView } from "../scene/labRenderer";
 import { LabCanvas } from "./LabCanvas";
 import { PredictionPanel } from "./PredictionPanel";
 import { ReagentShelf } from "./ReagentShelf";
@@ -15,15 +16,22 @@ const SCENE_H = 360;
 const EXPERIMENTS: readonly Experiment[] = [
   acidBaseExperiment,
   metalAcidExperiment,
+  saltSandExperiment,
 ];
 
 function chemicalMap(experiment: Experiment): Map<string, Chemical> {
   return new Map(experiment.chemicals.map((c) => [c.id, c]));
 }
 
-/** The id of the single station the v2 UI renders (the beaker). */
-function beakerId(experiment: Experiment): string {
-  return Object.keys(experiment.stations)[0];
+/** The station the current step acts on (a pour/heat target, or a filter source). */
+function activeStationOf(step: Step | null): string | undefined {
+  if (!step) return undefined;
+  return step.expect.target ?? step.expect.source;
+}
+
+/** A station id turned into a short caption: "mixture" → "Mixture". */
+function titleCase(id: string): string {
+  return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
 export function App() {
@@ -55,48 +63,86 @@ export function App() {
   );
 }
 
-/** How long the pour stream animates before the reaction resolves (ms). */
+/** How long a pour stream / filter / heat animates before it resolves (ms). */
 const POUR_MS = 600;
+const ACT_MS = 700;
 
 function LabSession({ experiment }: { readonly experiment: Experiment }) {
   const [state, dispatch] = useReducer(reduce, experiment, createLabSession);
   const chemicals = useMemo(() => chemicalMap(experiment), [experiment]);
+  const stationOrder = useMemo(
+    () => Object.keys(experiment.stations),
+    [experiment],
+  );
 
-  // The reagent whose pour stream is currently in flight, if any.
+  // The reagent whose pour stream is in flight, and any in-flight filter/heat.
   const [pouring, setPouring] = useState<string | null>(null);
-  const pourTimer = useRef<number | null>(null);
+  const [busy, setBusy] = useState<"filter" | "heat" | null>(null);
+  const actTimer = useRef<number | null>(null);
   useEffect(
     () => () => {
-      if (pourTimer.current) window.clearTimeout(pourTimer.current);
+      if (actTimer.current) window.clearTimeout(actTimer.current);
     },
     [],
   );
 
-  const bId = beakerId(experiment);
-  const initialColor = experiment.stations[bId].color;
-  const beaker = state.workspace.stations[bId];
   const result = state.result;
   const step = currentStep(state);
+  const activeId = activeStationOf(step);
+  const inFlight = Boolean(pouring) || Boolean(busy);
 
-  const startPour = (reagent: string) => {
-    if (pouring) return;
-    setPouring(reagent);
-    pourTimer.current = window.setTimeout(() => {
-      dispatch({
-        type: "perform",
-        action: { type: "pour", reagent, target: bId },
-      });
+  /** Run any action after a short animation beat, then resolve it. */
+  const runAfter = (action: Parameters<typeof dispatch>[0], delay: number) => {
+    actTimer.current = window.setTimeout(() => {
+      dispatch(action);
       setPouring(null);
-      pourTimer.current = null;
-    }, POUR_MS);
+      setBusy(null);
+      actTimer.current = null;
+    }, delay);
   };
 
+  const startPour = (reagent: string, target: string) => {
+    if (inFlight) return;
+    setPouring(reagent);
+    runAfter({ type: "perform", action: { type: "pour", reagent, target } }, POUR_MS);
+  };
+
+  const startFilter = (source: string) => {
+    if (inFlight) return;
+    setBusy("filter");
+    runAfter({ type: "perform", action: { type: "filter", source } }, ACT_MS);
+  };
+
+  const startHeat = (target: string) => {
+    if (inFlight) return;
+    setBusy("heat");
+    runAfter({ type: "perform", action: { type: "heat", target } }, ACT_MS);
+  };
+
+  const stations: StationView[] = stationOrder.map((id) => {
+    const st = state.workspace.stations[id];
+    const isActive = id === activeId;
+    return {
+      id,
+      label: titleCase(id),
+      color: st.color,
+      heat: st.heat,
+      empty: st.contents.length === 0,
+      emitting: Boolean(result?.emits?.length) && isActive,
+      active: isActive,
+      heated:
+        step?.expect.type === "heat" &&
+        step.expect.target === id &&
+        state.phase !== "predict",
+    };
+  });
+
   const scene: LabScene = {
-    fromColor: initialColor,
-    toColor: result?.newColor ?? beaker.color,
-    heat: beaker.heat,
-    emitting: Boolean(result?.emits?.length),
-    pour: pouring ? { color: chemicals.get(pouring)?.color ?? "#cfe6f5" } : null,
+    stations,
+    pour:
+      pouring && activeId
+        ? { color: chemicals.get(pouring)?.color ?? "#cfe6f5", stationId: activeId }
+        : null,
     width: SCENE_W,
     height: SCENE_H,
   };
@@ -107,6 +153,7 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
     .filter((c): c is Chemical => Boolean(c));
 
   const stepNumber = Math.min(state.stepIndex + 1, experiment.steps.length);
+  const activeLabel = activeId ? titleCase(activeId) : "beaker";
 
   return (
     <>
@@ -154,23 +201,53 @@ function LabSession({ experiment }: { readonly experiment: Experiment }) {
             <p className={result ? "observation nudge" : "prompt"}>
               {result ? result.observation : step.actionPrompt}
             </p>
-            <ReagentShelf
-              reagents={shelf}
-              selected={state.selectedReagent}
-              onSelect={(id) =>
-                dispatch({ type: "select-reagent", reagent: id })
-              }
-              disabled={Boolean(pouring)}
-            />
-            <button
-              className="primary"
-              disabled={!state.selectedReagent || Boolean(pouring)}
-              onClick={() =>
-                state.selectedReagent && startPour(state.selectedReagent)
-              }
-            >
-              {pouring ? "Pouring…" : "Pour into beaker"}
-            </button>
+
+            {step.expect.type === "pour" && (
+              <>
+                <ReagentShelf
+                  reagents={shelf}
+                  selected={state.selectedReagent}
+                  onSelect={(id) =>
+                    dispatch({ type: "select-reagent", reagent: id })
+                  }
+                  disabled={inFlight}
+                />
+                <button
+                  className="primary"
+                  disabled={!state.selectedReagent || inFlight}
+                  onClick={() =>
+                    state.selectedReagent &&
+                    startPour(state.selectedReagent, step.expect.target ?? activeId ?? "")
+                  }
+                >
+                  {pouring ? "Pouring…" : `Pour into the ${activeLabel}`}
+                </button>
+              </>
+            )}
+
+            {step.expect.type === "filter" && (
+              <button
+                className="primary"
+                disabled={inFlight}
+                onClick={() =>
+                  step.expect.source && startFilter(step.expect.source)
+                }
+              >
+                {busy === "filter" ? "Filtering…" : "Filter the mixture"}
+              </button>
+            )}
+
+            {step.expect.type === "heat" && (
+              <button
+                className="primary"
+                disabled={inFlight}
+                onClick={() =>
+                  step.expect.target && startHeat(step.expect.target)
+                }
+              >
+                {busy === "heat" ? "Heating…" : `Heat the ${activeLabel}`}
+              </button>
+            )}
           </section>
         ))}
 

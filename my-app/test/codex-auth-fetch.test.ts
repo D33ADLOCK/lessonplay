@@ -41,7 +41,14 @@ describe("codexAuthFetch", () => {
         input: [
           { id: "msg_1", type: "message", role: "user", content: "hello" },
           { id: "ref_1", type: "item_reference" },
+          { type: "item_reference" },
           { id: "tool_1", type: "function_call", call_id: "call_abc" },
+          {
+            id: "output_1",
+            type: "function_call_output",
+            call_id: "call_abc",
+            output: "done",
+          },
         ],
       }),
     });
@@ -64,7 +71,13 @@ describe("codexAuthFetch", () => {
       include: ["file_search_call.results", "reasoning.encrypted_content"],
       input: [
         { type: "message", role: "user", content: "hello" },
-        { type: "function_call", call_id: "call_abc" },
+        { id: "tool_1", type: "function_call", call_id: "call_abc" },
+        {
+          id: "output_1",
+          type: "function_call_output",
+          call_id: "call_abc",
+          output: "done",
+        },
       ],
     });
     expect(body).not.toHaveProperty("max_output_tokens");

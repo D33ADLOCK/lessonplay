@@ -1,7 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import {
   convertToModelMessages,
-  stepCountIs,
   streamText,
   type UIMessage,
 } from 'ai'
@@ -69,7 +68,6 @@ export async function POST(request: NextRequest) {
     system: SYSTEM_PROMPT,
     messages: convertToModelMessages(messages),
     tools,
-    stopWhen: stepCountIs(16),
     maxOutputTokens: 24000,
     providerOptions: {
       openai: {

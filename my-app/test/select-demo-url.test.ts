@@ -7,32 +7,61 @@ function userText(text: string): UIMessage {
   return { id: `u-${text}`, role: 'user', parts: [{ type: 'text', text }] }
 }
 
-function completedPublish(id: string, demoUrl: string): UIMessage {
+function completedPublish(
+  id: string,
+  demoUrl: string,
+  tool: 'publishGame' | 'publishLearnLoopGame' = 'publishGame',
+): UIMessage {
   return {
     id,
     role: 'assistant',
     parts: [
       {
-        type: 'tool-publishGame',
+        type: `tool-${tool}`,
         toolCallId: `call-${id}`,
         state: 'output-available',
-        input: { title: 'Game', html: '<html></html>' },
+        input:
+          tool === 'publishGame'
+            ? { title: 'Game', html: '<html></html>' }
+            : { title: 'Game' },
         output: { ok: true, versionId: `v-${id}`, demoUrl },
       },
     ],
   } as UIMessage
 }
 
-function inProgressPublish(id: string): UIMessage {
+function inProgressPublish(
+  id: string,
+  tool: 'publishGame' | 'publishLearnLoopGame' = 'publishGame',
+): UIMessage {
   return {
     id,
     role: 'assistant',
     parts: [
       {
-        type: 'tool-publishGame',
+        type: `tool-${tool}`,
         toolCallId: `call-${id}`,
         state: 'input-streaming',
-        input: { title: 'Game', html: '<htm' },
+        input:
+          tool === 'publishGame'
+            ? { title: 'Game', html: '<htm' }
+            : { title: 'Game' },
+      },
+    ],
+  } as UIMessage
+}
+
+function failedLearnLoopPublish(id: string): UIMessage {
+  return {
+    id,
+    role: 'assistant',
+    parts: [
+      {
+        type: 'tool-publishLearnLoopGame',
+        toolCallId: `call-${id}`,
+        state: 'output-available',
+        input: { title: 'Game' },
+        output: { ok: false, error: 'Vite failed' },
       },
     ],
   } as UIMessage
@@ -59,17 +88,42 @@ describe('selectDemoUrl', () => {
       userText('make a game'),
       completedPublish('a', 'https://cdn.example/a.html'),
       userText('make it faster'),
-      completedPublish('b', 'https://cdn.example/b.html'),
+      completedPublish(
+        'b',
+        'https://cdn.example/b.html',
+        'publishLearnLoopGame',
+      ),
     ]
 
     expect(selectDemoUrl(messages)).toBe('https://cdn.example/b.html')
   })
 
-  it('ignores an in-progress publishGame and keeps the prior completed url', () => {
+  it('accepts a completed publishLearnLoopGame', () => {
+    const messages = [
+      completedPublish(
+        'learn-loop',
+        'https://cdn.example/lab.html',
+        'publishLearnLoopGame',
+      ),
+    ]
+
+    expect(selectDemoUrl(messages)).toBe('https://cdn.example/lab.html')
+  })
+
+  it('ignores an in-progress publish and keeps the prior completed url', () => {
     const messages = [
       completedPublish('a', 'https://cdn.example/a.html'),
       userText('make it faster'),
-      inProgressPublish('b'),
+      inProgressPublish('b', 'publishLearnLoopGame'),
+    ]
+
+    expect(selectDemoUrl(messages)).toBe('https://cdn.example/a.html')
+  })
+
+  it('ignores a failed publish and keeps the prior completed url', () => {
+    const messages = [
+      completedPublish('a', 'https://cdn.example/a.html'),
+      failedLearnLoopPublish('b'),
     ]
 
     expect(selectDemoUrl(messages)).toBe('https://cdn.example/a.html')

@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 import {
   addGameVersion,
-  getChat,
+  getChatMetadata,
   setGameVersionDemoUrl,
   updateChatTitle,
   updateChatLatestHtml,
@@ -234,7 +234,7 @@ export function createGameTools({
         title: z.string().min(1).max(255),
       }),
       execute: async ({ title }: { title: string }) => {
-        const chat = await getChat({ id: chatId, clerkUserId })
+        const chat = await getChatMetadata({ id: chatId, clerkUserId })
 
         if (!chat) {
           throw new Error('Chat not found')
@@ -292,7 +292,7 @@ export function createGameTools({
         html: z.string().min(1),
       }),
       execute: async ({ title, html }: { title: string; html: string }) => {
-        const chat = await getChat({ id: chatId, clerkUserId })
+        const chat = await getChatMetadata({ id: chatId, clerkUserId })
 
         if (!chat) {
           throw new Error('Chat not found')

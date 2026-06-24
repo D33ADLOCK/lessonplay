@@ -2,25 +2,12 @@ import { auth } from '@clerk/nextjs/server'
 import type { UIMessage } from 'ai'
 
 import { ChatDetailClient } from '@/components/chats/chat-detail-client'
-import { getChat, getLatestGameVersion, getMessages } from '@/lib/db/queries'
-
-/**
- * A persisted message stores the full UIMessage (with `parts`) in `content`.
- * Older rows may hold a bare string; those are skipped rather than rendered as
- * a malformed message.
- */
-function toUIMessage(content: unknown): UIMessage | null {
-  if (
-    content &&
-    typeof content === 'object' &&
-    'parts' in content &&
-    Array.isArray((content as { parts: unknown }).parts)
-  ) {
-    return content as UIMessage
-  }
-
-  return null
-}
+import { readPersistedUIMessage } from '@/lib/agent/persisted-ui-message'
+import {
+  getChatMetadata,
+  getLatestGameVersion,
+  getMessages,
+} from '@/lib/db/queries'
 
 export default async function ChatDetailPage({
   params,
@@ -40,14 +27,14 @@ export default async function ChatDetailPage({
     const [rows, latestGameVersion, chat] = await Promise.all([
       getMessages({ chatId, clerkUserId: userId }),
       getLatestGameVersion({ chatId, clerkUserId: userId }),
-      getChat({ id: chatId, clerkUserId: userId }),
+      getChatMetadata({ id: chatId, clerkUserId: userId }),
     ])
 
-    initialMessages = (rows as Array<{ content: unknown }>)
-      .map((row) => toUIMessage(row.content))
+    initialMessages = rows
+      .map((row) => readPersistedUIMessage(row.content, row.id))
       .filter((message): message is UIMessage => message !== null)
 
-    initialDemoUrl = latestGameVersion?.demoUrl ?? chat?.demo_url ?? null
+    initialDemoUrl = latestGameVersion?.demoUrl ?? chat?.demoUrl ?? null
   }
 
   return (

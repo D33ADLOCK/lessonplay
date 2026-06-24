@@ -3,26 +3,31 @@ import {
   isReasoningUIPart,
   isTextUIPart,
   isToolUIPart,
+  type ToolUIPart,
   type UIMessage,
 } from 'ai'
 
+import { GeneratedFiles } from '@/components/chat/generated-files'
+import { PublishStatus } from '@/components/chat/publish-status'
 import {
   Reasoning,
   ReasoningContent,
   ReasoningTrigger,
 } from '@/components/ai-elements/reasoning'
 import { Response } from '@/components/ai-elements/response'
-import { Tool, ToolContent, ToolHeader } from '@/components/ai-elements/tool'
-
-const PUBLISH_GAME_TOOL = 'publishGame'
+import {
+  readGeneratedSourceFiles,
+  WRITE_LEARN_LOOP_FILES_TOOL,
+} from '@/lib/agent/generated-file-view-model'
+import {
+  PUBLISH_GAME_TOOL,
+  toPublishViewModel,
+} from '@/lib/agent/publish-view-model'
 
 /**
- * Renders a single chat message by switching on the typed `parts` union that
- * AI SDK v5 produces. Each branch narrows a part to its concrete type via the
- * SDK guards, so adding a future tool/agent region is a new `if`, not a rewrite.
- *
- * The `publishGame` code view binds to `part.input.html` — the text the model
- * is *writing* — never `part.output`, so the code types in live as it streams.
+ * Renders a single chat message by switching on the typed `parts` union.
+ * Reference-reading tools intentionally fall through so internal preparation
+ * does not crowd the conversation.
  */
 export function MessageParts({ message }: { message: UIMessage }) {
   return (
@@ -47,26 +52,34 @@ export function MessageParts({ message }: { message: UIMessage }) {
           return <Response key={key}>{part.text}</Response>
         }
 
-        if (isToolUIPart(part) && getToolName(part) === PUBLISH_GAME_TOOL) {
-          const html = (part.input as { html?: string } | undefined)?.html ?? ''
-          const building =
-            part.state !== 'output-available' && part.state !== 'output-error'
+        if (isToolUIPart(part)) {
+          const toolName = getToolName(part)
 
-          // A published game is a full HTML document (often 15-20 KB).
-          // Syntax-highlighting it with Prism — twice, for light/dark — blocks
-          // the main thread long enough to freeze the tab, both per-token while
-          // streaming and in a single pass when it completes. Plain monospace
-          // text is cheap and never freezes, so we never highlight this code.
-          return (
-            <Tool key={key} defaultOpen={building}>
-              <ToolHeader type={part.type} state={part.state} />
-              <ToolContent>
-                <pre className="max-h-80 overflow-auto rounded-md border bg-background p-4 font-mono text-sm whitespace-pre-wrap break-words">
-                  {html}
-                </pre>
-              </ToolContent>
-            </Tool>
-          )
+          if (toolName === WRITE_LEARN_LOOP_FILES_TOOL) {
+            return (
+              <GeneratedFiles
+                key={key}
+                files={readGeneratedSourceFiles(part.input)}
+                status={getGeneratedFilesStatus(part)}
+                error={part.state === 'output-error' ? part.errorText : undefined}
+              />
+            )
+          }
+
+          const publish = toPublishViewModel(part)
+          if (publish) {
+            return (
+              <div key={key}>
+                {toolName === PUBLISH_GAME_TOOL ? (
+                  <GeneratedFiles
+                    files={readPublishedHtml(part.input)}
+                    status={getPublishedHtmlStatus(part)}
+                  />
+                ) : null}
+                <PublishStatus publish={publish} />
+              </div>
+            )
+          }
         }
 
         // step-start and any other part types render nothing.
@@ -74,4 +87,28 @@ export function MessageParts({ message }: { message: UIMessage }) {
       })}
     </>
   )
+}
+
+function getGeneratedFilesStatus(
+  part: ToolUIPart,
+): 'writing' | 'saving' | 'complete' | 'failed' {
+  if (part.state === 'output-error') return 'failed'
+  if (part.state === 'output-available') return 'complete'
+  if (part.state === 'input-available') return 'saving'
+  return 'writing'
+}
+
+function readPublishedHtml(input: unknown) {
+  if (!input || typeof input !== 'object') return []
+
+  const html = 'html' in input ? input.html : undefined
+  if (typeof html !== 'string') return []
+
+  return [{ path: 'index.html', content: html }]
+}
+
+function getPublishedHtmlStatus(
+  part: ToolUIPart,
+): 'writing' | 'complete' {
+  return part.state === 'input-streaming' ? 'writing' : 'complete'
 }

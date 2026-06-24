@@ -14,9 +14,12 @@ npm run build --workspace <game-package-name>
 
 The game tests should validate:
 - every `Scenario` with `validateScenario`
-- every guided presentation with `validateGuidedLabPresentation`
+- every investigation presentation with `validateSandboxLabPresentation`
 - mission lists stay in lockstep
 - at least one full scenario sequence reaches the expected workspace state
+- hidden identities are absent before a correct conclusion
+- every investigation stage offers a meaningful material/tool choice
+- notebook evidence unlocks the final conclusion
 
 ## Browser Smoke Test
 

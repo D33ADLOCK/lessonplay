@@ -68,3 +68,16 @@ presentation={{
 
 Do not pass unsupported `kind` or `role` values. The template will normalize
 invalid values, but the skill should avoid generating them.
+
+## Investigation Materials
+
+For `ChemQuestLabGame`, author a `SandboxLabMissionPresentation` instead of a
+`LearnLoopPresentationInput`.
+
+- Set `mode: "investigation"`.
+- Use public material labels such as `Unknown A`.
+- Put the end-of-mission identity in `hiddenIdentity.revealLabel`.
+- Keep station labels consistent with the public material label.
+- Do not expose internal entity ids as visible labels.
+- Define material/tool interactions, evidence-bearing feedback cards, stages,
+  and conclusions as described in `gameplay-contract.md`.

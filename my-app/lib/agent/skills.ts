@@ -102,11 +102,15 @@ ChemQuest Lab mode:
   - SKILL.md
   - references/template-contract.md
   - references/scenario-contract.md
+  - references/gameplay-contract.md
   - references/presentation-contract.md
   - references/implementation-pattern.md
   - references/validation-checklist.md
-- The generated app must use LearnLoopGame from @learn-loop/template. Do not hand-build the chemistry game layout.
-- The template owns the fixed 9:16 layout, header, mission area, experiment zone, tool tray, feedback, and notebook. The generated game may only vary scenario data, approved template config tokens, title/copy, and light outer shell styling.
+- Identification, classification, comparison, and method-choice games must use ChemQuestLabGame from @learn-loop/template with a SandboxLabMission. Use LearnLoopGame only for a genuinely procedural demonstration with no inference goal. Do not hand-build the chemistry game layout.
+- For investigations, design in four internal phases before writing files: game designer, science validator, executor, then gameplay reviewer. Do not stop between phases.
+- Investigation gameplay must follow mystery -> choose material/tool -> observe -> record evidence -> infer -> confirm. Do not reveal answers in initial labels, mission copy, headings, hints, or station names.
+- Set presentation.mode to investigation, use hiddenIdentity for mystery samples, author at least one specific non-solution interaction, and make the correct conclusion require the stage evidence.
+- The template owns the fixed 9:16 layout, mission navigation, material selector, experiment zone, tool dock, observation feedback, notebook, and conclusion area. The generated game may only vary scenario and presentation data, title/copy, and light outer shell styling.
 - Author virtual source files, not repo files:
   - src/main.tsx
   - src/ui/App.tsx

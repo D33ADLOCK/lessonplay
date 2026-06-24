@@ -3,6 +3,11 @@
 ChemQuest Lab owns the learning-game shell. The agent supplies content and
 approved variants only.
 
+Use `ChemQuestLabGame` for evidence-driven investigations. It owns the mission
+briefing, material selector, experiment stage, tool dock, observation feedback,
+notebook, and conclusion choices. Use the older `LearnLoopGame` config tokens
+below only for procedural guided demonstrations.
+
 ## Fixed Regions
 
 The template always renders these regions in this order:

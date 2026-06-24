@@ -26,6 +26,12 @@ Predict -> Act -> Observe -> Explain
 The player chooses a tool or reagent, sees a visible state change, then reads a
 plain explanation.
 
+For identification, classification, comparison, or method-choice games, wrap
+the scenario in a `SandboxLabMission` and use the stronger investigation loop
+from `gameplay-contract.md`. The `Scenario.steps` remain valid engine data, but
+the learner-facing choices, evidence, stages, and conclusions come from
+`SandboxLabMissionPresentation`.
+
 ## Entity Rules
 
 - Use short stable ids such as `salt`, `sand`, `water`, `filtrate`.

@@ -45,6 +45,7 @@ export function SandboxLabViewport({
   const currentStage = session.currentStage;
   const stageNumber = session.state.currentStageIndex + 1;
   const stageCount = presentation.stages.length;
+  const revealHiddenIdentities = session.state.phase === "concluded";
 
   useEffect(() => {
     setOpenOverlay("briefing");
@@ -223,6 +224,7 @@ export function SandboxLabViewport({
               workspace={session.state.workspace}
               selectedMaterial={selectedMaterial}
               visibleMaterials={session.visibleMaterials}
+              revealHiddenIdentities={revealHiddenIdentities}
               effectTags={[
                 ...(session.state.latestInteraction?.effectTags ?? []),
                 ...(session.state.latestInteraction?.reactionEffect
@@ -255,7 +257,7 @@ export function SandboxLabViewport({
               className={material.id === session.selectedMaterialId ? "active" : ""}
               onClick={() => session.selectMaterial(material.id)}
             >
-              <span>{material.label}</span>
+              <span>{materialLabel(material, revealHiddenIdentities)}</span>
             </button>
           ))}
         </section>
@@ -308,12 +310,14 @@ function SandboxLabScene({
   workspace,
   selectedMaterial,
   visibleMaterials,
+  revealHiddenIdentities,
   effectTags,
 }: {
   readonly presentation: SandboxLabMissionPresentation;
   readonly workspace: Workspace;
   readonly selectedMaterial: SandboxLabMaterial | undefined;
   readonly visibleMaterials: readonly SandboxLabMaterial[];
+  readonly revealHiddenIdentities: boolean;
   readonly effectTags: readonly string[];
 }) {
   const visibleStationIds = new Set(visibleMaterials.map((material) => material.stationId));
@@ -326,15 +330,23 @@ function SandboxLabScene({
       <div className="sandbox-lab-wall" />
       <div className="sandbox-lab-bench" />
       <div className="sandbox-station-row">
-        {visibleStationVisuals.map((visual) => (
-          <SandboxStation
-            key={visual.stationId}
-            visual={visual}
-            station={workspace.stations[visual.stationId]}
-            active={visual.stationId === selectedMaterial?.stationId}
-            effectTags={effectTags}
-          />
-        ))}
+        {visibleStationVisuals.map((visual) => {
+          const material = visibleMaterials.find(
+            (candidate) => candidate.stationId === visual.stationId,
+          );
+
+          return (
+            <SandboxStation
+              key={visual.stationId}
+              visual={visual}
+              material={material}
+              station={workspace.stations[visual.stationId]}
+              active={visual.stationId === selectedMaterial?.stationId}
+              revealHiddenIdentity={revealHiddenIdentities}
+              effectTags={effectTags}
+            />
+          );
+        })}
       </div>
     </section>
   );
@@ -342,13 +354,17 @@ function SandboxLabScene({
 
 function SandboxStation({
   visual,
+  material,
   station,
   active,
+  revealHiddenIdentity,
   effectTags,
 }: {
   readonly visual: StationVisual;
+  readonly material: SandboxLabMaterial | undefined;
   readonly station: Station | undefined;
   readonly active: boolean;
+  readonly revealHiddenIdentity: boolean;
   readonly effectTags: readonly string[];
 }) {
   const safeStation = station ?? {
@@ -365,13 +381,22 @@ function SandboxStation({
     active,
     effectTags,
   );
+  const hasHiddenIdentity = Boolean(material?.hiddenIdentity);
+  const publicLabel =
+    material?.hiddenIdentity
+      ? materialLabel(material, revealHiddenIdentity)
+      : visual.label ?? apparatusLabel(visual.kind);
+  const visibleContents =
+    hasHiddenIdentity && !revealHiddenIdentity
+      ? ["Identity hidden"]
+      : contents.map(titleCase);
 
   return (
     <article
       className={classes}
       data-apparatus={visual.kind}
       data-effect={activeEffects.join(" ")}
-      aria-label={visual.label ?? apparatusLabel(visual.kind)}
+      aria-label={publicLabel}
     >
       <div className="sandbox-apparatus">
         <div
@@ -380,10 +405,20 @@ function SandboxStation({
         />
         {safeStation.heat === "hot" ? <span className="sandbox-heat" /> : null}
       </div>
-      <strong>{visual.label ?? titleCase(visual.stationId)}</strong>
-      <small>{contents.map(titleCase).join(" + ")}</small>
+      <strong>{publicLabel}</strong>
+      <small>{visibleContents.join(" + ")}</small>
     </article>
   );
+}
+
+function materialLabel(
+  material: SandboxLabMaterial,
+  revealHiddenIdentity: boolean,
+): string {
+  if (revealHiddenIdentity && material.hiddenIdentity) {
+    return `${material.label}: ${material.hiddenIdentity.revealLabel}`;
+  }
+  return material.label;
 }
 
 function toolIcon(type: string): string {

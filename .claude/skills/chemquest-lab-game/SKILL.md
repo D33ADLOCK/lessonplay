@@ -17,18 +17,20 @@ owns layout, mission navigation, tool tray, feedback, notebook, and responsive
 
 1. Read `references/template-contract.md` before designing UI or layout.
 2. Read `references/scenario-contract.md` before writing `Scenario` data.
-3. Read `references/presentation-contract.md` before writing station visuals.
-4. Read `references/implementation-pattern.md` before creating or editing files.
-5. Read `references/validation-checklist.md` before reporting completion.
-6. Build content as data first; only add game-local CSS for outer page chrome or
+3. Read `references/gameplay-contract.md` before designing the player loop.
+4. Read `references/presentation-contract.md` before writing station visuals.
+5. Read `references/implementation-pattern.md` before creating or editing files.
+6. Read `references/validation-checklist.md` before reporting completion.
+7. Build content as data first; only add game-local CSS for outer page chrome or
    tiny brand accents that do not override the template contract.
-7. Validate with typecheck, tests, build, and browser smoke testing at a phone
+8. Validate with typecheck, tests, build, and browser smoke testing at a phone
    viewport.
 
 ## Non-Negotiable Architecture
 
 ```text
-Scenario data -> @learn-loop/core engine -> @learn-loop/template UI -> browser game
+Scenario + SandboxLab presentation -> @learn-loop/core engine
+  -> ChemQuestLabGame from @learn-loop/template -> browser game
 ```
 
 The agent may author:
@@ -48,8 +50,11 @@ The agent must not author:
 
 ## Required Render Surface
 
-Use `LearnLoopGame` from `@learn-loop/template`. Do not render chemistry guided
-games with hand-built React layouts.
+Use `ChemQuestLabGame` from `@learn-loop/template` for investigations. It provides
+material/tool choices, observations, notebook evidence, and gated conclusions.
+Use `LearnLoopGame` only for a genuinely procedural demonstration with no
+classification or inference goal. Do not render chemistry games with hand-built
+React layouts.
 
 When adapting existing `GuidedLabMissionPresentation`, use
 `createLearnLoopTemplatePresentation(...)`.

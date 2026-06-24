@@ -11,6 +11,7 @@ import {
   type SandboxLabMissionPresentation,
 } from "../src";
 import { sandboxSaltSandMission } from "./fixtures/sandboxMixtures";
+import { sandboxIndicatorMission } from "./fixtures/sandboxIndicator";
 
 describe("validateSandboxLabPresentation", () => {
   it("exports the guided lab reaction kit vocabulary", () => {
@@ -33,6 +34,56 @@ describe("validateSandboxLabPresentation", () => {
         sandboxSaltSandMission.presentation,
       ),
     ).toEqual({ ok: true, errors: [] });
+  });
+
+  it("accepts an investigation with hidden identity, choices, and evidence", () => {
+    expect(
+      validateSandboxLabPresentation(
+        sandboxIndicatorMission.scenario,
+        sandboxIndicatorMission.presentation,
+      ),
+    ).toEqual({ ok: true, errors: [] });
+  });
+
+  it("rejects investigation copy that reveals a hidden identity", () => {
+    const presentation: SandboxLabMissionPresentation = {
+      ...sandboxIndicatorMission.presentation,
+      question: "Which test proves that Unknown A is dilute hydrochloric acid?",
+    };
+
+    const result = validateSandboxLabPresentation(
+      sandboxIndicatorMission.scenario,
+      presentation,
+    );
+
+    expect(result.errors).toContain(
+      'presentation.question reveals hidden answer "Dilute hydrochloric acid" for material "unknown-a"',
+    );
+  });
+
+  it("rejects investigations without a real choice or evidence-backed conclusion", () => {
+    const presentation: SandboxLabMissionPresentation = {
+      ...sandboxIndicatorMission.presentation,
+      stages: sandboxIndicatorMission.presentation.stages.map((stage, index) =>
+        index === 0 ? { ...stage, toolIds: ["add-base"] } : stage,
+      ),
+      conclusions: sandboxIndicatorMission.presentation.conclusions.map(
+        (conclusion, index) =>
+          index === 0 ? { ...conclusion, requiresEvidence: [] } : conclusion,
+      ),
+    };
+
+    const result = validateSandboxLabPresentation(
+      sandboxIndicatorMission.scenario,
+      presentation,
+    );
+
+    expect(result.errors).toContain(
+      'investigation stage "test-unknown" must offer at least two material/tool choices',
+    );
+    expect(result.errors).toContain(
+      'correct conclusion "acid" must require stage evidence "pink-and-warm"',
+    );
   });
 
   it("rejects generated data that cannot be played", () => {

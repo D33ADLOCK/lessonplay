@@ -10,6 +10,7 @@ import { titleCase } from "../src/ui/titleCase";
 import type { Entity } from "../src/model/entity";
 import { saltSandScenario } from "./fixtures/saltSand";
 import { sandboxSaltSandMission } from "./fixtures/sandboxMixtures";
+import { sandboxIndicatorMission } from "./fixtures/sandboxIndicator";
 
 const reagents: Entity[] = [
   { id: "water", label: "Water", color: "#bcd7ef", kind: "neutral" },
@@ -224,6 +225,36 @@ describe("SandboxLabViewport", () => {
 
     await user.click(screen.getByRole("button", { name: "Open notebook" }));
     expect(screen.getByText("Water dissolves salt. Sand does not dissolve.")).toBeInTheDocument();
+  });
+
+  it("keeps mystery identities hidden until an evidence-backed conclusion", async () => {
+    const user = userEvent.setup();
+    render(
+      <SandboxLabViewport
+        title="Indicator Detective"
+        eyebrow="Class 9"
+        mission={sandboxIndicatorMission}
+        missionIndex={0}
+        missionCount={1}
+        missionTitles={["Identify Unknown A"]}
+        onSelectMission={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/Dilute hydrochloric acid/)).not.toBeInTheDocument();
+    expect(screen.getByText("Identity hidden")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Start experiment" }));
+    await user.click(
+      screen.getByRole("button", { name: /Sodium hydroxide/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add evidence" }));
+    await user.click(screen.getByRole("button", { name: "Unknown A was an acid." }));
+
+    expect(
+      screen.getAllByText("Unknown A: Dilute hydrochloric acid").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText("Identity hidden")).not.toBeInTheDocument();
   });
 
   it("closes shared overlays from outside click and Escape", async () => {

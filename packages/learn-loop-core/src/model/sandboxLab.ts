@@ -50,9 +50,19 @@ export type SandboxLabSoundCue = (typeof SANDBOX_LAB_SOUND_CUES)[number];
 
 export interface SandboxLabMaterial {
   readonly id: string;
+  /** Public label shown before the learner reaches a supported conclusion. */
   readonly label: string;
   readonly stationId: StationId;
   readonly description?: string;
+  /**
+   * Private authoring metadata for mystery samples. The UI must not display
+   * this value until the investigation has been concluded successfully.
+   */
+  readonly hiddenIdentity?: {
+    readonly revealLabel: string;
+    /** Additional answer phrases that must not appear in pre-conclusion copy. */
+    readonly forbiddenTerms?: readonly string[];
+  };
 }
 
 export type SandboxLabToolAction =
@@ -121,6 +131,11 @@ export interface SandboxLabStage {
 
 export interface SandboxLabMissionPresentation {
   readonly scenarioId: string;
+  /**
+   * Investigation mode enables the stronger mystery -> evidence -> conclusion
+   * contract. Guided process labs remain supported for procedural activities.
+   */
+  readonly mode?: "guided-process" | "investigation";
   readonly badge?: string;
   readonly question: string;
   readonly materials: readonly SandboxLabMaterial[];
@@ -166,6 +181,11 @@ export function validateSandboxLabPresentation(
   const materialIds = new Set<string>();
   const toolIds = new Set<string>();
   const interactionEvidence = new Set<string>();
+  const interactionsByEvidence = new Map<string, SandboxLabInteraction>();
+  const investigation = presentation.mode === "investigation";
+  const hiddenMaterials = presentation.materials.filter(
+    (material) => material.hiddenIdentity,
+  );
 
   if (!presentation.materials.length) {
     errors.push("presentation.materials must include at least one material");
@@ -188,6 +208,11 @@ export function validateSandboxLabPresentation(
   if (!presentation.conclusions.length) {
     errors.push("presentation.conclusions must include at least one conclusion");
   }
+  if (investigation && !hiddenMaterials.length) {
+    errors.push(
+      "investigation presentations must include at least one material with hiddenIdentity",
+    );
+  }
 
   for (const material of presentation.materials) {
     if (materialIds.has(material.id)) {
@@ -196,6 +221,17 @@ export function validateSandboxLabPresentation(
     materialIds.add(material.id);
     if (!stationIds.has(material.stationId)) {
       errors.push(`material "${material.id}" uses unknown station "${material.stationId}"`);
+    }
+    if (material.hiddenIdentity) {
+      const revealLabel = material.hiddenIdentity.revealLabel.trim();
+      if (!revealLabel) {
+        errors.push(`material "${material.id}" hiddenIdentity must include a revealLabel`);
+      }
+      if (containsTerm(material.label, revealLabel)) {
+        errors.push(
+          `material "${material.id}" public label must not reveal "${revealLabel}"`,
+        );
+      }
     }
   }
 
@@ -225,6 +261,7 @@ export function validateSandboxLabPresentation(
       errors.push(`interaction "${interaction.id}" uses unknown tool "${interaction.toolId}"`);
     }
     interactionEvidence.add(interaction.evidenceId);
+    interactionsByEvidence.set(interaction.evidenceId, interaction);
     if (!interaction.feedbackCard) {
       errors.push(`interaction "${interaction.id}" must include a feedback card`);
     } else {
@@ -285,6 +322,14 @@ export function validateSandboxLabPresentation(
     if (!stage.requiredEvidence.length) {
       errors.push(`stage "${stage.id}" must require at least one evidence id`);
     }
+    if (
+      investigation &&
+      stage.materialIds.length * stage.toolIds.length < 2
+    ) {
+      errors.push(
+        `investigation stage "${stage.id}" must offer at least two material/tool choices`,
+      );
+    }
     for (const materialId of stage.materialIds) {
       if (!materialIds.has(materialId)) {
         errors.push(`stage "${stage.id}" uses unknown material "${materialId}"`);
@@ -300,6 +345,17 @@ export function validateSandboxLabPresentation(
         errors.push(
           `stage "${stage.id}" requires evidence "${evidenceId}" that cannot be collected`,
         );
+      } else if (investigation) {
+        const interaction = interactionsByEvidence.get(evidenceId);
+        if (
+          interaction &&
+          (!stage.materialIds.includes(interaction.materialId) ||
+            !stage.toolIds.includes(interaction.toolId))
+        ) {
+          errors.push(
+            `investigation stage "${stage.id}" requires evidence "${evidenceId}" from a choice that is not visible in that stage`,
+          );
+        }
       }
     }
   }
@@ -316,6 +372,64 @@ export function validateSandboxLabPresentation(
 
   if (!presentation.conclusions.some((conclusion) => conclusion.correct)) {
     errors.push("presentation.conclusions must include at least one correct conclusion");
+  }
+  if (investigation) {
+    const correctConclusions = presentation.conclusions.filter(
+      (conclusion) => conclusion.correct,
+    );
+    if (presentation.conclusions.length < 2) {
+      errors.push(
+        "investigation presentations must include at least two conclusion choices",
+      );
+    }
+    if (correctConclusions.length !== 1) {
+      errors.push(
+        `investigation presentations must include exactly one correct conclusion (found ${correctConclusions.length})`,
+      );
+    }
+
+    const requiredEvidence = new Set(
+      presentation.stages.flatMap((stage) => stage.requiredEvidence),
+    );
+    for (const conclusion of correctConclusions) {
+      const conclusionEvidence = new Set(conclusion.requiresEvidence);
+      for (const evidenceId of requiredEvidence) {
+        if (!conclusionEvidence.has(evidenceId)) {
+          errors.push(
+            `correct conclusion "${conclusion.id}" must require stage evidence "${evidenceId}"`,
+          );
+        }
+      }
+    }
+
+    const authoredWrongChoice = presentation.interactions.some(
+      (interaction) =>
+        !presentation.stages.some((stage) =>
+          stage.requiredEvidence.includes(interaction.evidenceId),
+        ),
+    );
+    if (!authoredWrongChoice) {
+      errors.push(
+        "investigation presentations must author at least one specific non-solution interaction",
+      );
+    }
+
+    for (const material of hiddenMaterials) {
+      const identity = material.hiddenIdentity!;
+      const forbiddenTerms = [
+        identity.revealLabel,
+        ...(identity.forbiddenTerms ?? []),
+      ].filter((term) => term.trim().length > 0);
+      for (const entry of preConclusionCopy(scenario, presentation)) {
+        for (const term of forbiddenTerms) {
+          if (containsTerm(entry.text, term)) {
+            errors.push(
+              `${entry.path} reveals hidden answer "${term}" for material "${material.id}"`,
+            );
+          }
+        }
+      }
+    }
   }
 
   if (!presentation.stationVisuals.length) {
@@ -344,4 +458,44 @@ export function validateSandboxLabPresentation(
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+function containsTerm(text: string | undefined, term: string): boolean {
+  if (!text?.trim() || !term.trim()) return false;
+  return text.toLocaleLowerCase().includes(term.trim().toLocaleLowerCase());
+}
+
+function preConclusionCopy(
+  scenario: Scenario,
+  presentation: SandboxLabMissionPresentation,
+): readonly { readonly path: string; readonly text: string | undefined }[] {
+  return [
+    { path: "scenario.title", text: scenario.title },
+    { path: "scenario.concept", text: scenario.concept },
+    { path: "presentation.question", text: presentation.question },
+    { path: "presentation.notebook.goal", text: presentation.notebook.goal },
+    ...(presentation.notebook.hints ?? []).map((text, index) => ({
+      path: `presentation.notebook.hints[${index}]`,
+      text,
+    })),
+    ...presentation.materials.flatMap((material) => [
+      {
+        path: `material "${material.id}" label`,
+        text: material.label,
+      },
+      {
+        path: `material "${material.id}" description`,
+        text: material.description,
+      },
+    ]),
+    ...presentation.stages.flatMap((stage) => [
+      { path: `stage "${stage.id}" title`, text: stage.title },
+      { path: `stage "${stage.id}" goal`, text: stage.goal },
+      { path: `stage "${stage.id}" nextPrompt`, text: stage.nextPrompt },
+    ]),
+    ...presentation.stationVisuals.map((visual) => ({
+      path: `station visual "${visual.stationId}" label`,
+      text: visual.label,
+    })),
+  ];
 }

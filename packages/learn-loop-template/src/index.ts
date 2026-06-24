@@ -1,4 +1,5 @@
 export { LearnLoopGame } from "./LearnLoopGame";
+export { SandboxLabViewport as ChemQuestLabGame } from "@learn-loop/core/ui";
 
 export {
   DEFAULT_LEARN_LOOP_TEMPLATE_CONFIG,
@@ -21,6 +22,9 @@ export {
 } from "./presentation";
 
 export type { LearnLoopGameProps } from "./LearnLoopGame";
+export type {
+  SandboxLabViewportProps as ChemQuestLabGameProps,
+} from "@learn-loop/core/ui";
 
 export type {
   LearnLoopTemplateAccent,

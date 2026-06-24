@@ -5,10 +5,8 @@ Use this pattern for ChemQuest Lab games.
 ## Package Imports
 
 ```tsx
-import {
-  LearnLoopGame,
-  createLearnLoopTemplatePresentation,
-} from "@learn-loop/template";
+import { ChemQuestLabGame } from "@learn-loop/template";
+import "@learn-loop/core/ui/styles.css";
 import "@learn-loop/template/styles.css";
 ```
 
@@ -16,7 +14,8 @@ If the game uses core validators or scenario types:
 
 ```ts
 import type {
-  GuidedLabMissionPresentation,
+  SandboxLabMission,
+  SandboxLabMissionPresentation,
   Scenario,
 } from "@learn-loop/core";
 ```
@@ -24,13 +23,11 @@ import type {
 ## Render Pattern
 
 ```tsx
-<LearnLoopGame
-  key={scenario.id}
+<ChemQuestLabGame
+  key={mission.scenario.id}
   title={gameTitle}
-  eyebrow={`Chapter 5 · Class ${scenario.grade}`}
-  scenario={scenario}
-  config={templateConfig}
-  presentation={createLearnLoopTemplatePresentation(guidedPresentation)}
+  eyebrow={`Chapter 5 · Class ${mission.scenario.grade}`}
+  mission={mission}
   missionIndex={missionIndex}
   missionCount={missions.length}
   missionTitles={missionTitles}
@@ -63,8 +60,7 @@ games/<slug>/
 
 The app should:
 - choose the active mission
-- pass scenario data into `LearnLoopGame`
-- choose allowed template config tokens
+- pass a validated `SandboxLabMission` into `ChemQuestLabGame`
 - pass mission titles and `onSelectMission`
 
 The app should not:

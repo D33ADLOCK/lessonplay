@@ -2,7 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { LearnLoopGame } from "../src";
+import { ChemQuestLabGame, LearnLoopGame } from "../src";
+import { SandboxLabViewport } from "@learn-loop/core/ui";
 import type { Scenario } from "@learn-loop/core";
 
 const scenario: Scenario = {
@@ -116,6 +117,10 @@ const scenario: Scenario = {
 };
 
 describe("LearnLoopGame", () => {
+  it("exports the evidence-driven ChemQuest investigation surface", () => {
+    expect(ChemQuestLabGame).toBe(SandboxLabViewport);
+  });
+
   it("renders the fixed template regions from a scenario", () => {
     render(
       <LearnLoopGame

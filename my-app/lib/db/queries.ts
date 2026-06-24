@@ -1,16 +1,16 @@
-import 'server-only'
+import "server-only";
 
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from "drizzle-orm";
 
-import db from './connection'
-import { chats, game_versions, messages } from './schema'
+import db, { type Database } from "./connection";
+import { chats, game_versions, messages } from "./schema";
 
-function requireDb() {
+function requireDb(): Database {
   if (!db) {
-    throw new Error('POSTGRES_URL is not configured')
+    throw new Error("POSTGRES_URL is not configured");
   }
 
-  return db
+  return db;
 }
 
 export async function createChat({
@@ -18,16 +18,16 @@ export async function createChat({
   clerkUserId,
   title,
 }: {
-  id?: string
-  clerkUserId: string
-  title?: string | null
+  id?: string;
+  clerkUserId: string;
+  title?: string | null;
 }) {
   try {
     const values = {
       ...(id ? { id } : {}),
       clerk_user_id: clerkUserId,
       title,
-    }
+    };
 
     const [chat] = id
       ? await requireDb()
@@ -35,49 +35,60 @@ export async function createChat({
           .values(values)
           .onConflictDoNothing({ target: chats.id })
           .returning()
-      : await requireDb().insert(chats).values(values).returning()
+      : await requireDb().insert(chats).values(values).returning();
 
-    return chat ?? (id ? getChat({ id, clerkUserId }) : undefined)
+    return chat ?? (id ? getChatMetadata({ id, clerkUserId }) : undefined);
   } catch (error) {
-    console.error('Failed to create chat in database')
-    throw error
+    console.error("Failed to create chat in database");
+    throw error;
   }
 }
 
-export async function getChat({
+export async function getChatMetadata({
   id,
   clerkUserId,
 }: {
-  id: string
-  clerkUserId: string
+  id: string;
+  clerkUserId: string;
 }) {
   try {
     const [chat] = await requireDb()
-      .select()
+      .select({
+        id: chats.id,
+        title: chats.title,
+        demoUrl: chats.demo_url,
+        createdAt: chats.created_at,
+        updatedAt: chats.updated_at,
+      })
       .from(chats)
-      .where(and(eq(chats.id, id), eq(chats.clerk_user_id, clerkUserId)))
+      .where(and(eq(chats.id, id), eq(chats.clerk_user_id, clerkUserId)));
 
-    return chat
+    return chat;
   } catch (error) {
-    console.error('Failed to get chat from database')
-    throw error
+    console.error("Failed to get chat metadata from database");
+    throw error;
   }
 }
 
 export async function getChatsByUserId({
   clerkUserId,
 }: {
-  clerkUserId: string
+  clerkUserId: string;
 }) {
   try {
     return await requireDb()
-      .select()
+      .select({
+        title: chats.title,
+        id: chats.id,
+        createdAt: chats.created_at,
+        updatedAt: chats.updated_at,
+      })
       .from(chats)
       .where(eq(chats.clerk_user_id, clerkUserId))
-      .orderBy(desc(chats.updated_at))
+      .orderBy(desc(chats.updated_at));
   } catch (error) {
-    console.error('Failed to get chats from database')
-    throw error
+    console.error("Failed to get chats from database");
+    throw error;
   }
 }
 
@@ -86,21 +97,27 @@ export async function updateChatTitle({
   clerkUserId,
   title,
 }: {
-  id: string
-  clerkUserId: string
-  title: string
+  id: string;
+  clerkUserId: string;
+  title: string;
 }) {
   try {
     const [chat] = await requireDb()
       .update(chats)
       .set({ title })
       .where(and(eq(chats.id, id), eq(chats.clerk_user_id, clerkUserId)))
-      .returning()
+      .returning({
+        id: chats.id,
+        title: chats.title,
+        demoUrl: chats.demo_url,
+        createdAt: chats.created_at,
+        updatedAt: chats.updated_at,
+      });
 
-    return chat
+    return chat;
   } catch (error) {
-    console.error('Failed to update chat title in database')
-    throw error
+    console.error("Failed to update chat title in database");
+    throw error;
   }
 }
 
@@ -109,21 +126,21 @@ export async function updateChatLatestHtml({
   clerkUserId,
   latestHtml,
 }: {
-  id: string
-  clerkUserId: string
-  latestHtml: string
+  id: string;
+  clerkUserId: string;
+  latestHtml: string;
 }) {
   try {
     const [chat] = await requireDb()
       .update(chats)
       .set({ latest_html: latestHtml })
       .where(and(eq(chats.id, id), eq(chats.clerk_user_id, clerkUserId)))
-      .returning()
+      .returning({ id: chats.id });
 
-    return chat
+    return chat;
   } catch (error) {
-    console.error('Failed to update chat HTML in database')
-    throw error
+    console.error("Failed to update chat HTML in database");
+    throw error;
   }
 }
 
@@ -131,19 +148,19 @@ export async function deleteChat({
   id,
   clerkUserId,
 }: {
-  id: string
-  clerkUserId: string
+  id: string;
+  clerkUserId: string;
 }) {
   try {
     const [deleted] = await requireDb()
       .delete(chats)
       .where(and(eq(chats.id, id), eq(chats.clerk_user_id, clerkUserId)))
-      .returning()
+      .returning({ id: chats.id });
 
-    return deleted
+    return deleted;
   } catch (error) {
-    console.error('Failed to delete chat from database')
-    throw error
+    console.error("Failed to delete chat from database");
+    throw error;
   }
 }
 
@@ -153,16 +170,16 @@ export async function addMessage({
   role,
   content,
 }: {
-  chatId: string
-  clerkUserId: string
-  role: string
-  content: unknown
+  chatId: string;
+  clerkUserId: string;
+  role: string;
+  content: unknown;
 }) {
   try {
-    const chat = await getChat({ id: chatId, clerkUserId })
+    const chat = await getChatMetadata({ id: chatId, clerkUserId });
 
     if (!chat) {
-      return undefined
+      return undefined;
     }
 
     const [message] = await requireDb()
@@ -172,17 +189,23 @@ export async function addMessage({
         role,
         content,
       })
-      .returning()
+      .returning({
+        id: messages.id,
+        chat_id: messages.chat_id,
+        role: messages.role,
+        content: messages.content,
+        created_at: messages.created_at,
+      });
 
     await requireDb()
       .update(chats)
       .set({ updated_at: new Date() })
-      .where(eq(chats.id, chatId))
+      .where(eq(chats.id, chatId));
 
-    return message
+    return message;
   } catch (error) {
-    console.error('Failed to add message to database')
-    throw error
+    console.error("Failed to add message to database");
+    throw error;
   }
 }
 
@@ -190,24 +213,31 @@ export async function getMessages({
   chatId,
   clerkUserId,
 }: {
-  chatId: string
-  clerkUserId: string
+  chatId: string;
+  clerkUserId: string;
 }) {
   try {
-    const chat = await getChat({ id: chatId, clerkUserId })
-
-    if (!chat) {
-      return []
-    }
-
     return await requireDb()
-      .select()
+      .select({
+        id: messages.id,
+        chat_id: messages.chat_id,
+        role: messages.role,
+        content: messages.content,
+        created_at: messages.created_at,
+      })
       .from(messages)
+      .innerJoin(
+        chats,
+        and(
+          eq(messages.chat_id, chats.id),
+          eq(chats.clerk_user_id, clerkUserId),
+        ),
+      )
       .where(eq(messages.chat_id, chatId))
-      .orderBy(messages.created_at)
+      .orderBy(messages.created_at);
   } catch (error) {
-    console.error('Failed to get messages from database')
-    throw error
+    console.error("Failed to get messages from database");
+    throw error;
   }
 }
 
@@ -221,20 +251,20 @@ export async function addGameVersion({
   sourceManifestKey,
   sourceManifestUrl,
 }: {
-  chatId: string
-  clerkUserId: string
-  title: string
-  html: string
-  demoUrl?: string | null
-  sourceSnapshotId?: string | null
-  sourceManifestKey?: string | null
-  sourceManifestUrl?: string | null
+  chatId: string;
+  clerkUserId: string;
+  title: string;
+  html: string;
+  demoUrl?: string | null;
+  sourceSnapshotId?: string | null;
+  sourceManifestKey?: string | null;
+  sourceManifestUrl?: string | null;
 }) {
   try {
-    const chat = await getChat({ id: chatId, clerkUserId })
+    const chat = await getChatMetadata({ id: chatId, clerkUserId });
 
     if (!chat) {
-      return undefined
+      return undefined;
     }
 
     const [version] = await requireDb()
@@ -244,11 +274,26 @@ export async function addGameVersion({
         title,
         html,
         ...(demoUrl !== undefined ? { demo_url: demoUrl } : {}),
-        ...(sourceSnapshotId !== undefined ? { source_snapshot_id: sourceSnapshotId } : {}),
-        ...(sourceManifestKey !== undefined ? { source_manifest_key: sourceManifestKey } : {}),
-        ...(sourceManifestUrl !== undefined ? { source_manifest_url: sourceManifestUrl } : {}),
+        ...(sourceSnapshotId !== undefined
+          ? { source_snapshot_id: sourceSnapshotId }
+          : {}),
+        ...(sourceManifestKey !== undefined
+          ? { source_manifest_key: sourceManifestKey }
+          : {}),
+        ...(sourceManifestUrl !== undefined
+          ? { source_manifest_url: sourceManifestUrl }
+          : {}),
       })
-      .returning()
+      .returning({
+        id: game_versions.id,
+        chat_id: game_versions.chat_id,
+        title: game_versions.title,
+        demo_url: game_versions.demo_url,
+        source_snapshot_id: game_versions.source_snapshot_id,
+        source_manifest_key: game_versions.source_manifest_key,
+        source_manifest_url: game_versions.source_manifest_url,
+        created_at: game_versions.created_at,
+      });
 
     await requireDb()
       .update(chats)
@@ -256,12 +301,18 @@ export async function addGameVersion({
         title,
         latest_html: html,
         ...(demoUrl !== undefined ? { demo_url: demoUrl } : {}),
-        ...(sourceSnapshotId !== undefined ? { source_snapshot_id: sourceSnapshotId } : {}),
-        ...(sourceManifestKey !== undefined ? { source_manifest_key: sourceManifestKey } : {}),
-        ...(sourceManifestUrl !== undefined ? { source_manifest_url: sourceManifestUrl } : {}),
+        ...(sourceSnapshotId !== undefined
+          ? { source_snapshot_id: sourceSnapshotId }
+          : {}),
+        ...(sourceManifestKey !== undefined
+          ? { source_manifest_key: sourceManifestKey }
+          : {}),
+        ...(sourceManifestUrl !== undefined
+          ? { source_manifest_url: sourceManifestUrl }
+          : {}),
         updated_at: new Date(),
       })
-      .where(eq(chats.id, chatId))
+      .where(eq(chats.id, chatId));
 
     return version
       ? {
@@ -271,10 +322,10 @@ export async function addGameVersion({
           sourceManifestKey: version.source_manifest_key,
           sourceManifestUrl: version.source_manifest_url,
         }
-      : version
+      : version;
   } catch (error) {
-    console.error('Failed to add game version to database')
-    throw error
+    console.error("Failed to add game version to database");
+    throw error;
   }
 }
 
@@ -284,28 +335,37 @@ export async function setGameVersionDemoUrl({
   clerkUserId,
   demoUrl,
 }: {
-  versionId: string
-  chatId: string
-  clerkUserId: string
-  demoUrl: string
+  versionId: string;
+  chatId: string;
+  clerkUserId: string;
+  demoUrl: string;
 }) {
   try {
-    const chat = await getChat({ id: chatId, clerkUserId })
+    const chat = await getChatMetadata({ id: chatId, clerkUserId });
 
     if (!chat) {
-      return undefined
+      return undefined;
     }
 
     const [version] = await requireDb()
       .update(game_versions)
       .set({ demo_url: demoUrl })
       .where(eq(game_versions.id, versionId))
-      .returning()
+      .returning({
+        id: game_versions.id,
+        chat_id: game_versions.chat_id,
+        title: game_versions.title,
+        demo_url: game_versions.demo_url,
+        source_snapshot_id: game_versions.source_snapshot_id,
+        source_manifest_key: game_versions.source_manifest_key,
+        source_manifest_url: game_versions.source_manifest_url,
+        created_at: game_versions.created_at,
+      });
 
     await requireDb()
       .update(chats)
       .set({ demo_url: demoUrl })
-      .where(eq(chats.id, chatId))
+      .where(eq(chats.id, chatId));
 
     return version
       ? {
@@ -315,10 +375,10 @@ export async function setGameVersionDemoUrl({
           sourceManifestKey: version.source_manifest_key,
           sourceManifestUrl: version.source_manifest_url,
         }
-      : version
+      : version;
   } catch (error) {
-    console.error('Failed to update game version demo URL in database')
-    throw error
+    console.error("Failed to update game version demo URL in database");
+    throw error;
   }
 }
 
@@ -326,34 +386,35 @@ export async function getLatestGameVersion({
   chatId,
   clerkUserId,
 }: {
-  chatId: string
-  clerkUserId: string
+  chatId: string;
+  clerkUserId: string;
 }) {
   try {
-    const chat = await getChat({ id: chatId, clerkUserId })
-
-    if (!chat) {
-      return undefined
-    }
-
     const [version] = await requireDb()
-      .select()
+      .select({
+        id: game_versions.id,
+        title: game_versions.title,
+        demoUrl: game_versions.demo_url,
+        sourceSnapshotId: game_versions.source_snapshot_id,
+        sourceManifestKey: game_versions.source_manifest_key,
+        sourceManifestUrl: game_versions.source_manifest_url,
+        createdAt: game_versions.created_at,
+      })
       .from(game_versions)
+      .innerJoin(
+        chats,
+        and(
+          eq(game_versions.chat_id, chats.id),
+          eq(chats.clerk_user_id, clerkUserId),
+        ),
+      )
       .where(eq(game_versions.chat_id, chatId))
       .orderBy(desc(game_versions.created_at))
-      .limit(1)
+      .limit(1);
 
-    return version
-      ? {
-          ...version,
-          demoUrl: version.demo_url,
-          sourceSnapshotId: version.source_snapshot_id,
-          sourceManifestKey: version.source_manifest_key,
-          sourceManifestUrl: version.source_manifest_url,
-        }
-      : version
+    return version;
   } catch (error) {
-    console.error('Failed to get latest game version from database')
-    throw error
+    console.error("Failed to get latest game version from database");
+    throw error;
   }
 }

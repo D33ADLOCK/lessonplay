@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const getChat = vi.fn()
+const getChatMetadata = vi.fn()
 const addGameVersion = vi.fn()
 const updateChatTitle = vi.fn()
 const updateChatLatestHtml = vi.fn()
@@ -18,7 +18,7 @@ const formatLearnLoopBuildError = vi.fn((error: unknown) =>
 )
 
 vi.mock('@/lib/db/queries', () => ({
-  getChat: (...a: unknown[]) => getChat(...a),
+  getChatMetadata: (...a: unknown[]) => getChatMetadata(...a),
   addGameVersion: (...a: unknown[]) => addGameVersion(...a),
   updateChatTitle: (...a: unknown[]) => updateChatTitle(...a),
   updateChatLatestHtml: (...a: unknown[]) => updateChatLatestHtml(...a),
@@ -60,7 +60,7 @@ function getPublishGame() {
 describe('publishGame', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    getChat.mockResolvedValue({ id: CHAT_ID })
+    getChatMetadata.mockResolvedValue({ id: CHAT_ID })
     addGameVersion.mockResolvedValue({ id: 'version-1' })
     updateChatTitle.mockResolvedValue({ id: CHAT_ID })
     updateChatLatestHtml.mockResolvedValue({ id: CHAT_ID })
@@ -126,7 +126,7 @@ describe('publishLearnLoopGame', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     clearLearnLoopDraftFiles(CHAT_ID)
-    getChat.mockResolvedValue({ id: CHAT_ID })
+    getChatMetadata.mockResolvedValue({ id: CHAT_ID })
     addGameVersion.mockResolvedValue({ id: 'version-learn-loop' })
     setGameVersionDemoUrl.mockResolvedValue({ id: 'version-learn-loop', demoUrl: DEMO_URL })
     uploadGameHtml.mockResolvedValue({ url: DEMO_URL, path: 'chat-123/learn-loop.html' })

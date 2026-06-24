@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import {
   convertToModelMessages,
+  createIdGenerator,
   stepCountIs,
   streamText,
   type UIMessage,
@@ -11,9 +12,14 @@ import { SYSTEM_PROMPT } from '@/lib/agent/skills'
 import { createGameTools } from '@/lib/agent/tools'
 import { validateChatRequest } from '@/lib/agent/validate-chat-request'
 import { getModel } from '@/lib/codex-oauth/getModel'
-import { addMessage, createChat, getChat } from '@/lib/db/queries'
+import { addMessage, createChat, getChatMetadata } from '@/lib/db/queries'
 
 export const maxDuration = 300
+
+const generateMessageId = createIdGenerator({
+  prefix: 'msg',
+  size: 16,
+})
 
 function getLastUserMessage(messages: UIMessage[]) {
   return [...messages].reverse().find((message) => message.role === 'user')
@@ -48,7 +54,10 @@ export async function POST(request: NextRequest) {
   const messages = validation.messages
   const chatId = requestedChatId || crypto.randomUUID()
 
-  const existingChat = await getChat({ id: chatId, clerkUserId: userId })
+  const existingChat = await getChatMetadata({
+    id: chatId,
+    clerkUserId: userId,
+  })
 
   if (!existingChat) {
     const createdChat = await createChat({
@@ -80,6 +89,7 @@ export async function POST(request: NextRequest) {
 
   return result.toUIMessageStreamResponse({
     originalMessages: messages,
+    generateMessageId,
     onFinish: async ({ responseMessage }) => {
       const lastUserMessage = getLastUserMessage(messages)
 

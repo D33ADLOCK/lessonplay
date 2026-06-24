@@ -2,9 +2,10 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { UIMessage } from 'ai'
 
+import { readPersistedUIMessage } from '@/lib/agent/persisted-ui-message'
 import {
   deleteChat,
-  getChat,
+  getChatMetadata,
   getLatestGameVersion,
   getMessages,
   updateChatTitle,
@@ -42,10 +43,7 @@ function getMessageText(content: unknown) {
 
 function toResponseMessage(message: Awaited<ReturnType<typeof getMessages>>[number]) {
   const content = message.content as UIMessage | string
-  const maybeMessage =
-    content && typeof content === 'object' && 'parts' in content
-      ? content
-      : undefined
+  const maybeMessage = readPersistedUIMessage(content, message.id) ?? undefined
 
   return {
     id: maybeMessage?.id || message.id,
@@ -75,7 +73,7 @@ export async function GET(
     )
   }
 
-  const chat = await getChat({ id: chatId, clerkUserId: userId })
+  const chat = await getChatMetadata({ id: chatId, clerkUserId: userId })
 
   if (!chat) {
     return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
@@ -91,10 +89,9 @@ export async function GET(
     object: 'chat',
     name: chat.title,
     title: chat.title,
-    latestHtml: chat.latest_html,
-    demoUrl: latestGameVersion?.demoUrl ?? chat.demo_url ?? null,
-    createdAt: chat.created_at.toISOString(),
-    updatedAt: chat.updated_at.toISOString(),
+    demoUrl: latestGameVersion?.demoUrl ?? chat.demoUrl ?? null,
+    createdAt: chat.createdAt.toISOString(),
+    updatedAt: chat.updatedAt.toISOString(),
     messages: messages.map(toResponseMessage),
     latestGameVersion,
   })
@@ -134,10 +131,9 @@ export async function PATCH(
     object: 'chat',
     name: chat.title,
     title: chat.title,
-    latestHtml: chat.latest_html,
-    demoUrl: chat.demo_url ?? null,
-    createdAt: chat.created_at.toISOString(),
-    updatedAt: chat.updated_at.toISOString(),
+    demoUrl: chat.demoUrl ?? null,
+    createdAt: chat.createdAt.toISOString(),
+    updatedAt: chat.updatedAt.toISOString(),
   })
 }
 

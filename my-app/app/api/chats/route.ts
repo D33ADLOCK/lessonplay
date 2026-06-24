@@ -2,7 +2,6 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 import { getChatsByUserId } from '@/lib/db/queries'
-import type { Chat } from '@/lib/db/schema'
 
 export async function GET() {
   const { userId } = await auth()
@@ -15,14 +14,13 @@ export async function GET() {
 
   return NextResponse.json({
     object: 'list',
-    data: chats.map((chat: Chat) => ({
+    data: chats.map((chat) => ({
       id: chat.id,
       object: 'chat',
-      name: chat.title,
-      title: chat.title,
-      latestHtml: chat.latest_html,
-      createdAt: chat.created_at.toISOString(),
-      updatedAt: chat.updated_at.toISOString(),
+      name: chat.title ?? 'Untitled game',
+      title: chat.title ?? 'Untitled game',
+      createdAt: chat.createdAt.toISOString(),
+      updatedAt: chat.updatedAt.toISOString(),
     })),
   })
 }

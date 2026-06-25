@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import {
   PromptInput,
   PromptInputImageButton,
@@ -138,9 +137,16 @@ export function HomeClient() {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8 md:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              What can we build together?
-            </h2>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400">
+              AI game creation for educators
+            </p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-950 dark:text-white mb-4">
+              Turn any lesson into a playable game.
+            </h1>
+            <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted-foreground">
+              Describe a concept or textbook chapter. LessonPlay helps you
+              choose a game idea, builds it, and publishes a playable experience.
+            </p>
           </div>
 
           {/* Prompt Input */}
@@ -162,7 +168,7 @@ export function HomeClient() {
                 ref={textareaRef}
                 onChange={(e) => setMessage(e.target.value)}
                 value={message}
-                placeholder="Describe what you want to build..."
+                placeholder="What do you want your students to learn?"
                 className="min-h-[80px] text-base"
                 disabled={isSubmitting}
               />
@@ -196,14 +202,10 @@ export function HomeClient() {
           <div className="mt-4 max-w-2xl mx-auto">
             <Suggestions>
               {[
-                'Landing page',
-                'Todo app',
-                'Dashboard',
-                'Blog',
-                'E-commerce',
-                'Portfolio',
-                'Chat app',
-                'Calculator',
+                'Teach fractions with a game',
+                'Turn photosynthesis into an adventure',
+                'Build a force and friction challenge',
+                'Create a separation-of-mixtures lab',
               ].map((suggestion) => (
                 <Suggestion
                   key={suggestion}
@@ -217,13 +219,7 @@ export function HomeClient() {
           {/* Footer */}
           <div className="mt-8 md:mt-16 text-center text-sm text-muted-foreground">
             <p>
-              Powered by{' '}
-              <Link
-                href="https://v0-sdk.dev"
-                className="text-foreground hover:underline"
-              >
-                v0 SDK
-              </Link>
+              Built for teachers and educational creators.
             </p>
           </div>
         </div>

@@ -136,7 +136,7 @@ export function MobileMenu({ onInfoDialogOpen }: MobileMenuProps) {
                       <div className="flex-1">
                         <div className="font-medium">What's This?</div>
                         <div className="text-sm text-muted-foreground">
-                          Learn about Game Builder
+                          Learn about LessonPlay
                         </div>
                       </div>
                     </div>

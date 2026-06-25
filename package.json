@@ -1,8 +1,8 @@
 {
-  "name": "game-code-workspace",
+  "name": "lessonplay-workspace",
   "version": "0.0.0",
   "private": true,
-  "description": "Scoped npm workspace for opt-in guided learning games and the shared @learn-loop/core package. Standalone games keep their own node_modules unless explicitly listed here.",
+  "description": "LessonPlay educational-game studio, shared learning-game packages, and reference games.",
   "workspaces": [
     "packages/*",
     "games/separation-bench",

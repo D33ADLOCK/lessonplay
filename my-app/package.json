@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "lessonplay",
   "version": "0.3.4",
   "private": true,
   "packageManager": "pnpm@10.20.0",

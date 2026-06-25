@@ -51,7 +51,8 @@ export const createImageAttachment = async (
 }
 
 // SessionStorage utilities for prompt persistence
-const PROMPT_STORAGE_KEY = 'v0-prompt-data'
+const PROMPT_STORAGE_KEY = 'lessonplay-prompt-data'
+const LEGACY_PROMPT_STORAGE_KEY = 'v0-prompt-data'
 
 export interface StoredPromptData {
   message: string
@@ -85,9 +86,14 @@ export const savePromptToStorage = (
 
 export const loadPromptFromStorage = (): StoredPromptData | null => {
   try {
-    const stored = sessionStorage.getItem(PROMPT_STORAGE_KEY)
+    const stored =
+      sessionStorage.getItem(PROMPT_STORAGE_KEY) ??
+      sessionStorage.getItem(LEGACY_PROMPT_STORAGE_KEY)
     if (stored) {
-      return JSON.parse(stored)
+      const data = JSON.parse(stored) as StoredPromptData
+      sessionStorage.setItem(PROMPT_STORAGE_KEY, stored)
+      sessionStorage.removeItem(LEGACY_PROMPT_STORAGE_KEY)
+      return data
     }
   } catch (error) {
     console.warn('Failed to load prompt from sessionStorage:', error)
@@ -98,6 +104,7 @@ export const loadPromptFromStorage = (): StoredPromptData | null => {
 export const clearPromptFromStorage = () => {
   try {
     sessionStorage.removeItem(PROMPT_STORAGE_KEY)
+    sessionStorage.removeItem(LEGACY_PROMPT_STORAGE_KEY)
   } catch (error) {
     console.warn('Failed to clear prompt from sessionStorage:', error)
   }
@@ -106,7 +113,8 @@ export const clearPromptFromStorage = () => {
 // Dedicated, one-shot handoff key for the home -> detail first prompt
 // (Approach X). Kept separate from the draft key above so the detail page's
 // input restore and the auto-send never read the same value twice.
-const INITIAL_PROMPT_KEY = 'v0-initial-prompt'
+const INITIAL_PROMPT_KEY = 'lessonplay-initial-prompt'
+const LEGACY_INITIAL_PROMPT_KEY = 'v0-initial-prompt'
 
 export const saveInitialPrompt = (chatId: string, text: string) => {
   try {
@@ -123,7 +131,10 @@ export const saveInitialPrompt = (chatId: string, text: string) => {
  */
 export const takeInitialPrompt = (chatId: string): string | null => {
   try {
-    const stored = sessionStorage.getItem(INITIAL_PROMPT_KEY)
+    const storageKey = sessionStorage.getItem(INITIAL_PROMPT_KEY)
+      ? INITIAL_PROMPT_KEY
+      : LEGACY_INITIAL_PROMPT_KEY
+    const stored = sessionStorage.getItem(storageKey)
     if (!stored) {
       return null
     }
@@ -131,7 +142,7 @@ export const takeInitialPrompt = (chatId: string): string | null => {
     if (data.chatId !== chatId || typeof data.text !== 'string') {
       return null
     }
-    sessionStorage.removeItem(INITIAL_PROMPT_KEY)
+    sessionStorage.removeItem(storageKey)
     return data.text
   } catch (error) {
     console.warn('Failed to read initial prompt from sessionStorage:', error)

@@ -139,7 +139,7 @@ export function PreviewPanel({
                 No preview available
               </p>
               <p className="text-xs text-gray-700/50 dark:text-gray-200/50">
-                Start a conversation to see your app here
+                Start with a lesson to see your game here
               </p>
             </div>
           </div>

@@ -1,198 +1,143 @@
-# v0 clone
+# LessonPlay
 
-> **⚠️ Developer Preview**: This SDK is currently in beta and is subject to change. Use in production at your own risk.
+**Turn any lesson into a playable game.**
 
-<p align="center">
-    <img src="./screenshot.png" alt="v0 Clone Screenshot" width="800" />
-</p>
+LessonPlay is an AI-assisted creation tool for teachers and educational creators. Give it a concept or textbook chapter, choose a game direction, and follow the build as LessonPlay generates, previews, and publishes a playable learning experience.
 
-<p align="center">
-    An example of how to use the AI Elements to build a v0 clone with authentication and multi-tenant support.
-</p>
+> Status: portfolio prototype. The core generation and publishing workflows work, but the product is not yet positioned as a production classroom service.
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#deploy-your-own"><strong>Deploy Your Own</strong></a> ·
-  <a href="#setup"><strong>Setup</strong></a> ·
-  <a href="#getting-started"><strong>Getting Started</strong></a> ·
-  <a href="#usage"><strong>Usage</strong></a>
-</p>
-<br/>
+![LessonPlay social card](./public/brand/lessonplay-social.png)
 
-## Deploy Your Own
+## What it does
 
-You can deploy your own version of the v0 clone to Vercel with one click:
+The product guides creators through a short workflow:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fv0-sdk%2Ftree%2Fmain%2Fexamples%2Fv0-clone&env=V0_API_KEY,AUTH_SECRET&envDescription=Get+your+v0+API+key&envLink=https%3A%2F%2Fv0.app%2Fchat%2Fsettings%2Fkeys&products=%255B%257B%2522type%2522%253A%2522integration%2522%252C%2522protocol%2522%253A%2522storage%2522%252C%2522productSlug%2522%253A%2522neon%2522%252C%2522integrationSlug%2522%253A%2522neon%2522%257D%255D&project-name=v0-clone&repository-name=v0-clone&demo-title=v0+Clone&demo-description=A+full-featured+v0+clone+built+with+Next.js%2C+AI+Elements%2C+and+the+v0+SDK&demo-url=https%3A%2F%2Fclone-demo.v0-sdk.dev)
+1. **Describe** what students should learn.
+2. **Choose** from focused game concepts proposed by the agent.
+3. **Generate** the selected experience while build progress appears in chat.
+4. **Preview** the playable game without leaving the conversation.
+5. **Publish** a versioned, shareable game URL.
 
-## Setup
+LessonPlay currently supports three generation paths:
 
-### Environment Variables
+- **Arcade mini-games** — self-contained HTML5 Canvas games with simple controls.
+- **Chapter games** — template-driven experiences built on the shared Learn Loop engine.
+- **ChemQuest labs** — structured chemistry investigations using a fixed mobile lab interface.
 
-Create a `.env` file with all required variables:
+## Why this project exists
 
-```bash
-# Auth Secret - Generate a random string for production
-# Generate with: openssl rand -base64 32
-# Or visit: https://generate-secret.vercel.app/32
-AUTH_SECRET=your-auth-secret-here
+Most AI education tools produce notes, slides, or quizzes. LessonPlay explores a different question: can curriculum become an interactive mechanic that students learn by playing?
 
-# Database URL - PostgreSQL connection string
-POSTGRES_URL=postgresql://user:password@localhost:5432/v0_clone
-# For Vercel Postgres, use the connection string from your dashboard
+The agent is constrained to prioritize:
 
-# Get your API key from https://v0.dev/chat/settings/keys
-V0_API_KEY=your_v0_api_key_here
+1. a game that runs reliably;
+2. a game that is enjoyable enough to replay;
+3. one accurate, load-bearing learning concept;
+4. controls simple enough for young learners.
 
-# Optional: Use a custom API URL
-# V0_API_URL=http://localhost:3001/v1
-```
+## Product capabilities
 
-### Database Setup
+- Chat-based game ideation and iteration
+- Real-time reasoning and build progress
+- Generated-file and publish-status views
+- Live sandboxed game preview with restart and fullscreen controls
+- Versioned game and source persistence
+- Clerk authentication and per-user chat history
+- OpenAI API or ChatGPT Codex OAuth model access
+- PostgreSQL persistence with Drizzle ORM
+- Cloudflare R2/S3-compatible game publishing
 
-This project uses PostgreSQL with Drizzle ORM. Set up your database:
+## Technology
 
-1. **Generate Database Schema**:
+- Next.js 16, React 19, TypeScript, Tailwind CSS
+- Vercel AI SDK and AI Elements
+- OpenAI models with optional ChatGPT Codex OAuth
+- Clerk authentication
+- PostgreSQL and Drizzle ORM
+- Cloudflare R2 through the S3 API
+- Vite-based bundling for Learn Loop and ChemQuest projects
+- Vitest
 
-   ```bash
-   pnpm db:generate
-   ```
+## Local setup
 
-2. **Run Database Migrations**:
+Prerequisites:
 
-   ```bash
-   pnpm db:migrate
-   ```
-
-3. **Optional - Open Database Studio**:
-   ```bash
-   pnpm db:studio
-   ```
-
-## Getting Started
-
-Then, run the development server:
+- Node.js 20+
+- pnpm 10
+- PostgreSQL
+- Clerk application credentials
+- OpenAI API access or a supported ChatGPT Codex OAuth connection
+- Cloudflare R2 or another compatible S3 publishing target
 
 ```bash
+git clone https://github.com/D33ADLOCK/lessonplay.git
+cd lessonplay/my-app
+cp .env.example .env
+pnpm install
+pnpm db:migrate
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Features
+The required environment variables and safe placeholders are documented in [`.env.example`](./.env.example). Never commit `.env`.
 
-This v0 clone includes:
+## Verification
 
-### Core Features
+```bash
+pnpm test
+pnpm build
+```
 
-- **AI Elements Integration**: Uses AI Elements components for a polished UI
-- **v0 SDK Integration**: Connects to the v0 Platform API for generating apps
-- **Real-time Preview**: Split-screen interface with chat and preview panels
-- **Conversation History**: Maintains chat history throughout the session
-- **Suggestion System**: Provides helpful prompts to get users started
-- **Streaming Support**: Toggle between streaming and non-streaming AI responses for real-time updates
-- **Comprehensive Task Support**: Full support for all v0 Platform API task types including:
-  - `task-thinking-v1` - AI reasoning and thought processes
-  - `task-search-web-v1` - Web search operations with results
-  - `task-search-repo-v1` - Repository/codebase search functionality
-  - `task-diagnostics-v1` - Code analysis and issue detection
-  - `task-read-file-v1` - File reading operations
-  - `task-coding-v1` - Code generation and editing tasks
-  - `task-generate-design-inspiration-v1` - Design inspiration generation
-  - **Graceful fallback** for unknown task types with user-friendly display
+## Repository structure
 
-### Authentication & Multi-Tenant Features
+```text
+my-app/
+├── app/                    # Next.js routes and APIs
+├── components/             # Chat, preview, and shared UI
+├── lib/agent/              # Agent prompt, tools, bundling, and persistence
+├── lib/db/                 # Drizzle schema, queries, and migrations
+├── skills/                 # Game-design and learning-game instructions
+└── test/                   # Unit and integration tests
 
-- **Anonymous Access**: Unauthenticated users can create chats directly (with rate limits)
-- **Guest Access**: Users can register as guests for persistent sessions
-- **User Registration/Login**: Email/password authentication with secure password hashing
-- **Session Management**: Secure session handling with NextAuth.js
-- **Multi-Tenant Architecture**: Multiple users share the same v0 API organization
-- **Ownership Mapping**: Authenticated users only see their own chats and projects
-- **Rate Limiting**: Different limits for anonymous, guest, and registered users
-- **User Navigation**: Header dropdown with user info and sign-out options
+packages/
+├── learn-loop-core/        # Shared learning-game engine and UI
+└── learn-loop-template/    # Reusable game presentation templates
 
-## Usage
+games/                      # Hand-built and generated reference games
+```
 
-### Setup
+## Current limitations
 
-1. Set up all environment variables in `.env`
-2. Run database migrations with `pnpm db:migrate`
-3. Start the development server with `pnpm dev` or production server with `pnpm start`
+- The product requires external authentication, database, model, and object-storage services.
+- Image controls are visible in the interface, but multimodal prompt delivery still needs a complete end-to-end product pass.
+- Generated educational content should be reviewed by a teacher before classroom use.
+- No measured learning-outcome claims are made.
+- The current experience is a prototype, not a hardened multi-school platform.
 
-### Using the App
+## Portfolio launch plan
 
-4. **Anonymous Usage**: Visit the homepage and start creating chats immediately (3 chats/day limit)
-5. **Guest Access**: Register as a guest for persistent sessions (5 chats/day limit)
-6. **Full Account**: Create a permanent account for higher limits (50 chats/day)
-7. Use the "Streaming" toggle in the header to enable/disable real-time streaming responses
-8. Enter a prompt describing the app you want to build
-9. Watch as v0 generates your app in real-time in the preview panel
-10. Continue the conversation to iterate and improve your app
-11. Authenticated users' chats are automatically saved and associated with their account
+The initial showcase will use short demo videos and two representative generated games. The repository should only be made public after:
 
-## Architecture
+- a secret and history audit;
+- setup verification from a clean clone;
+- confirmation that demo URLs contain no private data;
+- license and attribution review.
 
-### Frontend
+## Roadmap
 
-- `app/page.tsx` - Main UI with chat interface, streaming toggle, and preview panel
-- `components/ai-elements/` - AI Elements components for the UI
-- `components/shared/app-header.tsx` - Navigation header with user authentication
-- Uses `@v0-sdk/react` components for rendering streaming AI responses
+- Finish multimodal lesson input
+- Add a public gallery of generated games
+- Improve teacher controls for age, curriculum, and session length
+- Add structured playtesting and learning-review checkpoints
+- Capture reusable analytics without collecting student personal data
 
-### Backend & API
+## Attribution
 
-- `app/api/chat/route.ts` - Chat creation and messaging with ownership tracking
-- `app/api/chats/` - User's chat listing and individual chat access
-- `app/api/projects/` - User's project listing and individual project access
-- `app/(auth)/` - Authentication configuration and login/register pages
+LessonPlay began from Vercel's Apache-2.0-licensed v0 clone example and retains the original license notice. The current product replaces the original generation backend and product workflow with a custom educational-game agent, Learn Loop templates, ChemQuest investigations, versioned publishing, and ChatGPT Codex OAuth support.
 
-### Database
+Additional game-design skills were adapted from [`abagames/claude-one-button-game-creation`](https://github.com/abagames/claude-one-button-game-creation); see the relevant notices and source licenses.
 
-- **Users**: Store user accounts with email and hashed passwords
-- **ProjectOwnership**: Maps v0 API project IDs → user IDs (ownership only)
-- **ChatOwnership**: Maps v0 API chat IDs → user IDs with optional project association
-- **AnonymousChatLog**: Tracks anonymous chat creation by IP address for rate limiting
+## License
 
-### Multi-Tenant Design
-
-- **v0 API as Source of Truth**: All actual chat/project data stays in v0 API
-- **Ownership Layer**: Database only tracks "who owns what"
-- **Access Control**: API routes filter v0 data based on ownership
-- **No Data Duplication**: Avoids storing redundant data
-
-### Streaming Implementation
-
-When streaming is enabled:
-
-- Frontend sends `streaming: true` to the API route
-- API route calls `v0.chats.create({ responseMode: 'experimental_stream' })`
-- Server returns a streaming response with `Content-Type: text/event-stream`
-- Frontend uses `StreamingMessage` component from `@v0-sdk/react` to render responses in real-time
-
-## Database Commands
-
-- `pnpm db:generate` - Generate migration files from schema changes
-- `pnpm db:migrate` - Apply pending migrations
-- `pnpm db:studio` - Open Drizzle Studio for database inspection
-- `pnpm db:push` - Push schema changes directly (for development)
-
-## Security Features
-
-- Password hashing with bcrypt
-- Secure session cookies
-- CSRF protection
-- SQL injection protection via Drizzle ORM
-- User data isolation through ownership mapping
-
-## User Types & Rate Limits
-
-- **Anonymous Users**: No account needed, 3 chats per day, no data persistence
-- **Guest Users**: Auto-created accounts, 5 chats per day, data persists during session
-- **Registered Users**: Permanent accounts, 50 chats per day, data persists across sessions and devices
-
-Rate limits are enforced per 24-hour period and reset daily.
-
----
-
-You now have a working multi-tenant v0 clone with authentication! Feel free to explore the [v0 Platform API](https://v0.dev/docs/api/platform) and extend your app with additional features.
+See [LICENSE](./LICENSE).

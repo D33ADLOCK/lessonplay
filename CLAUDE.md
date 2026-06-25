@@ -1,7 +1,8 @@
-# Game Code — game collection
+# LessonPlay — educational-game studio and game collection
 
-This repository is a collection of small games. Each game lives in its own folder
-under `games/<slug>/` and is self-contained (its own `package.json`, source, build).
+This repository contains the LessonPlay product, shared learning-game packages,
+and a collection of small games. Each reference game lives in its own folder under
+`games/<slug>/` and is self-contained unless explicitly listed as a workspace consumer.
 
 `AGENTS.md` is a symlink to this file, so Claude Code and Codex read the same guidance.
 

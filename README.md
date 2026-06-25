@@ -1,46 +1,57 @@
-# Game Code
+# LessonPlay
 
-A collection of small games. Each game lives in its own self-contained folder under
-[`games/`](games/).
+**Turn any lesson into a playable game.**
 
-## Games
+LessonPlay is an AI-assisted educational-game studio for teachers and educational creators. Describe a concept or textbook chapter, choose a focused game idea, and follow the build from conversation to a playable, published experience.
 
-| Game | Stack | Run |
-| :-- | :-- | :-- |
-| [moon-jump-vs-earth-jump](games/moon-jump-vs-earth-jump/) | React + Vite | `cd games/moon-jump-vs-earth-jump && npm install && npm run dev` |
+The product application lives in [`my-app/`](my-app/). Its [README](my-app/README.md) covers product capabilities, architecture, setup, limitations, and the portfolio launch plan.
 
-## Game-creation skills (Claude Code + Codex)
+![LessonPlay](my-app/public/brand/lessonplay-social.png)
 
-This repo ships reusable game-design/build skills ported from
-[abagames/claude-one-button-game-creation](https://github.com/abagames/claude-one-button-game-creation):
+## Repository layout
 
-- `designing-one-button-games` — invent original tap/hold/release games
-- `designing-mini-games` — compact games with more than one input
-- `implementing-gameplay-invariants` — turn risk/reward prose into enforceable invariants
-- `developing-with-crisp-game-lib` — build browser mini-games with crisp-game-lib
-- `evaluating-gameplay-balance` — diagnose and improve balance from telemetry
-- `maximizing-game-feel` — add tactile polish
-- `chapter-to-game` — turn chapter material into a guided-sim, contraption, sort/classify,
-  or arcade game plan/scaffold
+```text
+my-app/       LessonPlay Next.js product
+packages/     Shared Learn Loop engine and templates
+games/        Reference, hand-built, and generated educational games
+scripts/      Game validation and development utilities
+.agents/      Reusable game-design and implementation skills
+```
 
-Guided-sim chapter games use `@learn-loop/core` with `Scenario` data,
-`GuidedLabMissionPresentation` metadata, and the shared `GuidedLabViewport` 9:16
-template.
-
-They are installed in two mirrored locations so both tools find them:
-
-- **Claude Code** → [`.claude/skills/`](.claude/skills/) (auto-discovered; just ask Claude
-  to "design a one-button game" and it invokes the right skill).
-- **Codex / other agents** → [`.agents/skills/`](.agents/skills/), referenced from
-  [`AGENTS.md`](AGENTS.md) (a symlink to [`CLAUDE.md`](CLAUDE.md)).
-
-The full workflow — tag selection, design, invariants, implementation, and the GA
-validation gate (`scripts/`) — is documented in [`CLAUDE.md`](CLAUDE.md).
+## Run LessonPlay
 
 ```bash
-# pick creative seed tags
-node scripts/random_tag_selector.js
-
-# validate a generated one-button game
-node scripts/check_generated_game.js games/<slug>
+cd my-app
+cp .env.example .env
+pnpm install
+pnpm db:migrate
+pnpm dev
 ```
+
+See [`my-app/.env.example`](my-app/.env.example) for required services and placeholders.
+
+## Verify
+
+```bash
+cd my-app
+pnpm test
+pnpm build
+```
+
+## Game-creation system
+
+LessonPlay combines several constrained generation paths:
+
+- self-contained arcade mini-games;
+- Learn Loop chapter games using shared engine and UI packages;
+- ChemQuest chemistry investigations using a fixed mobile lab template.
+
+Reusable skills under [`.agents/skills/`](.agents/skills/) define design, educational accuracy, gameplay invariants, balance, and implementation rules. The reference games under [`games/`](games/) support development and regression testing.
+
+## Status
+
+This repository is being prepared as a public portfolio project. Before public release, verify setup from a clean clone, audit Git history for secrets and private data, and confirm all published demo URLs are safe to share.
+
+## Attribution
+
+The product application began from Vercel's Apache-2.0-licensed v0 clone example. Game-design skills were adapted from [`abagames/claude-one-button-game-creation`](https://github.com/abagames/claude-one-button-game-creation). See the relevant licenses and notices for details.

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="340" height="72" viewBox="0 0 340 72" role="img" aria-labelledby="title">
+  <title id="title">LessonPlay</title>
+  <rect x="4" y="4" width="64" height="64" rx="18" fill="#4f46e5"/>
+  <path d="M21 22.5a5.5 5.5 0 0 1 5.5-5.5h19a5.5 5.5 0 0 1 5.5 5.5v27a5.5 5.5 0 0 1-5.5 5.5h-19a5.5 5.5 0 0 1-5.5-5.5v-27Z" fill="#eef2ff"/>
+  <path d="M32 28.413c0-1.527 1.652-2.49 2.985-1.746l9.901 5.587a2 2 0 0 1 0 3.492l-9.901 5.587C33.652 42.077 32 41.114 32 39.587V28.413Z" fill="#f97316"/>
+  <path d="M27 47h18" stroke="#a5b4fc" stroke-width="3" stroke-linecap="round"/>
+  <text x="84" y="47" fill="#111827" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="34" font-weight="700" letter-spacing="-1.2">LessonPlay</text>
+</svg>

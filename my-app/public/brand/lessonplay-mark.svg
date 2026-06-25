@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">LessonPlay</title>
+  <rect width="64" height="64" rx="18" fill="#4f46e5"/>
+  <path d="M17 18.5A5.5 5.5 0 0 1 22.5 13h19a5.5 5.5 0 0 1 5.5 5.5v27a5.5 5.5 0 0 1-5.5 5.5h-19a5.5 5.5 0 0 1-5.5-5.5v-27Z" fill="#eef2ff"/>
+  <path d="M28 24.413c0-1.527 1.652-2.49 2.985-1.746l9.901 5.587a2 2 0 0 1 0 3.492l-9.901 5.587C29.652 38.077 28 37.114 28 35.587V24.413Z" fill="#f97316"/>
+  <path d="M23 43h18" stroke="#a5b4fc" stroke-width="3" stroke-linecap="round"/>
+</svg>

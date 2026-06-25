@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">LessonPlay</title>
+  <desc id="desc">Turn any lesson into a playable game.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef2ff"/>
+      <stop offset="0.55" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#fff7ed"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="36" fill="url(#bg)"/>
+  <circle cx="1070" cy="76" r="160" fill="#c7d2fe" opacity=".55"/>
+  <circle cx="112" cy="590" r="190" fill="#fed7aa" opacity=".5"/>
+  <rect x="84" y="72" width="72" height="72" rx="20" fill="#4f46e5"/>
+  <path d="M103 93.5a6.5 6.5 0 0 1 6.5-6.5h21a6.5 6.5 0 0 1 6.5 6.5v29a6.5 6.5 0 0 1-6.5 6.5h-21a6.5 6.5 0 0 1-6.5-6.5v-29Z" fill="#eef2ff"/>
+  <path d="M116 100.5c0-1.7 1.84-2.77 3.32-1.94l11 6.2a2.22 2.22 0 0 1 0 3.88l-11 6.2c-1.48.83-3.32-.24-3.32-1.94v-12.4Z" fill="#f97316"/>
+  <path d="M110 121h20" stroke="#a5b4fc" stroke-width="3.5" stroke-linecap="round"/>
+  <text x="176" y="126" fill="#111827" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="42" font-weight="700" letter-spacing="-1.4">LessonPlay</text>
+  <text x="84" y="284" fill="#111827" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="72" font-weight="750" letter-spacing="-2.5">
+    <tspan x="84" dy="0">Turn any lesson into</tspan>
+    <tspan x="84" dy="86">a playable game.</tspan>
+  </text>
+  <text x="88" y="492" fill="#4b5563" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="30">
+    AI game creation for educators.
+  </text>
+  <rect x="844" y="184" width="274" height="310" rx="28" fill="#111827"/>
+  <rect x="872" y="214" width="218" height="158" rx="18" fill="#312e81"/>
+  <circle cx="922" cy="278" r="24" fill="#f97316"/>
+  <path d="M967 322c26-57 59-65 94-17" stroke="#a5b4fc" stroke-width="14" stroke-linecap="round"/>
+  <rect x="872" y="398" width="138" height="20" rx="10" fill="#eef2ff"/>
+  <rect x="872" y="434" width="194" height="14" rx="7" fill="#6b7280"/>
+  <rect x="872" y="460" width="162" height="14" rx="7" fill="#4b5563"/>
+</svg>

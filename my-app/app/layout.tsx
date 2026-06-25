@@ -15,9 +15,43 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Game Builder',
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  ),
+  title: {
+    default: 'LessonPlay — Turn any lesson into a playable game',
+    template: '%s · LessonPlay',
+  },
   description:
-    'Design and build fun, interactive educational mini-games with AI.',
+    'LessonPlay helps teachers and educational creators turn concepts and textbook chapters into playable learning games with AI.',
+  applicationName: 'LessonPlay',
+  keywords: [
+    'AI education',
+    'educational games',
+    'teacher tools',
+    'game-based learning',
+    'lesson generator',
+  ],
+  openGraph: {
+    title: 'LessonPlay — Turn any lesson into a playable game',
+    description:
+      'Describe a concept or textbook chapter. LessonPlay helps you choose, build, preview, and publish a playable learning experience.',
+    siteName: 'LessonPlay',
+    type: 'website',
+    images: [{ url: '/brand/lessonplay-social.png', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'LessonPlay — Turn any lesson into a playable game',
+    description:
+      'AI game creation for teachers and educational creators.',
+    images: ['/brand/lessonplay-social.png'],
+  },
+  icons: {
+    icon: '/brand/lessonplay-mark.svg',
+    shortcut: '/brand/lessonplay-mark.svg',
+    apple: '/brand/lessonplay-mark-180.png',
+  },
 }
 
 export default function RootLayout({

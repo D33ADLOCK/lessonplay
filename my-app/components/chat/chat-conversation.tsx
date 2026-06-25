@@ -16,7 +16,7 @@ interface ChatConversationProps {
 /**
  * Renders the live `useChat` message list. Each message is drawn by
  * MessageParts, which switches on the typed parts union, so reasoning, text,
- * and the live-streaming game code each get their own region.
+ * and the live-streaming generated source each get their own region.
  */
 export function ChatConversation({ messages, isLoading }: ChatConversationProps) {
   return (

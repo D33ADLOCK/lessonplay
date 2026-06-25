@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChatSelector } from './chat-selector'
 import { MobileMenu } from './mobile-menu'
@@ -10,6 +9,7 @@ import { UserNav } from '@/components/user-nav'
 import { Button } from '@/components/ui/button'
 import { Info } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { LessonPlayBrand } from './lessonplay-brand'
 
 interface AppHeaderProps {
   className?: string
@@ -27,7 +27,7 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
       // Add reset parameter to trigger UI reset
       window.location.href = '/?reset=true'
     }
-    // If not on homepage, let the Link component handle navigation normally
+    // Otherwise the nested brand link handles navigation normally.
   }
 
   return (
@@ -38,13 +38,7 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
         <div className="flex items-center justify-between h-16">
           {/* Left side - Logo and Selector */}
           <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              onClick={handleLogoClick}
-              className="text-lg font-semibold text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300"
-            >
-              Game Builder
-            </Link>
+            <LessonPlayBrand onClick={handleLogoClick} />
             {/* Hide ChatSelector on mobile */}
             <div className="hidden lg:block">
               <ChatSelector />
@@ -78,15 +72,14 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold mb-4">
-              Game Builder
+              LessonPlay
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
             <p>
-              Game Builder turns a concept or a textbook chapter into a fun,
-              interactive educational mini-game. Describe what you want to teach,
-              pick from a few game ideas, and watch the playable game build in
-              real time.
+              LessonPlay turns a concept or textbook chapter into a playable
+              educational game. Describe what students should learn, choose a
+              game direction, and watch the game build and publish in real time.
             </p>
             <p>
               It's built with{' '}
@@ -98,8 +91,8 @@ export function AppHeader({ className = '' }: AppHeaderProps) {
               >
                 Next.js
               </a>{' '}
-              and provides a full-featured interface with authentication,
-              database integration, and real-time streaming responses.
+              with an AI-guided workflow, reusable learning-game templates,
+              authentication, versioned publishing, and real-time build progress.
             </p>
           </div>
           <div className="flex justify-end mt-6">

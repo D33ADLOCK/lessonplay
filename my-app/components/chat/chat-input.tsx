@@ -163,110 +163,21 @@ export function ChatInput({
       {showSuggestions && (
         <div className="max-w-2xl mx-auto mt-2">
           <Suggestions>
-            <Suggestion
-              onClick={() => {
-                setMessage('Landing page')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="Landing page"
-            />
-            <Suggestion
-              onClick={() => {
-                setMessage('Todo app')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="Todo app"
-            />
-            <Suggestion
-              onClick={() => {
-                setMessage('Dashboard')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="Dashboard"
-            />
-            <Suggestion
-              onClick={() => {
-                setMessage('Blog')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="Blog"
-            />
-            <Suggestion
-              onClick={() => {
-                setMessage('E-commerce')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="E-commerce"
-            />
-            <Suggestion
-              onClick={() => {
-                setMessage('Portfolio')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="Portfolio"
-            />
-            <Suggestion
-              onClick={() => {
-                setMessage('Chat app')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="Chat app"
-            />
-            <Suggestion
-              onClick={() => {
-                setMessage('Calculator')
-                // Submit after setting message
-                setTimeout(() => {
-                  const form = textareaRef?.current?.form
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                }, 0)
-              }}
-              suggestion="Calculator"
-            />
+            {[
+              'Teach fractions with a game',
+              'Turn photosynthesis into an adventure',
+              'Build a force and friction challenge',
+              'Create a separation-of-mixtures lab',
+            ].map((suggestion) => (
+              <Suggestion
+                key={suggestion}
+                onClick={() => {
+                  setMessage(suggestion)
+                  setTimeout(() => textareaRef?.current?.form?.requestSubmit(), 0)
+                }}
+                suggestion={suggestion}
+              />
+            ))}
           </Suggestions>
         </div>
       )}

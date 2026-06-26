@@ -53,13 +53,14 @@ function safeFileName(fileName: string) {
 // Create object key to save
 export function createAttachmentObjectKey({
   clerkUserId,
+  attachmentId,
   fileName,
 }: {
   clerkUserId: string;
+  attachmentId: string;
   fileName: string;
 }) {
-  const id = nanoid();
-  return `attachments/${clerkUserId}/${id}/${safeFileName(fileName)}`;
+  return `attachments/${clerkUserId}/${attachmentId}/${safeFileName(fileName)}`;
 }
 
 // Create presigned URL
@@ -114,17 +115,30 @@ export async function createPresignedGetUrl({
 }
 
 export async function objectExists(objectKey: string) {
+  const metadata = await getObjectMetadata(objectKey);
+  return metadata.exists;
+}
+
+export async function getObjectMetadata(objectKey: string) {
   try {
-    await getS3Client().send(
+    const result = await getS3Client().send(
       new HeadObjectCommand({
         Bucket: getBucketName(),
         Key: objectKey,
       }),
     );
 
-    return true;
+    return {
+      exists: true,
+      contentType: result.ContentType,
+      contentLength: result.ContentLength,
+    };
   } catch {
-    return false;
+    return {
+      exists: false,
+      contentType: undefined,
+      contentLength: undefined,
+    };
   }
 }
 

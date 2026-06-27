@@ -98,6 +98,53 @@ describe("sanitizeCodexInput", () => {
     ]);
   });
 
+  it("preserves input file and image content parts unchanged", () => {
+    const input = [
+      {
+        id: "msg_1",
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "Use these attachments",
+          },
+          {
+            type: "input_file",
+            filename: "chapter.pdf",
+            file_url: "https://example.com/chapter.pdf?signature=abc",
+          },
+          {
+            type: "input_image",
+            image_url: "https://example.com/diagram.png?signature=abc",
+          },
+        ],
+      },
+    ];
+
+    expect(sanitizeCodexInput(input)).toEqual([
+      {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "Use these attachments",
+          },
+          {
+            type: "input_file",
+            filename: "chapter.pdf",
+            file_url: "https://example.com/chapter.pdf?signature=abc",
+          },
+          {
+            type: "input_image",
+            image_url: "https://example.com/diagram.png?signature=abc",
+          },
+        ],
+      },
+    ]);
+  });
+
   it("converts orphaned function call outputs into model-visible context", () => {
     const input = [
       {

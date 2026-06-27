@@ -11,6 +11,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { SYSTEM_PROMPT } from '@/lib/agent/skills'
 import { createGameTools } from '@/lib/agent/tools'
 import { validateChatRequest } from '@/lib/agent/validate-chat-request'
+import {
+  addAttachmentPartsToMessages,
+  AttachmentResolutionError,
+} from '@/lib/agent/resolve-message-attachments'
 import { getModel } from '@/lib/codex-oauth/getModel'
 import { addMessage, createChat, getChatMetadata } from '@/lib/db/queries'
 
@@ -72,11 +76,26 @@ export async function POST(request: NextRequest) {
   }
 
   const tools = createGameTools({ chatId, clerkUserId: userId })
+  let messagesWithAttachmentParts: UIMessage[]
+
+  try {
+    messagesWithAttachmentParts = await addAttachmentPartsToMessages({
+      messages,
+      chatId,
+      clerkUserId: userId,
+    })
+  } catch (error) {
+    if (error instanceof AttachmentResolutionError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    throw error
+  }
 
   const result = streamText({
     model: await getModel(),
     system: SYSTEM_PROMPT,
-    messages: convertToModelMessages(messages),
+    messages: convertToModelMessages(messagesWithAttachmentParts),
     tools,
     stopWhen: stepCountIs(64),
     maxOutputTokens: 24000,

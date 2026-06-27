@@ -6,6 +6,7 @@ import {
   type ToolUIPart,
   type UIMessage,
 } from 'ai'
+import { FileIcon } from 'lucide-react'
 
 import { GeneratedFiles } from '@/components/chat/generated-files'
 import { PublishStatus } from '@/components/chat/publish-status'
@@ -23,6 +24,13 @@ import {
   PUBLISH_GAME_TOOL,
   toPublishViewModel,
 } from '@/lib/agent/publish-view-model'
+
+type MessageAttachmentMetadata = {
+  id: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+}
 
 /**
  * Renders a single chat message by switching on the typed `parts` union.
@@ -85,8 +93,64 @@ export function MessageParts({ message }: { message: UIMessage }) {
         // step-start and any other part types render nothing.
         return null
       })}
+      {message.role === 'user' ? (
+        <MessageAttachmentBadges message={message} />
+      ) : null}
     </>
   )
+}
+
+function MessageAttachmentBadges({ message }: { message: UIMessage }) {
+  const attachments = readMessageAttachments(message.metadata)
+
+  if (attachments.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {attachments.map((attachment) => (
+        <div
+          key={attachment.id}
+          className="flex max-w-full items-center gap-2 rounded-md border border-border/60 bg-background/60 px-2 py-1 text-xs text-muted-foreground"
+        >
+          <FileIcon className="size-3.5 shrink-0" />
+          <span className="truncate">{attachment.fileName}</span>
+          <span className="shrink-0">· {formatAttachmentSize(attachment.sizeBytes)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function readMessageAttachments(metadata: UIMessage['metadata']) {
+  if (!metadata || typeof metadata !== 'object') {
+    return []
+  }
+
+  const attachments = (metadata as { attachments?: unknown }).attachments
+
+  if (!Array.isArray(attachments)) {
+    return []
+  }
+
+  return attachments.filter(
+    (attachment): attachment is MessageAttachmentMetadata =>
+      typeof attachment === 'object' &&
+      attachment !== null &&
+      typeof (attachment as MessageAttachmentMetadata).id === 'string' &&
+      typeof (attachment as MessageAttachmentMetadata).fileName === 'string' &&
+      typeof (attachment as MessageAttachmentMetadata).contentType === 'string' &&
+      typeof (attachment as MessageAttachmentMetadata).sizeBytes === 'number',
+  )
+}
+
+function formatAttachmentSize(sizeBytes: number) {
+  if (sizeBytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function getGeneratedFilesStatus(

@@ -4,23 +4,22 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   PromptInput,
-  PromptInputImageButton,
-  PromptInputImagePreview,
+  PromptInputAttachmentButton,
+  PromptInputAttachmentPreview,
   PromptInputMicButton,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputTools,
-  createImageAttachment,
-  createImageAttachmentFromStored,
   savePromptToStorage,
   loadPromptFromStorage,
   clearPromptFromStorage,
   saveInitialPrompt,
-  type ImageAttachment,
+  type PromptAttachment,
 } from '@/components/ai-elements/prompt-input'
 import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion'
 import { AppHeader } from '@/components/shared/app-header'
+import { uploadAttachment } from '@/lib/client/upload-attachment'
 
 // Component that uses useSearchParams - needs to be wrapped in Suspense
 function SearchParamsHandler({ onReset }: { onReset: () => void }) {
@@ -45,14 +44,26 @@ function SearchParamsHandler({ onReset }: { onReset: () => void }) {
 export function HomeClient() {
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [attachments, setAttachments] = useState<ImageAttachment[]>([])
+  const [attachments, setAttachments] = useState<PromptAttachment[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const router = useRouter()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const attachmentsRef = useRef<PromptAttachment[]>([])
+
+  const revokeAttachmentPreviews = (items: PromptAttachment[]) => {
+    for (const attachment of items) {
+      if (attachment.previewUrl) {
+        URL.revokeObjectURL(attachment.previewUrl)
+      }
+    }
+  }
 
   const handleReset = () => {
     setMessage('')
-    setAttachments([])
+    setAttachments((prev) => {
+      revokeAttachmentPreviews(prev)
+      return []
+    })
     setIsSubmitting(false)
     clearPromptFromStorage()
 
@@ -68,34 +79,91 @@ export function HomeClient() {
     const storedData = loadPromptFromStorage()
     if (storedData) {
       setMessage(storedData.message)
-      if (storedData.attachments.length > 0) {
-        setAttachments(storedData.attachments.map(createImageAttachmentFromStored))
-      }
     }
   }, [])
 
   // Save prompt data to sessionStorage whenever message or attachments change
   useEffect(() => {
-    if (message.trim() || attachments.length > 0) {
-      savePromptToStorage(message, attachments)
+    if (message.trim()) {
+      savePromptToStorage(message, [])
     } else {
       clearPromptFromStorage()
     }
-  }, [message, attachments])
+  }, [message])
 
-  const handleImageFiles = async (files: File[]) => {
-    try {
-      const newAttachments = await Promise.all(
-        files.map((file) => createImageAttachment(file)),
-      )
-      setAttachments((prev) => [...prev, ...newAttachments])
-    } catch (error) {
-      console.error('Error processing image files:', error)
+  useEffect(() => {
+    attachmentsRef.current = attachments
+  }, [attachments])
+
+  useEffect(() => {
+    return () => {
+      revokeAttachmentPreviews(attachmentsRef.current)
+    }
+  }, [])
+
+  const handleAttachmentFiles = (files: File[]) => {
+    for (const file of files) {
+      const localId = crypto.randomUUID()
+      const previewUrl = file.type.startsWith('image/')
+        ? URL.createObjectURL(file)
+        : undefined
+
+      setAttachments((prev) => [
+        ...prev,
+        {
+          id: localId,
+          fileName: file.name,
+          contentType: file.type,
+          sizeBytes: file.size,
+          previewUrl,
+          status: 'uploading',
+        },
+      ])
+
+      uploadAttachment(file)
+        .then((uploaded) => {
+          setAttachments((prev) =>
+            prev.map((attachment) =>
+              attachment.id === localId
+                ? {
+                    ...attachment,
+                    attachmentId: uploaded.attachmentId,
+                    fileName: uploaded.fileName,
+                    contentType: uploaded.contentType,
+                    sizeBytes: uploaded.sizeBytes,
+                    status: 'uploaded',
+                    error: undefined,
+                  }
+                : attachment,
+            ),
+          )
+        })
+        .catch((error) => {
+          setAttachments((prev) =>
+            prev.map((attachment) =>
+              attachment.id === localId
+                ? {
+                    ...attachment,
+                    status: 'failed',
+                    error:
+                      error instanceof Error ? error.message : 'Upload failed',
+                  }
+                : attachment,
+            ),
+          )
+        })
     }
   }
 
   const handleRemoveAttachment = (id: string) => {
-    setAttachments((prev) => prev.filter((att) => att.id !== id))
+    setAttachments((prev) => {
+      const removed = prev.find((attachment) => attachment.id === id)
+      if (removed?.previewUrl) {
+        URL.revokeObjectURL(removed.previewUrl)
+      }
+
+      return prev.filter((att) => att.id !== id)
+    })
   }
 
   const handleDragOver = () => setIsDragOver(true)
@@ -112,10 +180,34 @@ export function HomeClient() {
 
     setIsSubmitting(true)
     const chatId = crypto.randomUUID()
+    const uploadedAttachments = attachments.filter(
+      (attachment) => attachment.status === 'uploaded' && attachment.attachmentId,
+    )
+    const attachmentIds = uploadedAttachments.map(
+      (attachment) => attachment.attachmentId!,
+    )
+    const attachmentMetadata = uploadedAttachments.map((attachment) => ({
+      id: attachment.attachmentId!,
+      fileName: attachment.fileName,
+      contentType: attachment.contentType,
+      sizeBytes: attachment.sizeBytes,
+    }))
+
     clearPromptFromStorage()
-    saveInitialPrompt(chatId, text)
+    saveInitialPrompt(chatId, {
+      text,
+      attachmentIds,
+      attachments: attachmentMetadata,
+    })
     router.push(`/chats/${chatId}`)
   }
+
+  const isUploading = attachments.some(
+    (attachment) => attachment.status === 'uploading',
+  )
+  const hasFailedAttachment = attachments.some(
+    (attachment) => attachment.status === 'failed',
+  )
 
   const handleSuggestion = (suggestion: string) => {
     setMessage(suggestion)
@@ -154,13 +246,13 @@ export function HomeClient() {
             <PromptInput
               onSubmit={handleSendMessage}
               className="w-full relative"
-              onImageDrop={handleImageFiles}
+              onAttachmentDrop={handleAttachmentFiles}
               isDragOver={isDragOver}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <PromptInputImagePreview
+              <PromptInputAttachmentPreview
                 attachments={attachments}
                 onRemove={handleRemoveAttachment}
               />
@@ -174,8 +266,8 @@ export function HomeClient() {
               />
               <PromptInputToolbar>
                 <PromptInputTools>
-                  <PromptInputImageButton
-                    onImageSelect={handleImageFiles}
+                  <PromptInputAttachmentButton
+                    onAttachmentSelect={handleAttachmentFiles}
                     disabled={isSubmitting}
                   />
                 </PromptInputTools>
@@ -190,7 +282,12 @@ export function HomeClient() {
                     disabled={isSubmitting}
                   />
                   <PromptInputSubmit
-                    disabled={!message.trim() || isSubmitting}
+                    disabled={
+                      !message.trim() ||
+                      isSubmitting ||
+                      isUploading ||
+                      hasFailedAttachment
+                    }
                     status={isSubmitting ? 'streaming' : 'ready'}
                   />
                 </PromptInputTools>

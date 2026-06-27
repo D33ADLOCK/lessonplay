@@ -13,7 +13,7 @@ import { BottomToolbar } from '@/components/shared/bottom-toolbar'
 import { selectDemoUrl } from '@/lib/agent/select-demo-url'
 import { cn } from '@/lib/utils'
 import {
-  type ImageAttachment,
+  type PromptAttachment,
   clearPromptFromStorage,
   takeInitialPrompt,
 } from '@/components/ai-elements/prompt-input'
@@ -31,10 +31,11 @@ export function ChatDetailClient({
 }: ChatDetailClientProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [attachments, setAttachments] = useState<ImageAttachment[]>([])
+  const [attachments, setAttachments] = useState<PromptAttachment[]>([])
   const [activePanel, setActivePanel] = useState<'chat' | 'preview'>('chat')
   const [message, setMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const attachmentsRef = useRef<PromptAttachment[]>([])
 
   const transport = useMemo(
     () => new DefaultChatTransport({ api: '/api/chat', body: { chatId } }),
@@ -57,16 +58,53 @@ export function ChatDetailClient({
   const demoUrl = selectDemoUrl(messages) ?? initialDemoUrl ?? undefined
   const currentChat = { id: chatId, demoUrl }
 
+  const revokeAttachmentPreviews = (items: PromptAttachment[]) => {
+    for (const attachment of items) {
+      if (attachment.previewUrl) {
+        URL.revokeObjectURL(attachment.previewUrl)
+      }
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const text = message.trim()
     if (!text || isLoading) return
 
+    const uploadedAttachments = attachments.filter(
+      (attachment) => attachment.status === 'uploaded' && attachment.attachmentId,
+    )
+    const attachmentIds = uploadedAttachments.map(
+      (attachment) => attachment.attachmentId!,
+    )
+    const attachmentMetadata = uploadedAttachments.map((attachment) => ({
+      id: attachment.attachmentId!,
+      fileName: attachment.fileName,
+      contentType: attachment.contentType,
+      sizeBytes: attachment.sizeBytes,
+    }))
+
     clearPromptFromStorage()
-    setAttachments([])
+    setAttachments((prev) => {
+      revokeAttachmentPreviews(prev)
+      return []
+    })
     setMessage('')
-    sendMessage({ text })
+    sendMessage({
+      text,
+      metadata: { attachmentIds, attachments: attachmentMetadata },
+    })
   }
+
+  useEffect(() => {
+    attachmentsRef.current = attachments
+  }, [attachments])
+
+  useEffect(() => {
+    return () => {
+      revokeAttachmentPreviews(attachmentsRef.current)
+    }
+  }, [])
 
   // Approach X handoff: the home page stashed the first prompt and navigated
   // here. Fire it once on mount for a brand-new chat. takeInitialPrompt clears
@@ -75,10 +113,16 @@ export function ChatDetailClient({
   useEffect(() => {
     if (sentInitialRef.current || initialMessages.length > 0) return
 
-    const text = takeInitialPrompt(chatId)
-    if (text) {
+    const initialPrompt = takeInitialPrompt(chatId)
+    if (initialPrompt) {
       sentInitialRef.current = true
-      sendMessage({ text })
+      sendMessage({
+        text: initialPrompt.text,
+        metadata: {
+          attachmentIds: initialPrompt.attachmentIds,
+          attachments: initialPrompt.attachments ?? [],
+        },
+      })
     }
   }, [chatId, initialMessages.length, sendMessage])
 
@@ -120,6 +164,7 @@ export function ChatDetailClient({
               </div>
 
               <ChatInput
+                chatId={chatId}
                 message={message}
                 setMessage={setMessage}
                 onSubmit={handleSubmit}

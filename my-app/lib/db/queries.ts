@@ -1,9 +1,9 @@
 import "server-only";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 
 import db, { type Database } from "./connection";
-import { chats, game_versions, messages } from "./schema";
+import { attachments, chats, game_versions, messages } from "./schema";
 
 function requireDb(): Database {
   if (!db) {
@@ -239,6 +239,164 @@ export async function getMessages({
     console.error("Failed to get messages from database");
     throw error;
   }
+}
+
+export async function createPendingAttachment({
+  id,
+  clerkUserId,
+  chatId,
+  objectKey,
+  originalName,
+  contentType,
+  sizeBytes,
+}: {
+  id?: string;
+  clerkUserId: string;
+  chatId?: string | null;
+  objectKey: string;
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+}) {
+  try {
+    const [attachment] = await requireDb()
+      .insert(attachments)
+      .values({
+        ...(id ? { id } : {}),
+        clerk_user_id: clerkUserId,
+        chat_id: chatId ?? null,
+        object_key: objectKey,
+        original_name: originalName,
+        content_type: contentType,
+        size_bytes: sizeBytes,
+        status: "pending",
+      })
+      .returning();
+
+    return attachment;
+  } catch (error) {
+    console.error("Failed to create pending attachment in database");
+    throw error;
+  }
+}
+
+export async function markAttachmentUploaded({
+  id,
+  clerkUserId,
+}: {
+  id: string;
+  clerkUserId: string;
+}) {
+  try {
+    const [attachment] = await requireDb()
+      .update(attachments)
+      .set({
+        status: "uploaded",
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(attachments.id, id),
+          eq(attachments.clerk_user_id, clerkUserId),
+          eq(attachments.status, "pending"),
+        ),
+      )
+      .returning();
+
+    return attachment;
+  } catch (error) {
+    console.error("Failed to mark attachment uploaded in database");
+    throw error;
+  }
+}
+
+export async function getAttachmentForUser({
+  id,
+  clerkUserId,
+}: {
+  id: string;
+  clerkUserId: string;
+}) {
+  try {
+    const [attachment] = await requireDb()
+      .select()
+      .from(attachments)
+      .where(
+        and(eq(attachments.id, id), eq(attachments.clerk_user_id, clerkUserId)),
+      )
+      .limit(1);
+
+    return attachment;
+  } catch (error) {
+    console.error("Failed to get attachment from database");
+    throw error;
+  }
+}
+
+export async function getAttachmentsForUser({
+  clerkUserId,
+  ids,
+  chatId,
+  status,
+}: {
+  clerkUserId: string;
+  ids?: string[];
+  chatId?: string;
+  status?: string;
+}) {
+  try {
+    if (ids && ids.length === 0) {
+      return [];
+    }
+
+    const filters = [
+      eq(attachments.clerk_user_id, clerkUserId),
+      ...(ids ? [inArray(attachments.id, ids)] : []),
+      ...(chatId ? [eq(attachments.chat_id, chatId)] : []),
+      ...(status ? [eq(attachments.status, status)] : []),
+    ];
+
+    return await requireDb()
+      .select()
+      .from(attachments)
+      .where(and(...filters))
+      .orderBy(desc(attachments.created_at));
+  } catch (error) {
+    console.error("Failed to get attachments from database");
+    throw error;
+  }
+}
+
+export async function attachAttachmentsToChat({
+  ids,
+  clerkUserId,
+  chatId,
+}: {
+  ids: string[];
+  clerkUserId: string;
+  chatId: string;
+}) {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const updated = await requireDb()
+    .update(attachments)
+    .set({
+      chat_id: chatId,
+      updated_at: new Date(),
+    })
+    .where(
+      and(
+        eq(attachments.clerk_user_id, clerkUserId),
+        eq(attachments.status, "uploaded"),
+        inArray(attachments.id, ids),
+        or(isNull(attachments.chat_id), eq(attachments.chat_id, chatId)),
+      ),
+    )
+    .returning();
+
+  return updated;
 }
 
 export async function addGameVersion({

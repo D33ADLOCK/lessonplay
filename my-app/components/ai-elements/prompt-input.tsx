@@ -19,8 +19,6 @@ import {
   ArrowUpIcon,
   FileIcon,
   Loader2Icon,
-  MicIcon,
-  MicOffIcon,
   SquareIcon,
   XIcon,
 } from "lucide-react";
@@ -29,30 +27,7 @@ import type {
   HTMLAttributes,
   KeyboardEventHandler,
 } from "react";
-import { Children, useCallback, useEffect, useRef, useState } from "react";
-
-// Utility function to convert file to data URL
-export const fileToDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
-
-// Utility function to create image attachment
-export const createImageAttachment = async (
-  file: File,
-): Promise<ImageAttachment> => {
-  const dataUrl = await fileToDataUrl(file);
-  return {
-    id: Math.random().toString(36).substr(2, 9),
-    file,
-    dataUrl,
-    preview: dataUrl,
-  };
-};
+import { Children, useCallback, useRef } from "react";
 
 // SessionStorage utilities for prompt persistence
 const PROMPT_STORAGE_KEY = "lessonplay-prompt-data";
@@ -60,27 +35,12 @@ const LEGACY_PROMPT_STORAGE_KEY = "v0-prompt-data";
 
 export interface StoredPromptData {
   message: string;
-  attachments: Array<{
-    id: string;
-    fileName: string;
-    dataUrl: string;
-    preview: string;
-  }>;
 }
 
-export const savePromptToStorage = (
-  message: string,
-  attachments: ImageAttachment[],
-) => {
+export const savePromptToStorage = (message: string) => {
   try {
     const data: StoredPromptData = {
       message,
-      attachments: attachments.map((att) => ({
-        id: att.id,
-        fileName: att.file.name,
-        dataUrl: att.dataUrl,
-        preview: att.preview,
-      })),
     };
     sessionStorage.setItem(PROMPT_STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
@@ -94,10 +54,15 @@ export const loadPromptFromStorage = (): StoredPromptData | null => {
       sessionStorage.getItem(PROMPT_STORAGE_KEY) ??
       sessionStorage.getItem(LEGACY_PROMPT_STORAGE_KEY);
     if (stored) {
-      const data = JSON.parse(stored) as StoredPromptData;
-      sessionStorage.setItem(PROMPT_STORAGE_KEY, stored);
+      const data = JSON.parse(stored) as { message?: unknown };
+      if (typeof data.message !== "string") {
+        return null;
+      }
+
+      const promptData: StoredPromptData = { message: data.message };
+      sessionStorage.setItem(PROMPT_STORAGE_KEY, JSON.stringify(promptData));
       sessionStorage.removeItem(LEGACY_PROMPT_STORAGE_KEY);
-      return data;
+      return promptData;
     }
   } catch (error) {
     console.warn("Failed to load prompt from sessionStorage:", error);
@@ -202,19 +167,6 @@ export const takeInitialPrompt = (chatId: string): InitialPromptData | null => {
   }
 };
 
-export const createImageAttachmentFromStored = (
-  stored: StoredPromptData["attachments"][0],
-): ImageAttachment => {
-  // Create a mock File object from stored data
-  const mockFile = new File([""], stored.fileName, { type: "image/*" });
-  return {
-    id: stored.id,
-    file: mockFile,
-    dataUrl: stored.dataUrl,
-    preview: stored.preview,
-  };
-};
-
 function getValidAttachmentFiles(files: File[]) {
   const validFiles: File[] = [];
 
@@ -233,14 +185,12 @@ function getValidAttachmentFiles(files: File[]) {
 
 export type PromptInputProps = HTMLAttributes<HTMLFormElement> & {
   onAttachmentDrop?: (files: File[]) => void;
-  onImageDrop?: (files: File[]) => void;
   isDragOver?: boolean;
 };
 
 export const PromptInput = ({
   className,
   onAttachmentDrop,
-  onImageDrop,
   isDragOver,
   onDragOver,
   onDragLeave,
@@ -274,12 +224,11 @@ export const PromptInput = ({
 
       if (files.length > 0) {
         onAttachmentDrop?.(files);
-        onImageDrop?.(files);
       }
 
       onDrop?.(e);
     },
-    [onAttachmentDrop, onImageDrop, onDrop],
+    [onAttachmentDrop, onDrop],
   );
 
   return (
@@ -495,132 +444,15 @@ export const PromptInputModelSelectValue = ({
   <SelectValue className={cn(className)} {...props} />
 );
 
-export type PromptInputMicButtonProps = ComponentProps<typeof Button> & {
-  onTranscript?: (transcript: string) => void;
-  onError?: (error: string) => void;
-};
-
-export const PromptInputMicButton = ({
-  className,
-  onTranscript,
-  onError,
-  ...props
-}: PromptInputMicButtonProps) => {
-  const [isListening, setIsListening] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const isCleaningUpRef = useRef(false);
-
-  useEffect(() => {
-    // Check if speech recognition is supported
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      setIsSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = "en-US";
-
-      recognition.onstart = () => {
-        if (!isCleaningUpRef.current) {
-          setIsListening(true);
-        }
-      };
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        if (!isCleaningUpRef.current) {
-          const transcript = event.results[0][0].transcript;
-          onTranscript?.(transcript);
-          setIsListening(false);
-        }
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        // Don't report "aborted" errors as they're usually from cleanup or natural timeout
-        if (event.error !== "aborted" && !isCleaningUpRef.current) {
-          console.error("Speech recognition error:", event.error);
-          onError?.(event.error);
-        }
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        if (!isCleaningUpRef.current) {
-          setIsListening(false);
-        }
-      };
-
-      recognitionRef.current = recognition;
-    }
-
-    return () => {
-      isCleaningUpRef.current = true;
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (error) {
-          // Ignore errors during cleanup
-        }
-      }
-    };
-  }, [onTranscript, onError]);
-
-  const toggleListening = useCallback(() => {
-    if (!recognitionRef.current || isCleaningUpRef.current) return;
-
-    if (isListening) {
-      try {
-        recognitionRef.current.stop();
-      } catch (error) {
-        console.warn("Error stopping speech recognition:", error);
-        setIsListening(false);
-      }
-    } else {
-      try {
-        recognitionRef.current.start();
-      } catch (error) {
-        console.error("Error starting speech recognition:", error);
-        onError?.("Failed to start speech recognition");
-      }
-    }
-  }, [isListening, onError]);
-
-  if (!isSupported) {
-    return null;
-  }
-
-  return (
-    <PromptInputButton
-      className={cn(
-        "transition-colors",
-        isListening &&
-          "bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30",
-        className,
-      )}
-      onClick={toggleListening}
-      {...props}
-    >
-      {isListening ? (
-        <MicOffIcon className="size-4 text-red-600 dark:text-red-400" />
-      ) : (
-        <MicIcon className="size-4" />
-      )}
-    </PromptInputButton>
-  );
-};
-
-export type PromptInputImageButtonProps = ComponentProps<typeof Button> & {
+export type PromptInputAttachmentButtonProps = ComponentProps<typeof Button> & {
   onAttachmentSelect?: (files: File[]) => void;
-  onImageSelect?: (files: File[]) => void;
 };
 
 export const PromptInputAttachmentButton = ({
   className,
   onAttachmentSelect,
-  onImageSelect,
   ...props
-}: PromptInputImageButtonProps) => {
+}: PromptInputAttachmentButtonProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = useCallback(() => {
@@ -633,7 +465,6 @@ export const PromptInputAttachmentButton = ({
 
       if (files.length > 0) {
         onAttachmentSelect?.(files);
-        onImageSelect?.(files);
       }
 
       // Reset the input so the same file can be selected again
@@ -641,7 +472,7 @@ export const PromptInputAttachmentButton = ({
         e.target.value = "";
       }
     },
-    [onAttachmentSelect, onImageSelect],
+    [onAttachmentSelect],
   );
 
   return (
@@ -665,15 +496,6 @@ export const PromptInputAttachmentButton = ({
   );
 };
 
-export const PromptInputImageButton = PromptInputAttachmentButton;
-
-export type ImageAttachment = {
-  id: string;
-  file: File;
-  dataUrl: string;
-  preview: string;
-};
-
 export type PromptAttachment = {
   id: string;
   fileName: string;
@@ -684,10 +506,6 @@ export type PromptAttachment = {
   previewUrl?: string;
   error?: string;
 };
-
-function isImageAttachment(attachment: ImageAttachment) {
-  return attachment.file.type.startsWith("image/");
-}
 
 function isImagePromptAttachment(attachment: PromptAttachment) {
   return attachment.contentType.startsWith("image/");
@@ -763,55 +581,6 @@ export const PromptInputAttachmentPreview = ({
               <XIcon className="size-3" />
             </button>
           )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-export type PromptInputImagePreviewProps = {
-  attachments: ImageAttachment[];
-  onRemove?: (id: string) => void;
-  className?: string;
-};
-
-export const PromptInputImagePreview = ({
-  attachments,
-  onRemove,
-  className,
-}: PromptInputImagePreviewProps) => {
-  if (attachments.length === 0) return null;
-
-  return (
-    <div className={cn("flex flex-wrap gap-2 p-2", className)}>
-      {attachments.map((attachment) => (
-        <div
-          key={attachment.id}
-          className="relative group rounded-lg overflow-hidden border bg-muted"
-        >
-          {isImageAttachment(attachment) ? (
-            <img
-              src={attachment.preview}
-              alt={attachment.file.name}
-              className="w-16 h-16 object-cover"
-            />
-          ) : (
-            <div className="w-16 h-16 flex items-center justify-center bg-muted text-muted-foreground">
-              <FileIcon className="size-6" />
-            </div>
-          )}
-          {onRemove && (
-            <button
-              onClick={() => onRemove(attachment.id)}
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              type="button"
-            >
-              <XIcon className="size-3" />
-            </button>
-          )}
-          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
-            {attachment.file.name}
-          </div>
         </div>
       ))}
     </div>

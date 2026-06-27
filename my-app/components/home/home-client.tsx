@@ -6,7 +6,6 @@ import {
   PromptInput,
   PromptInputAttachmentButton,
   PromptInputAttachmentPreview,
-  PromptInputMicButton,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
@@ -82,10 +81,10 @@ export function HomeClient() {
     }
   }, [])
 
-  // Save prompt data to sessionStorage whenever message or attachments change
+  // Save text drafts only; uploaded attachments use the initial prompt handoff.
   useEffect(() => {
     if (message.trim()) {
-      savePromptToStorage(message, [])
+      savePromptToStorage(message)
     } else {
       clearPromptFromStorage()
     }
@@ -272,15 +271,6 @@ export function HomeClient() {
                   />
                 </PromptInputTools>
                 <PromptInputTools>
-                  <PromptInputMicButton
-                    onTranscript={(transcript) => {
-                      setMessage((prev) => prev + (prev ? ' ' : '') + transcript)
-                    }}
-                    onError={(error) => {
-                      console.error('Speech recognition error:', error)
-                    }}
-                    disabled={isSubmitting}
-                  />
                   <PromptInputSubmit
                     disabled={
                       !message.trim() ||

@@ -2,7 +2,6 @@ import {
   PromptInput,
   PromptInputAttachmentButton,
   PromptInputAttachmentPreview,
-  PromptInputMicButton,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
@@ -132,12 +131,11 @@ export function ChatInput({
     setIsDragOver(false)
   }, [])
 
-  // Save to sessionStorage when message or attachments change
+  // Save text drafts only; uploaded attachments are tracked by attachment IDs.
   useEffect(() => {
     if (message.trim()) {
-      savePromptToStorage(message, [])
+      savePromptToStorage(message)
     } else {
-      // Clear sessionStorage if both message and attachments are empty
       clearPromptFromStorage()
     }
   }, [message])
@@ -199,14 +197,6 @@ export function ChatInput({
               />
             </PromptInputTools>
             <PromptInputTools>
-              <PromptInputMicButton
-                onTranscript={(transcript) => {
-                  setMessage(message + (message ? ' ' : '') + transcript)
-                }}
-                onError={(error) => {
-                  console.error('Speech recognition error:', error)
-                }}
-              />
               <PromptInputSubmit
                 disabled={
                   !message.trim() || isLoading || isUploading || hasFailedAttachment

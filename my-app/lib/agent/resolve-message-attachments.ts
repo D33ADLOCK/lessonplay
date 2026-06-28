@@ -53,16 +53,22 @@ export async function addAttachmentPartsToMessages({
   messages,
   chatId,
   clerkUserId,
+  hydrateMessageId,
 }: {
   messages: UIMessage[]
   chatId: string
   clerkUserId: string
+  hydrateMessageId?: string
 }): Promise<UIMessage[]> {
   const attachmentIdsByMessage = new Map<string, string[]>()
   const allAttachmentIds: string[] = []
 
   for (const message of messages) {
     if (message.role !== 'user') {
+      continue
+    }
+
+    if (hydrateMessageId && message.id !== hydrateMessageId) {
       continue
     }
 

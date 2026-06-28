@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
   }
 
   const tools = createGameTools({ chatId, clerkUserId: userId })
+  const lastUserMessage = getLastUserMessage(messages)
   let messagesWithAttachmentParts: UIMessage[]
 
   try {
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       messages,
       chatId,
       clerkUserId: userId,
+      hydrateMessageId: lastUserMessage?.id,
     })
   } catch (error) {
     if (error instanceof AttachmentResolutionError) {
@@ -92,15 +94,18 @@ export async function POST(request: NextRequest) {
     throw error
   }
 
+  const modelMessages = convertToModelMessages(messagesWithAttachmentParts)
+
   const result = streamText({
     model: await getModel(),
     system: SYSTEM_PROMPT,
-    messages: convertToModelMessages(messagesWithAttachmentParts),
+    messages: modelMessages,
     tools,
     stopWhen: stepCountIs(64),
     maxOutputTokens: 24000,
     providerOptions: {
       openai: {
+        store: false,
         reasoningEffort: 'medium',
       },
     },
@@ -110,8 +115,6 @@ export async function POST(request: NextRequest) {
     originalMessages: messages,
     generateMessageId,
     onFinish: async ({ responseMessage }) => {
-      const lastUserMessage = getLastUserMessage(messages)
-
       if (lastUserMessage) {
         await addMessage({
           chatId,

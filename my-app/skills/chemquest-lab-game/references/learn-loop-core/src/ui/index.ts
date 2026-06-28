@@ -7,23 +7,27 @@
  */
 
 export { Stage, type StageProps } from "./Stage";
-export { ToolTray, type ToolTrayProps } from "./ToolTray";
-export {
-  StepCounter,
-  CuePanel,
-  ResultPanel,
-  CompletePanel,
-} from "./panels";
 export { titleCase } from "./titleCase";
-export { useGuidedSession, type GuidedSession } from "./useGuidedSession";
-export {
-  GuidedLabViewport,
-  type GuidedLabViewportProps,
-} from "./GuidedLabViewport";
 export {
   SandboxLabViewport,
   type SandboxLabViewportProps,
 } from "./SandboxLabViewport";
+export {
+  SANDBOX_LAB_PALETTES,
+  SANDBOX_LAB_ACCENTS,
+  SANDBOX_LAB_INTENSITIES,
+  SANDBOX_LAB_HEADER_DENSITIES,
+  DEFAULT_SANDBOX_LAB_THEME,
+  normalizeSandboxLabTheme,
+  assertSandboxLabTheme,
+  sandboxLabThemeClasses,
+  type SandboxLabTheme,
+  type SandboxLabThemeInput,
+  type SandboxLabPalette,
+  type SandboxLabAccent,
+  type SandboxLabIntensity,
+  type SandboxLabHeaderDensity,
+} from "./sandboxLabTheme";
 export {
   useSandboxLabSession,
   type SandboxLabSession,

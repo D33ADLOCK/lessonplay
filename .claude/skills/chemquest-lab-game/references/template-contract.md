@@ -3,11 +3,10 @@
 ChemQuest Lab owns the learning-game shell. The agent supplies content and
 approved variants only.
 
-Use `ChemQuestLabGame` for evidence-driven investigations. It owns the mission
-briefing, material selector, experiment stage, tool dock, observation feedback,
-notebook, and conclusion choices. It is exported from `@learn-loop/template`
-and currently renders the rich `SandboxLabViewport` investigation surface from
-`@learn-loop/core/ui`.
+Use `SandboxLabViewport` from `@learn-loop/core/ui` for evidence-driven
+investigations. It owns the mission briefing, material selector, experiment
+stage, tool dock, observation feedback, notebook, and conclusion choices, and it
+renders its own full-screen 9:16 shell. Render it as the page root.
 
 ## Fixed Investigation Regions
 
@@ -25,52 +24,36 @@ ChemQuest investigations always render these regions:
 
 Do not rearrange, resize, remove, or replace these regions from a game.
 
-## Procedural Template Config Tokens
+## Theming
 
-Use `LearnLoopTemplateConfigInput` only when rendering `LearnLoopGame` for a
-procedural guided demonstration. Do not rely on these tokens to style the
-ChemQuest investigation surface.
+The viewport accepts an optional `theme` prop that changes the skin only — it
+never moves, resizes, or reorders regions. Choose tokens by name; unknown values
+fall back to the default (`clean-lab` / `blue` / `standard`).
 
-Allowed palettes:
-- `clean-lab`
-- `warm-lab`
-- `night-lab`
-- `field-notes`
+- `palette`: `clean-lab`, `warm-lab`, `night-lab`, `field-notes`
+- `accent`: `blue`, `green`, `amber`, `rose`
+- `intensity`: `calm`, `standard`, `high-contrast`
+- `headerDensity`: `standard`, `compact`
 
-Allowed accents:
-- `blue`
-- `green`
-- `amber`
-- `rose`
-
-Allowed intensities:
-- `calm`
-- `standard`
-- `high-contrast`
-
-Allowed header variants:
-- `standard`
-- `compact`
-
-Allowed stage variants:
-- `bench`
-- `split-bench`
-- `process-flow`
-
-Allowed feedback variants:
-- `inline`
-- `notebook`
+Theming is optional and is the only supported way to change appearance. Do not
+invent token values, and do not override the `--sl-*` CSS variables or any region
+geometry from a game. See `implementation-pattern.md` for the prop shape.
 
 ## Layout Rules
 
-- Keep the game in the ChemQuest Lab 9:16 frame.
+- The viewport owns the full screen; render `SandboxLabViewport` as the page
+  root.
+- Do not wrap the viewport in a centering/padded shell or set `min-height: 100vh`
+  on a wrapper. That collapses the `.sandbox-lab-frame` grid and overlaps regions.
 - Do not create a landing page for the generated game.
 - Do not create a custom mission drawer.
 - Do not create a custom tool tray.
 - Do not put cards inside cards.
-- Do not add decorative gradient orbs or unrelated illustration.
-- Do not use CSS overrides that change `.sandbox-lab-frame` grid rows,
-  `.sandbox-lab-stage`, `.sandbox-tool-dock`, or investigation region order.
+- Do not add a decorative gradient background, gradient orbs, or unrelated
+  illustration behind the viewport.
+- Do not use CSS overrides that change `.sandbox-lab-app`, `.sandbox-lab-frame`
+  grid rows, `.sandbox-lab-stage`, `.sandbox-tool-dock`, or investigation region
+  order.
 
 ## Naming
 

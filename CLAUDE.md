@@ -45,6 +45,7 @@ for designing and building games, ported from
 | `maximizing-game-feel` | Add tactile polish to a game that runs but feels flat. |
 | `physics-contraption-level-generator` | Convert Class 6–7 physics topics into validated JSON contraption-game levels. |
 | `chapter-to-game` | Convert chapter material into a mechanic choice and scaffolded learning game. |
+| `chemquest-lab-game` | Build a chemistry game plan with the fixed ChemQuest Lab 9:16 template. |
 
 - **Claude Code** auto-discovers these from `.claude/skills/` (invoke via the Skill tool).
 - **Codex** and other agents should read the `SKILL.md` files under `.agents/skills/`
@@ -92,6 +93,12 @@ chapter summary, textbook activity, or target concept. For the guided-sim archet
 new games should import `@learn-loop/core`, author `Scenario` data plus
 `GuidedLabMissionPresentation` metadata, and render with `GuidedLabViewport` from
 `@learn-loop/core/ui`. Keep `games/chemistry-lab-bench/` reference-only and untouched.
+
+For chemistry chapters or lab concepts, the app runtime uses one sequential
+agent: first produce a chemistry game plan and stop, then build from that plan
+when the user asks to proceed. Use `.agents/skills/chemquest-lab-game/SKILL.md`
+for ChemQuest implementation guidance. Do not repeat the same plan when the user
+has asked to build.
 
 ## Stable project constraints (one-button crisp-game-lib games)
 

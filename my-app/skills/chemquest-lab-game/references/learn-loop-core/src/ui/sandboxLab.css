@@ -1,3 +1,260 @@
+/* =========================================================================
+ * Theme layer
+ * -------------------------------------------------------------------------
+ * Colors are driven entirely by CSS custom properties so a game can pick a
+ * skin through the `theme` prop on SandboxLabViewport (see sandboxLabTheme.ts).
+ * The default values below match the `clean-lab` palette + `blue` accent +
+ * `standard` intensity, so the viewport still looks finished when no theme
+ * class is applied. Geometry lives further down and is never touched by a
+ * theme; only `headerDensity` adjusts sizing, and only on fixed rows.
+ * ========================================================================= */
+
+.sandbox-lab-app {
+  --sl-surface: #e8eef2;
+  --sl-text: #16242c;
+  --sl-muted: #5a6b73;
+  --sl-card: #ffffff;
+  --sl-card-border: rgba(20, 40, 50, 0.1);
+  --sl-wall: #dbe6ec;
+  --sl-bench: #c4d2d8;
+  --sl-station: #f3f8fb;
+  --sl-station-ink: #3f5763;
+  --sl-button: #eef3f6;
+  --sl-button-ink: #1b2c34;
+  --sl-button-border: rgba(20, 40, 50, 0.12);
+  --sl-accent: #2d83d6;
+  --sl-accent-ink: #ffffff;
+  --sl-shadow: 0 8px 20px rgba(10, 20, 25, 0.1);
+  --sl-overlay-shadow: 0 18px 40px rgba(8, 15, 20, 0.28);
+  --sl-heading-weight: 700;
+}
+
+/* Palettes ---------------------------------------------------------------- */
+
+.sl-palette-clean-lab {
+  --sl-surface: #e8eef2;
+  --sl-text: #16242c;
+  --sl-muted: #5a6b73;
+  --sl-card: #ffffff;
+  --sl-card-border: rgba(20, 40, 50, 0.1);
+  --sl-wall: #dbe6ec;
+  --sl-bench: #c4d2d8;
+  --sl-station: #f3f8fb;
+  --sl-station-ink: #3f5763;
+  --sl-button: #eef3f6;
+  --sl-button-ink: #1b2c34;
+  --sl-button-border: rgba(20, 40, 50, 0.12);
+}
+
+.sl-palette-warm-lab {
+  --sl-surface: #f4ece0;
+  --sl-text: #2c2014;
+  --sl-muted: #7a6650;
+  --sl-card: #fffaf2;
+  --sl-card-border: rgba(80, 50, 20, 0.12);
+  --sl-wall: #efe2d0;
+  --sl-bench: #ddc7a9;
+  --sl-station: #fff6ea;
+  --sl-station-ink: #6b5238;
+  --sl-button: #f6ecdd;
+  --sl-button-ink: #3a2a18;
+  --sl-button-border: rgba(80, 50, 20, 0.14);
+}
+
+.sl-palette-night-lab {
+  --sl-surface: #0f1620;
+  --sl-text: #e7eef4;
+  --sl-muted: #93a4b3;
+  --sl-card: #1b2734;
+  --sl-card-border: rgba(255, 255, 255, 0.1);
+  --sl-wall: #16202c;
+  --sl-bench: #243140;
+  --sl-station: #1f2c3a;
+  --sl-station-ink: #9fb4c6;
+  --sl-button: #243240;
+  --sl-button-ink: #e7eef4;
+  --sl-button-border: rgba(255, 255, 255, 0.12);
+}
+
+.sl-palette-field-notes {
+  --sl-surface: #e9e0c9;
+  --sl-text: #2a2417;
+  --sl-muted: #6f6446;
+  --sl-card: #f7f1de;
+  --sl-card-border: rgba(70, 60, 20, 0.16);
+  --sl-wall: #e3d8bd;
+  --sl-bench: #cdbd95;
+  --sl-station: #f3ecd6;
+  --sl-station-ink: #6a5d39;
+  --sl-button: #efe7cd;
+  --sl-button-ink: #322b18;
+  --sl-button-border: rgba(70, 60, 20, 0.18);
+}
+
+/* Accents ----------------------------------------------------------------- */
+
+.sl-accent-blue {
+  --sl-accent: #2d83d6;
+  --sl-accent-ink: #ffffff;
+}
+
+.sl-accent-green {
+  --sl-accent: #1f9d57;
+  --sl-accent-ink: #ffffff;
+}
+
+.sl-accent-amber {
+  --sl-accent: #d98a17;
+  --sl-accent-ink: #1c1404;
+}
+
+.sl-accent-rose {
+  --sl-accent: #d8456a;
+  --sl-accent-ink: #ffffff;
+}
+
+/* Intensity (shadow depth + heading weight only — palette-agnostic) -------- */
+
+.sl-intensity-calm {
+  --sl-shadow: 0 4px 14px rgba(10, 20, 25, 0.05);
+  --sl-heading-weight: 600;
+}
+
+.sl-intensity-standard {
+  --sl-shadow: 0 8px 20px rgba(10, 20, 25, 0.1);
+  --sl-heading-weight: 700;
+}
+
+.sl-intensity-high-contrast {
+  --sl-shadow: 0 10px 24px rgba(10, 20, 25, 0.18);
+  --sl-heading-weight: 800;
+}
+
+/* Header density (safe layout knob: only resizes fixed rows; the experiment
+ * row stays minmax(0, 1fr) and absorbs the slack, so the grid never collapses) */
+
+.sl-header-compact .sandbox-lab-frame {
+  grid-template-rows: 60px 54px minmax(0, 1fr) 110px 72px 18px;
+}
+
+.sl-header-compact .sandbox-icon-button {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+}
+
+.sl-header-compact .sandbox-lab-hud h1 {
+  font-size: 1rem;
+}
+
+/* Color consumption ------------------------------------------------------- */
+
+.sandbox-lab-app {
+  background: var(--sl-surface);
+  color: var(--sl-text);
+}
+
+.sandbox-lab-hud,
+.sandbox-objective-card,
+.sandbox-observation-card,
+.sandbox-material-strip,
+.sandbox-tool-dock,
+.sandbox-conclusion-strip {
+  background: var(--sl-card);
+  border: 1px solid var(--sl-card-border);
+  box-shadow: var(--sl-shadow);
+  padding: 10px 12px;
+}
+
+.sandbox-lab-hud h1,
+.sandbox-objective-card h2,
+.sandbox-observation-card h2 {
+  font-weight: var(--sl-heading-weight);
+}
+
+.sandbox-eyebrow,
+.sandbox-objective-card p,
+.sandbox-objective-card span,
+.sandbox-observation-card p,
+.sandbox-observation-card small,
+.sandbox-tool-dock > p {
+  color: var(--sl-muted);
+}
+
+.sandbox-icon-button,
+.sandbox-material-strip button,
+.sandbox-tool-dock button,
+.drawer-list button {
+  background: var(--sl-button);
+  color: var(--sl-button-ink);
+  border: 1px solid var(--sl-button-border);
+}
+
+.sandbox-material-strip button.active,
+.drawer-list button.active,
+.sandbox-conclusion-strip button.selected {
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+  border-color: var(--sl-accent);
+}
+
+.sandbox-briefing-modal button,
+.sandbox-feedback-card button {
+  background: var(--sl-accent);
+  color: var(--sl-accent-ink);
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.sandbox-conclusion-strip button {
+  background: var(--sl-button);
+  color: var(--sl-button-ink);
+  border: 1px solid var(--sl-button-border);
+  border-radius: 8px;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+.sandbox-briefing-modal,
+.sandbox-feedback-card,
+.notebook-panel,
+.sandbox-mission-drawer {
+  background: var(--sl-card);
+  color: var(--sl-text);
+  border: 1px solid var(--sl-card-border);
+  box-shadow: var(--sl-overlay-shadow);
+}
+
+.stage.sandbox-lab-stage {
+  background: var(--sl-wall);
+}
+
+.sandbox-lab-wall {
+  background: var(--sl-wall);
+}
+
+.sandbox-lab-bench {
+  background: var(--sl-bench);
+}
+
+.sandbox-station {
+  background: var(--sl-station);
+  border: 1px solid var(--sl-card-border);
+  color: var(--sl-station-ink);
+}
+
+.sandbox-station.active {
+  border-color: var(--sl-accent);
+  box-shadow: var(--sl-shadow);
+}
+
+/* =========================================================================
+ * Geometry (theme-independent)
+ * ========================================================================= */
+
 .sandbox-lab-app {
   width: 100vw;
   height: 100dvh;

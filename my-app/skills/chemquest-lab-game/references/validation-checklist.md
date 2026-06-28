@@ -5,8 +5,6 @@ Run static validation first:
 ```bash
 npm run typecheck --workspace @learn-loop/core
 npm test --workspace @learn-loop/core
-npm run typecheck --workspace @learn-loop/template
-npm test --workspace @learn-loop/template
 npm run typecheck --workspace <game-package-name>
 npm test --workspace <game-package-name>
 npm run build --workspace <game-package-name>

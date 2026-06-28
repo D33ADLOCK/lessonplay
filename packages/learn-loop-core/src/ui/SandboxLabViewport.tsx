@@ -9,6 +9,7 @@ import { Stage } from "./Stage";
 import { apparatusLabel, stationVisualClasses } from "./sandboxLabKit";
 import { playSandboxLabSoundCue } from "./sandboxLabSound";
 import { titleCase } from "./titleCase";
+import { sandboxLabThemeClasses, type SandboxLabThemeInput } from "./sandboxLabTheme";
 import { useSandboxLabSession } from "./useSandboxLabSession";
 import { useEffect, useState } from "react";
 
@@ -20,6 +21,12 @@ export interface SandboxLabViewportProps {
   readonly missionCount: number;
   readonly missionTitles: readonly string[];
   readonly onSelectMission: (index: number) => void;
+  /**
+   * Optional visual skin. Picks palette/accent/intensity plus the safe
+   * `headerDensity` layout knob. Unknown tokens fall back to the default
+   * (clean-lab / blue / standard). Omit it for the default skin.
+   */
+  readonly theme?: SandboxLabThemeInput;
 }
 
 export function SandboxLabViewport({
@@ -30,6 +37,7 @@ export function SandboxLabViewport({
   missionCount,
   missionTitles,
   onSelectMission,
+  theme,
 }: SandboxLabViewportProps) {
   const session = useSandboxLabSession(mission);
   const [openOverlay, setOpenOverlay] = useState<"drawer" | "notebook" | "briefing" | null>(
@@ -67,7 +75,7 @@ export function SandboxLabViewport({
   }, [openOverlay]);
 
   return (
-    <main className="sandbox-lab-app">
+    <main className={`sandbox-lab-app ${sandboxLabThemeClasses(theme)}`}>
       <section className="sandbox-lab-frame" aria-label={title}>
         {openOverlay ? (
           <button

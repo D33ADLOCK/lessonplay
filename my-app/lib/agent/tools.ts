@@ -17,7 +17,6 @@ import { writeLearnLoopDraftFiles } from './learn-loop-draft-store'
 import { persistLearnLoopSourceDraft } from './learn-loop-source-persistence'
 import { SKILLS_DIR } from './skills'
 
-const LEARN_LOOP_REFERENCE_DIR = path.join(SKILLS_DIR, 'learn-loop-chapter-game')
 const CHEMQUEST_REFERENCE_DIR = path.join(SKILLS_DIR, 'chemquest-lab-game')
 const EXCLUDED_REFERENCE_DIRS = new Set(['node_modules', 'dist', '.git'])
 
@@ -50,10 +49,6 @@ function shouldSkipReferenceEntry(entryName: string) {
   }
 
   return entryName.startsWith('.')
-}
-
-export async function listLearnLoopReferenceFiles() {
-  return listReferenceFiles(LEARN_LOOP_REFERENCE_DIR)
 }
 
 export async function listChemQuestReferenceFiles() {
@@ -90,14 +85,6 @@ async function listReferenceFiles(referenceDir: string) {
   await walk(root)
 
   return files.sort()
-}
-
-export async function readLearnLoopReferenceFile(relativePath: string) {
-  return readReferenceFile({
-    rootDir: LEARN_LOOP_REFERENCE_DIR,
-    relativePath,
-    label: 'Learn Loop reference',
-  })
 }
 
 export async function readChemQuestReferenceFile(relativePath: string) {
@@ -146,34 +133,11 @@ export function createGameTools({
           .string()
           .min(1)
           .describe(
-            'Path relative to the skills directory, for example designing-one-button-games/references/one-button-design-guide.md',
+            'Path relative to the skills directory, for example chemquest-lab-game/references/gameplay-contract.md',
           ),
       }),
       execute: async ({ path: referencePath }: { path: string }) => {
         return readSafeSkillFile(referencePath)
-      },
-    },
-    listLearnLoopReferenceFiles: {
-      description:
-        'List Learn Loop chapter-game skill and reference files available to read.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        return { files: await listLearnLoopReferenceFiles() }
-      },
-    },
-    readLearnLoopReference: {
-      description:
-        'Read a Learn Loop chapter-game skill or reference file by path relative to my-app/skills/learn-loop-chapter-game.',
-      inputSchema: z.object({
-        path: z
-          .string()
-          .min(1)
-          .describe(
-            'Path relative to learn-loop-chapter-game, for example references/learn-loop-core/src/model/sandboxLab.ts',
-          ),
-      }),
-      execute: async ({ path: referencePath }: { path: string }) => {
-        return readLearnLoopReferenceFile(referencePath)
       },
     },
     listChemQuestReferenceFiles: {

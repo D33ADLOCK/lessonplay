@@ -25,6 +25,22 @@ export {
   type SandboxLabViewportProps,
 } from "./SandboxLabViewport";
 export {
+  SANDBOX_LAB_PALETTES,
+  SANDBOX_LAB_ACCENTS,
+  SANDBOX_LAB_INTENSITIES,
+  SANDBOX_LAB_HEADER_DENSITIES,
+  DEFAULT_SANDBOX_LAB_THEME,
+  normalizeSandboxLabTheme,
+  assertSandboxLabTheme,
+  sandboxLabThemeClasses,
+  type SandboxLabTheme,
+  type SandboxLabThemeInput,
+  type SandboxLabPalette,
+  type SandboxLabAccent,
+  type SandboxLabIntensity,
+  type SandboxLabHeaderDensity,
+} from "./sandboxLabTheme";
+export {
   useSandboxLabSession,
   type SandboxLabSession,
 } from "./useSandboxLabSession";

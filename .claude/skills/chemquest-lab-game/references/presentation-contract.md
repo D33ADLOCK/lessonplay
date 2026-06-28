@@ -3,76 +3,11 @@
 ChemQuest Lab station presentation is constrained. The agent may label stations
 and choose approved visual kinds; it may not invent new layout primitives.
 
-## Preferred Adapter
+## Investigation Presentation
 
-When using `GuidedLabMissionPresentation` from `@learn-loop/core`, convert it:
-
-```ts
-import { createLearnLoopTemplatePresentation } from "@learn-loop/template";
-
-const presentation = createLearnLoopTemplatePresentation(guidedPresentation);
-```
-
-## Approved Template Station Kinds
-
-`@learn-loop/template` accepts:
-- `beaker`
-- `flask`
-- `filter`
-- `dish`
-- `tube`
-- `jar`
-- `tray`
-
-## Adapter Mappings
-
-The shared adapter maps core guided-lab visuals into template visuals:
-
-```text
-test-tube -> tube
-evaporating-dish -> dish
-receiver -> jar
-distillation -> flask
-paper -> tray
-condenser -> tube
-burner -> tray
-magnet -> tray
-```
-
-Existing approved visual kinds such as `beaker`, `dish`, `filter`, and `flask`
-stay unchanged.
-
-## Roles
-
-The template supports these roles:
-- `source`
-- `process`
-- `output`
-
-The adapter uses first station as `source`, last station as `output`, and middle
-stations as `process`.
-
-## Manual Presentation
-
-If not using the adapter, pass `LearnLoopPresentationInput`:
-
-```ts
-presentation={{
-  stations: [
-    { stationId: "beaker", label: "Salt + sand", kind: "beaker", role: "source" },
-    { stationId: "residue", label: "Sand residue", kind: "filter", role: "process" },
-    { stationId: "filtrate", label: "Salt water", kind: "dish", role: "output" },
-  ],
-}}
-```
-
-Do not pass unsupported `kind` or `role` values. The template will normalize
-invalid values, but the skill should avoid generating them.
-
-## Investigation Materials
-
-For `ChemQuestLabGame`, author a `SandboxLabMissionPresentation` instead of a
-`LearnLoopPresentationInput`.
+For `SandboxLabViewport`, author a `SandboxLabMissionPresentation` with
+`mode: "investigation"`. See `gameplay-contract.md` for the required loop and
+`scenario-contract.md` for the paired `Scenario` data.
 
 - Set `mode: "investigation"`.
 - Use public material labels such as `Unknown A`.
@@ -81,3 +16,28 @@ For `ChemQuestLabGame`, author a `SandboxLabMissionPresentation` instead of a
 - Do not expose internal entity ids as visible labels.
 - Define material/tool interactions, evidence-bearing feedback cards, stages,
   and conclusions as described in `gameplay-contract.md`.
+
+## Approved Station Visual Kinds
+
+`stationVisuals[].kind` accepts:
+- `beaker`
+- `flask`
+- `filter`
+- `dish`
+- `tube`
+- `jar`
+- `tray`
+
+Do not pass unsupported `kind` values. Pick the kind that best matches the real
+apparatus (for example, a settling sample in a test tube uses `tube`; a filtrate
+catch uses `beaker`; filter residue uses `filter`).
+
+## Example Station Visuals
+
+```ts
+stationVisuals: [
+  { stationId: "unknownA", kind: "tube", label: "Unknown A" },
+  { stationId: "residue", kind: "filter", label: "Filter residue" },
+  { stationId: "filtrate", kind: "beaker", label: "Filtrate" },
+],
+```

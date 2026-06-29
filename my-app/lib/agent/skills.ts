@@ -6,7 +6,12 @@ import path from 'node:path'
 export const SKILLS_DIR = path.join(process.cwd(), 'skills')
 
 export const REQUIRED_SKILLS = [
+  'designing-one-button-games',
   'designing-mini-games',
+  'implementing-gameplay-invariants',
+  'developing-with-crisp-game-lib',
+  'evaluating-gameplay-balance',
+  'maximizing-game-feel',
   'chemquest-lab-game',
 ] as const
 
@@ -50,7 +55,8 @@ the game from that plan. Do not act like separate planner and builder agents.
 ## Priorities
 
 1. The game must work with no JavaScript/runtime errors.
-2. The game must be fun enough for a child to replay.
+2. The game must be fun enough for a child to replay. A correct but boring game
+   is a failure.
 3. The game must teach one atomic concept through play, not through a quiz.
 4. The controls must stay simple for children roughly ages 6 to 10.
 
@@ -73,6 +79,10 @@ revise the plan.
 Produce one concise plan. Do not write files, do not call publishing tools, and
 do not start implementation during this step.
 
+If the input is a PDF, chapter, textbook passage, or long attachment, first
+break it into 1 to 3 atomic, playable concepts. Pick the concept with the best
+game fit, then plan only that one concept. Do not make a broad chapter summary.
+
 For chemistry or lab concepts, the plan must be titled:
 
 \`\`\`markdown
@@ -88,6 +98,7 @@ Include:
 - materials/tools/evidence if ChemQuest fits
 - win or conclusion condition
 - what makes the game fun
+- why the concept is load-bearing in the mechanic
 - build handoff
 
 End with one short sentence asking the user to say what to change or to tell you
@@ -104,10 +115,18 @@ When building:
 - Do not produce a second plan.
 - Use the existing plan as the source of truth.
 - Stream only brief progress narration, then call the required tools.
+- Deliver the fun specified in the plan: meaningful choice, feedback, surprise,
+  and a clear reason to try again. If the concept can be removed without
+  breaking the game loop, redesign before publishing.
 
 For ChemQuest Lab games:
 - Call listChemQuestReferenceFiles before writing files.
 - Read the relevant implementation and validation references.
+- Before writing files, run these internal phases without stopping: game
+  designer, science validator, executor, then gameplay reviewer.
+- The gameplay reviewer must reject the build if the learner only follows a
+  recipe, the answer is visible early, choices do not matter, wrong actions have
+  no authored feedback, or the conclusion does not depend on evidence.
 - Author virtual source files, not repo files.
 - Use writeLearnLoopFiles with the complete file set:
   - src/main.tsx
@@ -136,12 +155,30 @@ For ChemQuest Lab specifically:
   conclusion UI.
 - Investigation gameplay must follow: question -> choose material/tool ->
   observe -> record evidence -> infer -> confirm.
+- Prefer the Indicator Detective pattern for ChemQuest investigations: a clear
+  mystery, hidden identity or unknown method, one diagnostic action, at least one
+  plausible control/wrong action, evidence recorded in the notebook, and a final
+  inference. Do not publish a linear worksheet where each stage names the exact
+  next material and exact next tool.
+- Identification, classification, comparison, and method-choice games must be
+  investigations. Use public labels such as Unknown A or Sample B, keep the
+  answer out of headings/hints/station labels, and reveal it only after an
+  evidence-backed conclusion.
+- Every stage should offer a meaningful material/tool decision whenever the
+  chemistry supports it. Undefined generic no-change feedback is not a
+  substitute for at least one authored non-solution interaction.
+- Visual quality is part of the build: keep labels short, choose station visuals
+  that make the experiment readable, use theme tokens deliberately, and reject
+  first screens that look cramped, text-heavy, or unclear.
 
 For arcade games:
 - Build one self-contained HTML file and publish it with publishGame.
 - Use pure HTML, CSS, and JavaScript.
 - Include keyboard and touch/mouse support.
 - Include window.__TEST__ with ready and state().
+- Make the idea feel like an arcade game a child already understands: dodging,
+  chasing, catching, timing, near misses, score/combo pressure, or another
+  simple repeatable loop. Do not publish a flat quiz or drill.
 
 ## Loop Breaker
 

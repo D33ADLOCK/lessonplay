@@ -134,7 +134,7 @@
  * row stays minmax(0, 1fr) and absorbs the slack, so the grid never collapses) */
 
 .sl-header-compact .sandbox-lab-frame {
-  grid-template-rows: 60px 54px minmax(0, 1fr) 110px 72px 18px;
+  grid-template-rows: 64px 50px minmax(0, 1fr) 84px 56px 70px;
 }
 
 .sl-header-compact .sandbox-icon-button {
@@ -252,6 +252,112 @@ button:disabled {
 }
 
 /* =========================================================================
+ * Typography (theme-independent)
+ * -------------------------------------------------------------------------
+ * The grid rows are fixed and small (HUD 74px, objective/observation cards).
+ * Without explicit font sizes the browser defaults (h1 ~2em, h2 ~1.5em)
+ * overflow those rows, spill over neighboring regions, and push the tool and
+ * material controls off-screen. These rules keep text inside its row.
+ * ========================================================================= */
+
+.sandbox-lab-app {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.25;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sandbox-lab-app * {
+  box-sizing: border-box;
+}
+
+.sandbox-lab-app h1,
+.sandbox-lab-app h2,
+.sandbox-lab-app h3,
+.sandbox-lab-app p {
+  margin: 0;
+}
+
+.sandbox-objective-card,
+.sandbox-observation-card {
+  overflow: hidden;
+}
+
+.sandbox-eyebrow {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sandbox-lab-hud h1 {
+  font-size: 0.95rem;
+  line-height: 1.15;
+}
+
+.sandbox-objective-card p,
+.sandbox-observation-card p {
+  font-size: 0.7rem;
+}
+
+.sandbox-objective-card h2,
+.sandbox-observation-card h2 {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.sandbox-objective-card span,
+.sandbox-observation-card small {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.sandbox-objective-card,
+.sandbox-observation-card {
+  padding: 6px 12px;
+}
+
+.sandbox-conclusion-strip h2 {
+  font-size: 0.8rem;
+}
+
+.sandbox-station strong {
+  font-size: 0.78rem;
+}
+
+.sandbox-station small {
+  font-size: 0.66rem;
+}
+
+.sandbox-tool-dock > p {
+  font-size: 0.72rem;
+}
+
+.sandbox-material-strip button,
+.sandbox-tool-dock button,
+.sandbox-conclusion-strip button,
+.drawer-list button {
+  font-size: 0.78rem;
+}
+
+.sandbox-icon-button {
+  font-size: 0.78rem;
+}
+
+.drawer-head h2,
+.notebook-panel h2,
+.sandbox-briefing-modal h2,
+.sandbox-feedback-card h2 {
+  font-size: 1rem;
+}
+
+.notebook-panel,
+.sandbox-briefing-modal,
+.sandbox-feedback-card {
+  font-size: 0.8rem;
+}
+
+/* =========================================================================
  * Geometry (theme-independent)
  * ========================================================================= */
 
@@ -270,7 +376,10 @@ button:disabled {
   max-width: 430px;
   max-height: 100dvh;
   display: grid;
-  grid-template-rows: 74px 58px minmax(0, 1fr) 116px 76px 20px;
+  /* Rows map by source order: HUD, objective, stage, observation, material
+   * strip, tool dock. The tool dock needs real height for its labelled action
+   * buttons; the conclusion strip overlays the stage (position: absolute). */
+  grid-template-rows: 72px 56px minmax(0, 1fr) 92px 60px 76px;
   gap: 8px;
   padding: 10px;
   overflow: hidden;

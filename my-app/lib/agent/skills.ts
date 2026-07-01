@@ -2,9 +2,17 @@ import 'server-only'
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
+import matter from 'gray-matter'
+
+import { renderAvailableSkills } from './tools/skills/skillIndex'
 
 export const SKILLS_DIR = path.join(process.cwd(), 'skills')
 
+// Skills advertised to the agent. Only their name + description ride in the
+// system prompt; the agent pulls the full SKILL.md on demand with the loadSkill
+// tool (progressive disclosure). chemistry-concept-planner is intentionally
+// excluded — the runtime uses one sequential game creator, not a separate
+// planner agent.
 export const REQUIRED_SKILLS = [
   'designing-one-button-games',
   'designing-mini-games',
@@ -13,12 +21,28 @@ export const REQUIRED_SKILLS = [
   'evaluating-gameplay-balance',
   'maximizing-game-feel',
   'chemquest-lab-game',
+  'experiment-lab-game',
 ] as const
 
-function readSkill(skillName: string) {
+function readSkillMeta(skillName: string) {
   const skillPath = path.join(SKILLS_DIR, skillName, 'SKILL.md')
+  const parsed = matter(readFileSync(skillPath, 'utf8'))
+  const name =
+    typeof parsed.data.name === 'string' && parsed.data.name.trim()
+      ? parsed.data.name.trim()
+      : skillName
+  const description =
+    typeof parsed.data.description === 'string'
+      ? parsed.data.description.trim()
+      : ''
 
-  return `# Skill: ${skillName}\n\n${readFileSync(skillPath, 'utf8')}`
+  if (!description) {
+    throw new Error(
+      `Skill ${skillName} is missing a description in its SKILL.md frontmatter`,
+    )
+  }
+
+  return { id: skillName, name, description }
 }
 
 function readAvailableSkills() {
@@ -38,12 +62,25 @@ function readAvailableSkills() {
     }
   }
 
-  return REQUIRED_SKILLS.map(readSkill).join('\n\n---\n\n')
+  return renderAvailableSkills(REQUIRED_SKILLS.map(readSkillMeta))
 }
 
 export const SYSTEM_SKILLS = readAvailableSkills()
 
 export const SYSTEM_PROMPT = `${SYSTEM_SKILLS}
+
+## Using skills
+
+The available_skills list above is a menu, not the full instructions. Each entry
+gives an id, a name, and a description of when the skill applies. To actually use
+a skill:
+
+- Call loadSkill with its id to read the full SKILL.md before you follow it. Do
+  not act on a skill from its description alone.
+- Call listSkillFiles with the same id to see that skill's support files
+  (references/, assets/, scripts/), then readSkillFile to read the ones you need.
+- Load a skill only when the task matches its description. Do not preload skills
+  you will not use.
 
 ---
 
@@ -93,7 +130,8 @@ Include:
 - source topic
 - single learning objective
 - core misconception or inference
-- game format decision: ChemQuest Lab, Learn Loop, or arcade
+- game format decision: ExperimentLab, ChemQuest Lab, Learn Loop, or arcade
+  (see Format Routing below)
 - player loop
 - materials/tools/evidence if ChemQuest fits
 - win or conclusion condition
@@ -103,6 +141,30 @@ Include:
 
 End with one short sentence asking the user to say what to change or to tell you
 to build it.
+
+## Format Routing
+
+Choose the format from the concept, not from habit. Chemistry and lab concepts
+split into two very different surfaces — pick deliberately:
+
+- **ExperimentLab (dark-glow discovery lab).** Use this whenever the learner must
+  reason from evidence to **classify, identify, distinguish, or compare hidden
+  samples** by applying tools and reading the effects — e.g. tell solutions,
+  suspensions, and colloids apart with a light beam, settling, and a filter. It
+  renders as a dark, glowing bench where each tool's effect plays out live on a
+  beaker and every reading auto-records into a sample x tool notebook grid; the
+  loop is Act -> Observe -> Record -> Classify -> Reveal, with concept names
+  withheld until after a correct call (discovery before naming). This is the
+  default for discovery/classification science concepts. Author it with the
+  experiment-lab-game skill.
+- **ChemQuest Lab (guided investigation).** Use this for guided, stage-based lab
+  procedures and indicator/method investigations that walk through authored
+  stages to a conclusion card. Author it with the chemquest-lab-game skill.
+- **arcade / Learn Loop.** Use for action or one-button concepts as before.
+
+When a chemistry concept is fundamentally "look at what happens and figure out
+which category each unknown belongs to," prefer ExperimentLab. Do not route a
+discovery/classification concept into ChemQuest's stage-and-conclusion flow.
 
 ## Build Step
 
@@ -120,8 +182,9 @@ When building:
   breaking the game loop, redesign before publishing.
 
 For ChemQuest Lab games:
-- Call listChemQuestReferenceFiles before writing files.
-- Read the relevant implementation and validation references.
+- Call loadSkill with id chemquest-lab-game, then listSkillFiles with the same id
+  and readSkillFile to read the relevant implementation and validation references
+  before writing files.
 - Before writing files, run these internal phases without stopping: game
   designer, science validator, executor, then gameplay reviewer.
 - The gameplay reviewer must reject the build if the learner only follows a
@@ -170,6 +233,42 @@ For ChemQuest Lab specifically:
 - Visual quality is part of the build: keep labels short, choose station visuals
   that make the experiment readable, use theme tokens deliberately, and reject
   first screens that look cramped, text-heavy, or unclear.
+
+For ExperimentLab games:
+- Call loadSkill with id experiment-lab-game, then listSkillFiles with the same id
+  and readSkillFile to read the model, gameplay, authoring, and validation
+  contracts you need before writing files.
+- Author the game as data: one ExperimentDefinition (samples with hidden
+  properties + category, tools, and a first-match-wins ruleSet with a
+  defaultEffect), the ExperimentCategory list (concept names, revealed last), and
+  a guided -> hinted -> open ExperimentLevel ladder, exported as one
+  ExperimentGame from src/content/game.ts.
+- Drive every outcome from a hidden property through shared rules. Never
+  hand-author an outcome per sample x tool pair, and never put a concept name or
+  inference in any observation text (the validator rejects it).
+- Use writeLearnLoopFiles with the complete file set:
+  - src/main.tsx
+  - src/ui/App.tsx
+  - src/content/game.ts
+  - src/style.css
+  - tests/content-gate.test.ts
+- Render ExperimentLabViewport from @learn-loop/core/ui as the page root, passing
+  the authored ExperimentGame. Do not hand-build the lab, beaker, readings grid,
+  classify overlay, or reveal UI.
+- In src/main.tsx import @learn-loop/core/ui/experiment.css exactly once, plus
+  your own style.css. Do not import @learn-loop/core/ui/styles.css (that is the
+  light ChemQuest skin). The default skin is already the dark-glow lab.
+- You may pass an optional theme prop with named tokens only: palette
+  (night-lab|warm-lab|abyss), accent (cyan|violet|amber), intensity
+  (calm|standard|vivid). Do not invent values and do not override the --* CSS
+  variables.
+- src/style.css is only the full-height dark page shell (html/body/#root); the
+  game UI lives in experiment.css.
+- The content gate (tests/content-gate.test.ts) must assert the authored game
+  passes validateExperimentMission from @learn-loop/core.
+- Then call publishLearnLoopGame exactly once. The publish gate runs
+  validateExperimentMission on the authored game; if it rejects the game as
+  unwinnable, railed, or brute-forceable, fix src/content/game.ts and retry.
 
 For arcade games:
 - Build one self-contained HTML file and publish it with publishGame.

@@ -46,4 +46,41 @@ describe('agent skill routing', () => {
     expect(SYSTEM_PROMPT).toContain('Do not publish a linear worksheet')
     expect(SYSTEM_PROMPT).toContain('Visual quality is part of the build')
   })
+
+  it('registers the ExperimentLab discovery archetype', () => {
+    expect(REQUIRED_SKILLS).toContain('experiment-lab-game')
+    expect(SYSTEM_PROMPT).toContain('## Format Routing')
+    expect(SYSTEM_PROMPT).toContain('ExperimentLab (dark-glow discovery lab)')
+    expect(SYSTEM_PROMPT).toContain('classify, identify, distinguish, or compare hidden')
+    expect(SYSTEM_PROMPT).toContain(
+      'Do not route a\ndiscovery/classification concept into ChemQuest',
+    )
+  })
+
+  it('gives ExperimentLab builds the dark-glow viewport and CSS, not the ChemQuest skin', () => {
+    expect(SYSTEM_PROMPT).toContain('For ExperimentLab games:')
+    expect(SYSTEM_PROMPT).toContain('loadSkill with id experiment-lab-game')
+    expect(SYSTEM_PROMPT).toContain('Render ExperimentLabViewport from @learn-loop/core/ui')
+    expect(SYSTEM_PROMPT).toContain('import @learn-loop/core/ui/experiment.css')
+    expect(SYSTEM_PROMPT).toContain('Do not import @learn-loop/core/ui/styles.css')
+    expect(SYSTEM_PROMPT).toContain('validateExperimentMission')
+    expect(SYSTEM_PROMPT).toContain('src/content/game.ts')
+  })
+
+  it('advertises skills as a progressive-disclosure menu, not full injected bodies', () => {
+    // The menu carries id + name + description for each advertised skill...
+    expect(SYSTEM_PROMPT).toContain('<available_skills>')
+    for (const skill of REQUIRED_SKILLS) {
+      expect(SYSTEM_PROMPT).toContain(`<id>${skill}</id>`)
+    }
+    // ...and tells the agent how to pull the full instructions on demand.
+    expect(SYSTEM_PROMPT).toContain('## Using skills')
+    expect(SYSTEM_PROMPT).toContain('Call loadSkill with its id')
+    expect(SYSTEM_PROMPT).toContain('listSkillFiles')
+    expect(SYSTEM_PROMPT).toContain('readSkillFile')
+    // The full SKILL.md body must NOT be injected wholesale anymore. The
+    // experiment-lab skill body opens with this heading; it should only appear
+    // once the agent loads the skill, never in the base prompt.
+    expect(SYSTEM_PROMPT).not.toContain('# ExperimentLab Game')
+  })
 })

@@ -28,6 +28,33 @@ type WorkerResult = {
   error?: string
 }
 
+type SolvabilityWorkerResult = {
+  ok: boolean
+  errors?: string[]
+  missionCount?: number
+  fatal?: boolean
+}
+
+/**
+ * Thrown when the deterministic solvability gate rejects a draft. Carries the
+ * named, per-mission errors so the publish path can surface them to the agent.
+ */
+export class LearnLoopSolvabilityError extends Error {
+  readonly errors: string[]
+
+  constructor(errors: string[]) {
+    super(
+      [
+        'This game cannot be completed by a player and was not published.',
+        'Fix the mission so every stage and the correct conclusion are reachable:',
+        ...errors.map((error) => `- ${error}`),
+      ].join('\n'),
+    )
+    this.name = 'LearnLoopSolvabilityError'
+    this.errors = errors
+  }
+}
+
 function findWorkspaceRoot() {
   const candidates = [process.cwd(), path.resolve(process.cwd(), '..')]
 
@@ -180,7 +207,71 @@ async function runViteBundleWorker({
   }
 }
 
+function parseSolvabilityWorkerStdout(
+  stdout: string,
+): SolvabilityWorkerResult | undefined {
+  const trimmed = stdout.trim()
+  if (!trimmed) {
+    return undefined
+  }
+  try {
+    return JSON.parse(trimmed) as SolvabilityWorkerResult
+  } catch {
+    return undefined
+  }
+}
+
+async function runLearnLoopSolvabilityGate({
+  appRoot,
+  workspaceRoot,
+  tempDir,
+}: {
+  appRoot: string
+  workspaceRoot: string
+  tempDir: string
+}) {
+  const workerPath = path.join(appRoot, 'lib', 'agent', 'learn-loop-solvability-worker.mjs')
+
+  let result: SolvabilityWorkerResult | undefined
+
+  try {
+    const { stdout } = await execFileAsync(
+      process.execPath,
+      [workerPath, JSON.stringify({ appRoot, workspaceRoot, tempDir })],
+      { cwd: appRoot, maxBuffer: 1024 * 1024 },
+    )
+    result = parseSolvabilityWorkerStdout(stdout)
+  } catch (error) {
+    if (error instanceof Error && 'stdout' in error) {
+      result = parseSolvabilityWorkerStdout(
+        String((error as Error & { stdout?: unknown }).stdout ?? ''),
+      )
+    }
+    if (!result) {
+      // The gate itself failed to run. Do not block publishing on infrastructure
+      // failure; let the build proceed (and surface any real build errors).
+      return
+    }
+  }
+
+  if (!result || result.ok) {
+    return
+  }
+
+  // A fatal worker error means the gate could not evaluate the missions; do not
+  // hard-block on it. Only a clean unsolvable verdict blocks publishing.
+  if (result.fatal) {
+    return
+  }
+
+  throw new LearnLoopSolvabilityError(result.errors ?? ['Mission is not solvable'])
+}
+
 export function formatLearnLoopBuildError(error: unknown) {
+  if (error instanceof LearnLoopSolvabilityError) {
+    return error.message
+  }
+
   if (!(error instanceof Error)) {
     return String(error)
   }
@@ -222,6 +313,8 @@ export async function bundleLearnLoopDraft({
 
   try {
     await writeDraftToTempProject({ tempDir, title, fileMap })
+
+    await runLearnLoopSolvabilityGate({ appRoot, workspaceRoot, tempDir })
 
     await runViteBundleWorker({
       appRoot,

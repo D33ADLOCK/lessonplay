@@ -38,6 +38,7 @@
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
     "embla-carousel-react": "^8.6.0",
+    "gray-matter": "^4.0.3",
     "lucide-react": "^0.540.0",
     "nanoid": "^5.1.5",
     "next": "16.2.4",

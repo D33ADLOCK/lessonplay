@@ -1,7 +1,5 @@
 import 'server-only'
 
-import { readdir, readFile, realpath } from 'node:fs/promises'
-import path from 'node:path'
 import { z } from 'zod'
 
 import {
@@ -15,107 +13,7 @@ import { uploadGameHtml } from '@/lib/storage'
 import { bundleLearnLoopDraft, formatLearnLoopBuildError } from './learn-loop-bundler'
 import { writeLearnLoopDraftFiles } from './learn-loop-draft-store'
 import { persistLearnLoopSourceDraft } from './learn-loop-source-persistence'
-import { SKILLS_DIR } from './skills'
-
-const CHEMQUEST_REFERENCE_DIR = path.join(SKILLS_DIR, 'chemquest-lab-game')
-const EXCLUDED_REFERENCE_DIRS = new Set(['node_modules', 'dist', '.git'])
-
-async function resolveSafeFile(rootDir: string, relativePath: string, label: string) {
-  const normalizedPath = relativePath.replace(/\\/g, '/')
-
-  if (path.isAbsolute(normalizedPath)) {
-    throw new Error(`${label} path must be relative`)
-  }
-
-  const root = await realpath(rootDir)
-  const resolvedPath = await realpath(path.resolve(root, normalizedPath))
-
-  if (resolvedPath !== root && !resolvedPath.startsWith(`${root}${path.sep}`)) {
-    throw new Error(`${label} path escapes the allowed directory`)
-  }
-
-  return resolvedPath
-}
-
-async function readSafeSkillFile(relativePath: string) {
-  const resolvedPath = await resolveSafeFile(SKILLS_DIR, relativePath, 'Skill reference')
-
-  return readFile(resolvedPath, 'utf8')
-}
-
-function shouldSkipReferenceEntry(entryName: string) {
-  if (EXCLUDED_REFERENCE_DIRS.has(entryName)) {
-    return true
-  }
-
-  return entryName.startsWith('.')
-}
-
-export async function listChemQuestReferenceFiles() {
-  return listReferenceFiles(CHEMQUEST_REFERENCE_DIR)
-}
-
-async function listReferenceFiles(referenceDir: string) {
-  const root = await realpath(referenceDir)
-  const files: string[] = []
-
-  async function walk(currentDir: string) {
-    const entries = await readdir(currentDir, { withFileTypes: true })
-
-    for (const entry of entries) {
-      if (shouldSkipReferenceEntry(entry.name)) {
-        continue
-      }
-
-      const entryPath = path.join(currentDir, entry.name)
-
-      if (entry.isDirectory()) {
-        await walk(entryPath)
-        continue
-      }
-
-      if (!entry.isFile()) {
-        continue
-      }
-
-      files.push(path.relative(root, entryPath).replace(/\\/g, '/'))
-    }
-  }
-
-  await walk(root)
-
-  return files.sort()
-}
-
-export async function readChemQuestReferenceFile(relativePath: string) {
-  return readReferenceFile({
-    rootDir: CHEMQUEST_REFERENCE_DIR,
-    relativePath,
-    label: 'ChemQuest reference',
-  })
-}
-
-async function readReferenceFile({
-  rootDir,
-  relativePath,
-  label,
-}: {
-  rootDir: string
-  relativePath: string
-  label: string
-}) {
-  try {
-    const resolvedPath = await resolveSafeFile(rootDir, relativePath, label)
-
-    return await readFile(resolvedPath, 'utf8')
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      throw new Error(`${label} file not found: ${relativePath}`)
-    }
-
-    throw error
-  }
-}
+import { createSkillTools } from './tools/skills/loadSkillTool'
 
 export function createGameTools({
   chatId,
@@ -125,44 +23,7 @@ export function createGameTools({
   clerkUserId: string
 }) {
   return {
-    readSkillReference: {
-      description:
-        'Read deeper game-design reference material from my-app/skills by relative path.',
-      inputSchema: z.object({
-        path: z
-          .string()
-          .min(1)
-          .describe(
-            'Path relative to the skills directory, for example chemquest-lab-game/references/gameplay-contract.md',
-          ),
-      }),
-      execute: async ({ path: referencePath }: { path: string }) => {
-        return readSafeSkillFile(referencePath)
-      },
-    },
-    listChemQuestReferenceFiles: {
-      description:
-        'List ChemQuest Lab skill and reference files available to read.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        return { files: await listChemQuestReferenceFiles() }
-      },
-    },
-    readChemQuestReference: {
-      description:
-        'Read a ChemQuest Lab skill or reference file by path relative to my-app/skills/chemquest-lab-game.',
-      inputSchema: z.object({
-        path: z
-          .string()
-          .min(1)
-          .describe(
-            'Path relative to chemquest-lab-game, for example references/template-contract.md',
-          ),
-      }),
-      execute: async ({ path: referencePath }: { path: string }) => {
-        return readChemQuestReferenceFile(referencePath)
-      },
-    },
+    ...createSkillTools(),
     writeLearnLoopFiles: {
       description:
         'Write or replace Learn Loop virtual project files for this chat. Use for src/, tests/, index.html, or README.md files before calling publishLearnLoopGame.',

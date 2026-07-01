@@ -103,6 +103,10 @@ async function main() {
           replacement: path.join(learnLoopCoreRoot, 'src', 'ui', 'sandboxLab.css'),
         },
         {
+          find: '@learn-loop/core/ui/experiment.css',
+          replacement: path.join(learnLoopCoreRoot, 'src', 'ui', 'experimentLab.css'),
+        },
+        {
           find: '@learn-loop/template/styles.css',
           replacement: path.join(learnLoopTemplateRoot, 'src', 'styles.css'),
         },

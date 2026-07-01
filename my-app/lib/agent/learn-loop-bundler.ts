@@ -28,6 +28,33 @@ type WorkerResult = {
   error?: string
 }
 
+type SolvabilityWorkerResult = {
+  ok: boolean
+  errors?: string[]
+  missionCount?: number
+  fatal?: boolean
+}
+
+/**
+ * Thrown when the deterministic solvability gate rejects a draft. Carries the
+ * named, per-mission errors so the publish path can surface them to the agent.
+ */
+export class LearnLoopSolvabilityError extends Error {
+  readonly errors: string[]
+
+  constructor(errors: string[]) {
+    super(
+      [
+        'This game cannot be completed by a player and was not published.',
+        'Fix the mission so every stage and the correct conclusion are reachable:',
+        ...errors.map((error) => `- ${error}`),
+      ].join('\n'),
+    )
+    this.name = 'LearnLoopSolvabilityError'
+    this.errors = errors
+  }
+}
+
 function findWorkspaceRoot() {
   const candidates = [process.cwd(), path.resolve(process.cwd(), '..')]
 
@@ -180,7 +207,90 @@ async function runViteBundleWorker({
   }
 }
 
+function parseSolvabilityWorkerStdout(
+  stdout: string,
+): SolvabilityWorkerResult {
+  const trimmed = stdout.trim()
+  if (!trimmed) {
+    return {
+      ok: false,
+      fatal: true,
+      errors: ['Learn Loop solvability worker produced no output'],
+    }
+  }
+  try {
+    return JSON.parse(trimmed) as SolvabilityWorkerResult
+  } catch {
+    return {
+      ok: false,
+      fatal: true,
+      errors: ['Learn Loop solvability worker produced unparseable output'],
+    }
+  }
+}
+
+async function runLearnLoopSolvabilityGate({
+  appRoot,
+  workspaceRoot,
+  tempDir,
+}: {
+  appRoot: string
+  workspaceRoot: string
+  tempDir: string
+}) {
+  const workerPath = path.join(appRoot, 'lib', 'agent', 'learn-loop-solvability-worker.mjs')
+
+  let result: SolvabilityWorkerResult
+
+  try {
+    const { stdout } = await execFileAsync(
+      process.execPath,
+      [workerPath, JSON.stringify({ appRoot, workspaceRoot, tempDir })],
+      { cwd: appRoot, maxBuffer: 1024 * 1024 },
+    )
+    result = parseSolvabilityWorkerStdout(stdout)
+  } catch (error) {
+    if (error instanceof Error && 'stdout' in error) {
+      const execError = error as Error & { stdout?: unknown; stderr?: unknown }
+      const stdout = String(execError.stdout ?? '').trim()
+      result = stdout
+        ? parseSolvabilityWorkerStdout(stdout)
+        : {
+            ok: false,
+            fatal: true,
+            errors: [
+              String(execError.stderr ?? '').trim() ||
+                execError.message ||
+                'Learn Loop solvability worker failed before producing JSON',
+            ],
+          }
+    } else {
+      result = {
+        ok: false,
+        fatal: true,
+        errors: [error instanceof Error ? error.message : String(error)],
+      }
+    }
+  }
+
+  if (result.ok) {
+    return
+  }
+
+  throw new LearnLoopSolvabilityError(
+    result.errors ?? [
+      result.fatal
+        ? 'Learn Loop solvability gate failed before it could validate the draft'
+        : 'Mission is not solvable',
+    ],
+  )
+}
+
 export function formatLearnLoopBuildError(error: unknown) {
+  if (error instanceof LearnLoopSolvabilityError) {
+    return error.message
+  }
+
   if (!(error instanceof Error)) {
     return String(error)
   }
@@ -222,6 +332,8 @@ export async function bundleLearnLoopDraft({
 
   try {
     await writeDraftToTempProject({ tempDir, title, fileMap })
+
+    await runLearnLoopSolvabilityGate({ appRoot, workspaceRoot, tempDir })
 
     await runViteBundleWorker({
       appRoot,

@@ -1,0 +1,893 @@
+/* ExperimentLab — the reusable cause→effect discovery viewport.
+   A dark glowing lab, mobile-first 9:16. The Tyndall beam is the hero; the rest
+   stays dark and quiet so the glow reads in a screenshot or screen-recording.
+
+   Everything is scoped under `.experiment-lab-app` so a consuming game never
+   collides with these class names. The skin is driven entirely by CSS variables
+   set on the root; the `xl-palette-* / xl-accent-* / xl-intensity-*` classes
+   (see experimentLabTheme.ts) only flip those variables — the layout is fixed.
+   The default values below reproduce the hand-built reference exactly. */
+
+.experiment-lab-app {
+  /* palette (background + panel + ink + liquid) — overridden by xl-palette-* */
+  --bg-0: #05070f;
+  --panel: rgba(18, 26, 48, 0.72);
+  --panel-line: rgba(120, 160, 255, 0.16);
+  --ink: #eaf0ff;
+  --ink-dim: #9fb0d6;
+  --good: #5effa8;
+  --warn: #ffd166;
+  --frame-top: #16213f;
+  --frame-bot: #0c1428;
+  --card-top: #121a30;
+  --card-bot: #0c1326;
+  --liquid-top: #16335c;
+  --liquid-bot: #0c1d3a;
+  --liquid-cloudy-top: #2b4f7a;
+  --liquid-cloudy-bot: #1a3358;
+
+  /* accent (the beam / glow hero colour) — overridden by xl-accent-* */
+  --beam: #5fe3ff;
+  --beam-warm: #aef6ff;
+  --beam-rgb: 95, 227, 255;
+  --beam-warm-rgb: 174, 246, 255;
+  --accent: #6ea8ff;
+
+  /* intensity (glow strength) — overridden by xl-intensity-* */
+  --halo: 0.45;
+
+  --radius: 18px;
+
+  position: relative;
+  width: 100%;
+  max-width: min(100vw, calc(100vh * 9 / 16));
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 16px;
+  box-sizing: border-box;
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(120% 60% at 50% -10%, var(--frame-top) 0%, transparent 60%),
+    radial-gradient(90% 70% at 50% 120%, var(--frame-bot) 0%, transparent 55%),
+    var(--bg-0);
+  overflow: hidden;
+}
+
+.experiment-lab-app *,
+.experiment-lab-app *::before,
+.experiment-lab-app *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- Palette skins ---- */
+.experiment-lab-app.xl-palette-warm-lab {
+  --bg-0: #0c0a07;
+  --panel: rgba(40, 32, 22, 0.72);
+  --panel-line: rgba(255, 210, 150, 0.16);
+  --ink: #fdf3e6;
+  --ink-dim: #d8c2a0;
+  --frame-top: #2a2014;
+  --frame-bot: #160f08;
+  --card-top: #221a10;
+  --card-bot: #15100a;
+  --liquid-top: #3a2c16;
+  --liquid-bot: #241a0d;
+  --liquid-cloudy-top: #5a4424;
+  --liquid-cloudy-bot: #3a2c16;
+}
+
+.experiment-lab-app.xl-palette-abyss {
+  --bg-0: #03080a;
+  --panel: rgba(10, 26, 30, 0.72);
+  --panel-line: rgba(120, 220, 210, 0.16);
+  --ink: #e6fffb;
+  --ink-dim: #93c6bf;
+  --frame-top: #0c2a2c;
+  --frame-bot: #06181a;
+  --card-top: #0a2022;
+  --card-bot: #061416;
+  --liquid-top: #0e3a3c;
+  --liquid-bot: #08242a;
+  --liquid-cloudy-top: #155a52;
+  --liquid-cloudy-bot: #0e3a3c;
+}
+
+/* ---- Accent skins (the hero beam colour) ---- */
+.experiment-lab-app.xl-accent-violet {
+  --beam: #b59bff;
+  --beam-warm: #e3d6ff;
+  --beam-rgb: 170, 130, 255;
+  --beam-warm-rgb: 220, 200, 255;
+  --accent: #9a7dff;
+}
+
+.experiment-lab-app.xl-accent-amber {
+  --beam: #ffce6a;
+  --beam-warm: #ffe7ad;
+  --beam-rgb: 255, 196, 90;
+  --beam-warm-rgb: 255, 230, 170;
+  --accent: #ffb74d;
+}
+
+/* ---- Intensity (glow strength) ---- */
+.experiment-lab-app.xl-intensity-calm {
+  --halo: 0.3;
+}
+.experiment-lab-app.xl-intensity-vivid {
+  --halo: 0.62;
+}
+
+/* ---- Topbar ---- */
+.experiment-lab-app .topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.experiment-lab-app .topbar__title {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  color: var(--beam-warm);
+  text-shadow: 0 0 12px rgba(var(--beam-rgb), 0.35);
+}
+.experiment-lab-app .topbar__level {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+/* ---- Stage: the hero beaker ---- */
+.experiment-lab-app .stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.experiment-lab-app .stage__label {
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* ---- Beaker ---- */
+.experiment-lab-app .beaker {
+  position: relative;
+  width: 168px;
+  height: 220px;
+  display: flex;
+  justify-content: center;
+}
+.experiment-lab-app .beaker__glass {
+  position: relative;
+  width: 132px;
+  height: 100%;
+  border: 2px solid rgba(150, 190, 255, 0.35);
+  border-top: none;
+  border-radius: 6px 6px 26px 26px;
+  background: linear-gradient(
+    180deg,
+    rgba(120, 160, 255, 0.05),
+    rgba(120, 160, 255, 0.12)
+  );
+  box-shadow:
+    inset 0 0 26px rgba(120, 170, 255, 0.18),
+    0 12px 40px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+.experiment-lab-app .beaker__liquid {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 72%;
+  border-radius: 4px 4px 22px 22px;
+  background: linear-gradient(180deg, var(--liquid-top) 0%, var(--liquid-bot) 100%);
+  transition: background 0.5s ease;
+}
+.experiment-lab-app .beaker__liquid.is-cloudy {
+  background: linear-gradient(
+    180deg,
+    var(--liquid-cloudy-top) 0%,
+    var(--liquid-cloudy-bot) 100%
+  );
+}
+.experiment-lab-app .beaker__surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: radial-gradient(
+    60% 100% at 50% 0%,
+    rgba(var(--beam-warm-rgb), 0.5),
+    transparent 70%
+  );
+}
+
+/* drifting suspended motes */
+.experiment-lab-app .motes {
+  position: absolute;
+  inset: 0;
+}
+.experiment-lab-app .mote {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(190, 230, 255, 0.85);
+  box-shadow: 0 0 6px rgba(150, 220, 255, 0.9);
+  animation: xl-drift 4.5s ease-in-out infinite;
+}
+@keyframes xl-drift {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-6px) translateX(3px);
+    opacity: 1;
+  }
+}
+
+/* ---- THE BEAM (hero) ---- */
+.experiment-lab-app .beam {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.experiment-lab-app .beam__shaft {
+  position: absolute;
+  top: 38%;
+  left: -10%;
+  width: 120%;
+  height: 26px;
+  transform: rotate(-9deg);
+  transform-origin: center;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--beam-rgb), 0.15) 8%,
+    rgba(var(--beam-warm-rgb), 0.95) 50%,
+    rgba(var(--beam-rgb), 0.15) 92%,
+    transparent 100%
+  );
+  filter: blur(0.4px);
+  animation:
+    xl-beam-enter 0.7s ease-out both,
+    xl-beam-pulse 1.8s ease-in-out 0.7s infinite;
+}
+.experiment-lab-app .beam__glow {
+  position: absolute;
+  top: 30%;
+  left: -10%;
+  width: 120%;
+  height: 60px;
+  transform: rotate(-9deg);
+  background: radial-gradient(
+    50% 60% at 50% 50%,
+    rgba(var(--beam-rgb), 0.55),
+    transparent 70%
+  );
+  filter: blur(6px);
+  animation:
+    xl-beam-enter 0.7s ease-out both,
+    xl-beam-pulse 1.8s ease-in-out 0.7s infinite;
+}
+@keyframes xl-beam-enter {
+  from {
+    opacity: 0;
+    transform: rotate(-9deg) translateX(-45%) scaleX(0.25);
+  }
+  to {
+    opacity: 0.9;
+    transform: rotate(-9deg) translateX(0) scaleX(1);
+  }
+}
+@keyframes xl-beam-pulse {
+  0%,
+  100% {
+    opacity: 0.78;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.experiment-lab-app .beaker.is-animating.is-beam .beaker__glass {
+  box-shadow:
+    inset 0 0 50px rgba(var(--beam-rgb), 0.5),
+    0 0 70px rgba(var(--beam-rgb), calc(var(--halo) + 0.15)),
+    0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.experiment-lab-app .beaker.is-beam .beaker__glass {
+  box-shadow:
+    inset 0 0 40px rgba(var(--beam-rgb), 0.35),
+    0 0 50px rgba(var(--beam-rgb), var(--halo)),
+    0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* sediment settled at the bottom */
+.experiment-lab-app .sediment {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 22px;
+  border-radius: 0 0 22px 22px;
+  background: linear-gradient(180deg, #6b5230, #3c2f1c);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
+  animation: xl-settle-rise 0.9s ease-out;
+}
+@keyframes xl-settle-rise {
+  from {
+    transform: translateY(22px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* residue clinging after filtering */
+.experiment-lab-app .residue {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  width: 70px;
+  height: 70px;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 4px 4px;
+  background: radial-gradient(
+    circle at 50% 35%,
+    rgba(214, 196, 150, 0.95),
+    rgba(120, 100, 60, 0.6)
+  );
+  box-shadow: 0 0 14px rgba(214, 196, 150, 0.4);
+  animation: xl-residue-enter 0.8s ease-out both;
+}
+@keyframes xl-residue-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* rising bubbles — fizz (effervescence) and gas (escaping) */
+.experiment-lab-app .bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.experiment-lab-app .bubble {
+  position: absolute;
+  bottom: 6%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(255, 255, 255, 0.95),
+    rgba(190, 225, 255, 0.4) 70%,
+    transparent
+  );
+  box-shadow: 0 0 6px rgba(210, 235, 255, 0.55);
+  animation: xl-fizz-rise 1.5s ease-in infinite;
+}
+.experiment-lab-app .bubbles--gas .bubble {
+  animation-name: xl-gas-escape;
+  animation-duration: 1.3s;
+}
+@keyframes xl-fizz-rise {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-150px) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes xl-gas-escape {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-230px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* the gas identity chip riding above the escaping bubbles */
+.experiment-lab-app .gas-chip {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #06121c;
+  background: linear-gradient(180deg, #d8f3ff, #9fd8ff);
+  box-shadow: 0 0 12px rgba(159, 216, 255, 0.7);
+  animation: xl-fade-in 0.4s ease both;
+}
+
+/* color-change — the liquid takes on a tint */
+.experiment-lab-app .beaker__liquid.is-colour {
+  background: linear-gradient(180deg, #d56bd0 0%, #8e2f9a 100%);
+  box-shadow: inset 0 0 28px rgba(213, 107, 208, 0.4);
+}
+
+/* precipitate — clear solution turns milky with drifting curd flecks */
+.experiment-lab-app .beaker__liquid.is-milky {
+  background: linear-gradient(180deg, #e8eef5 0%, #c3cedd 100%);
+}
+.experiment-lab-app .precipitate {
+  position: absolute;
+  inset: 0;
+  animation: xl-fade-in 0.6s ease both;
+}
+.experiment-lab-app .curd {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.7);
+  animation: xl-drift 5s ease-in-out infinite;
+}
+
+/* lamp firing the beam */
+.experiment-lab-app .lamp {
+  position: absolute;
+  left: -16px;
+  top: 36%;
+  width: 26px;
+  height: 34px;
+  border-radius: 6px;
+  background: #1b2236;
+  border: 1px solid rgba(150, 190, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.experiment-lab-app .lamp__bulb {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2a3350;
+  margin-right: 3px;
+}
+.experiment-lab-app .lamp.is-on .lamp__bulb {
+  background: var(--beam-warm);
+  box-shadow: 0 0 14px 4px rgba(var(--beam-rgb), 0.8);
+}
+
+/* ---- Sample chips ---- */
+.experiment-lab-app .samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.experiment-lab-app .chip {
+  appearance: none;
+  border: 1px solid var(--panel-line);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.experiment-lab-app .chip.is-active {
+  border-color: var(--beam);
+  box-shadow: 0 0 0 1px var(--beam), 0 0 16px rgba(var(--beam-rgb), 0.35);
+  color: var(--beam-warm);
+}
+.experiment-lab-app .chip.is-probed {
+  color: var(--ink);
+}
+.experiment-lab-app .chip__dot {
+  color: var(--good);
+}
+.experiment-lab-app .chip:disabled {
+  opacity: 0.55;
+}
+
+/* ---- Tool tray ---- */
+.experiment-lab-app .tools {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.experiment-lab-app .tool {
+  appearance: none;
+  flex: 1 1 0;
+  max-width: 110px;
+  border: 1px solid var(--panel-line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.experiment-lab-app .tool:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.experiment-lab-app .tool:disabled {
+  opacity: 0.4;
+}
+.experiment-lab-app .tool__icon {
+  font-size: 22px;
+}
+.experiment-lab-app .tool__label {
+  font-size: 12px;
+}
+
+/* ---- Reading caption (the live sensory line under the beaker) ---- */
+.experiment-lab-app .reading {
+  margin: 0;
+  min-height: 2.4em;
+  max-width: 280px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink-dim);
+}
+.experiment-lab-app .reading.is-live {
+  color: var(--beam-warm);
+  text-shadow: 0 0 10px rgba(var(--beam-rgb), 0.3);
+}
+
+/* ---- Readings grid (the reasoning surface) ---- */
+.experiment-lab-app .grid {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 14px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.experiment-lab-app .grid__row {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 1.4fr repeat(var(--cols, 3), 1fr);
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  padding: 5px 6px;
+  text-align: left;
+}
+.experiment-lab-app .grid__row--head {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.experiment-lab-app .grid__row.is-active {
+  border-color: var(--beam);
+  background: rgba(var(--beam-rgb), 0.08);
+}
+.experiment-lab-app .grid__row:disabled {
+  opacity: 1; /* readings stay readable even when the bench is busy */
+}
+.experiment-lab-app .grid__name {
+  font-size: 12px;
+  font-weight: 600;
+}
+.experiment-lab-app .grid__col {
+  text-align: center;
+}
+.experiment-lab-app .gcell {
+  text-align: center;
+  font-size: 11px;
+  padding: 4px 2px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-dim);
+}
+.experiment-lab-app .gcell--empty {
+  color: rgba(159, 176, 214, 0.35);
+  background: transparent;
+}
+.experiment-lab-app .gcell--beam {
+  color: #06121c;
+  font-weight: 700;
+  background: linear-gradient(180deg, var(--beam-warm), var(--beam));
+  box-shadow: 0 0 10px rgba(var(--beam-rgb), 0.45);
+}
+.experiment-lab-app .gcell--settle {
+  color: #1a130a;
+  font-weight: 600;
+  background: linear-gradient(180deg, #d8b878, #b08a44);
+}
+.experiment-lab-app .gcell--residue {
+  color: #1a130a;
+  font-weight: 600;
+  background: linear-gradient(180deg, #e6d6a6, #c4a96a);
+}
+.experiment-lab-app .gcell--fizz {
+  color: #06121c;
+  font-weight: 600;
+  background: linear-gradient(180deg, #cdeaffa6, #9fd8ff);
+}
+.experiment-lab-app .gcell--colour {
+  color: #fff;
+  font-weight: 600;
+  background: linear-gradient(180deg, #d56bd0, #8e2f9a);
+}
+.experiment-lab-app .gcell--gas {
+  color: #06121c;
+  font-weight: 700;
+  background: linear-gradient(180deg, #d8f3ff, #9fd8ff);
+}
+.experiment-lab-app .gcell--ppt {
+  color: #1a130a;
+  font-weight: 600;
+  background: linear-gradient(180deg, #eef2f7, #c3cedd);
+}
+.experiment-lab-app .gcell--none {
+  color: var(--ink-dim);
+}
+
+/* ---- Actions ---- */
+.experiment-lab-app .actions {
+  display: flex;
+  gap: 10px;
+}
+.experiment-lab-app .btn {
+  appearance: none;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 16px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.experiment-lab-app .btn--block {
+  width: 100%;
+}
+.experiment-lab-app .btn--primary {
+  flex: 1 1 auto;
+  background: linear-gradient(180deg, #2f73ff, #1c4fd6);
+  box-shadow: 0 6px 18px rgba(40, 90, 220, 0.45);
+}
+.experiment-lab-app .btn--primary:disabled {
+  background: #1a2340;
+  color: var(--ink-dim);
+  box-shadow: none;
+}
+.experiment-lab-app .btn--ghost {
+  background: transparent;
+  border: 1px solid var(--panel-line);
+  color: var(--ink-dim);
+}
+
+.experiment-lab-app .hints {
+  position: absolute;
+  bottom: 70px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.experiment-lab-app .hints__line {
+  margin: 0;
+  font-size: 12px;
+  color: var(--warn);
+  background: rgba(20, 26, 48, 0.92);
+  border: 1px solid rgba(255, 209, 102, 0.25);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+/* ---- Overlays ---- */
+.experiment-lab-app .overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 5, 12, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 10;
+  animation: xl-fade-in 0.25s ease;
+}
+@keyframes xl-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.experiment-lab-app .card {
+  width: 100%;
+  max-width: 320px;
+  background: linear-gradient(180deg, var(--card-top), var(--card-bot));
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+.experiment-lab-app .card--wide {
+  max-width: 340px;
+}
+.experiment-lab-app .card__title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: var(--beam-warm);
+  text-shadow: 0 0 16px rgba(var(--beam-rgb), 0.35);
+}
+.experiment-lab-app .card__body {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.experiment-lab-app .card__hint {
+  margin: -4px 0 14px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.experiment-lab-app .verdict {
+  margin: 0 0 10px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.experiment-lab-app .verdict.is-surprise {
+  color: var(--warn);
+}
+
+/* ---- Classify ---- */
+.experiment-lab-app .classify {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+.experiment-lab-app .classify__row {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 6px;
+}
+.experiment-lab-app .classify__row.is-wrong {
+  border-color: rgba(255, 120, 120, 0.6);
+  background: rgba(255, 80, 80, 0.08);
+}
+.experiment-lab-app .classify__name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--beam);
+}
+.experiment-lab-app .classify__opts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.experiment-lab-app .pill {
+  appearance: none;
+  border: 1px solid var(--panel-line);
+  background: rgba(20, 28, 50, 0.8);
+  color: var(--ink-dim);
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: 999px;
+}
+.experiment-lab-app .pill.is-chosen {
+  border-color: var(--beam);
+  color: var(--beam-warm);
+  box-shadow: 0 0 10px rgba(var(--beam-rgb), 0.3);
+}
+
+/* ---- Predict (the "predict first" beat before a tool fires) ---- */
+.experiment-lab-app .predict {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.experiment-lab-app .pill--predict {
+  font-size: 14px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.experiment-lab-app .pill--predict:hover {
+  border-color: var(--beam);
+  color: var(--beam-warm);
+  box-shadow: 0 0 10px rgba(var(--beam-rgb), 0.25);
+}
+.experiment-lab-app .predict-verdict {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.experiment-lab-app .predict-verdict.is-correct {
+  color: var(--beam);
+  text-shadow: 0 0 10px rgba(var(--beam-rgb), 0.3);
+}
+.experiment-lab-app .predict-verdict.is-wrong {
+  color: var(--warn);
+}
+
+/* ---- Reveal ---- */
+.experiment-lab-app .reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.experiment-lab-app .reveal__row {
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(20, 28, 50, 0.5);
+}
+.experiment-lab-app .reveal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 14px;
+}
+.experiment-lab-app .reveal__real {
+  color: var(--good);
+  font-size: 13px;
+}
+.experiment-lab-app .reveal__cat {
+  margin-top: 2px;
+  color: var(--beam-warm);
+  font-weight: 700;
+  font-size: 13px;
+}
+.experiment-lab-app .reveal__def {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-dim);
+  line-height: 1.4;
+}
+
+/* ---- Complete ---- */
+.experiment-lab-app .complete__beam {
+  font-size: 44px;
+  filter: drop-shadow(0 0 18px rgba(var(--beam-rgb), 0.8));
+  margin-bottom: 6px;
+}

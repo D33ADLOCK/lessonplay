@@ -116,6 +116,161 @@ describe('bundleLearnLoopDraft', () => {
     await expect(listTempLearnLoopBuildDirs(tempParentDir)).resolves.toEqual([])
   })
 
+  it('bundles drafts that import the ExperimentLab viewport and dark-glow CSS', async () => {
+    writeLearnLoopDraftFiles({
+      chatId: CHAT_ID,
+      files: [
+        {
+          path: 'src/main.tsx',
+          content: `
+            import React from 'react'
+            import { createRoot } from 'react-dom/client'
+            import type { ExperimentGame } from '@learn-loop/core'
+            import {
+              EXPERIMENT_LAB_PALETTES,
+              ExperimentLabViewport,
+              experimentLabThemeClasses,
+            } from '@learn-loop/core/ui'
+            import '@learn-loop/core/ui/experiment.css'
+
+            const game: ExperimentGame = {
+              id: 'alias-exp',
+              title: 'Alias Experiment',
+              definition: {
+                samples: [
+                  { id: 'a', label: 'Unknown A', properties: { size: 'tiny' }, categoryId: 'solution' },
+                ],
+                tools: [{ id: 'light', label: 'Light' }],
+                ruleSet: {
+                  rules: [
+                    {
+                      toolId: 'light',
+                      when: { size: 'tiny' },
+                      effect: {
+                        observationId: 'light-clear',
+                        observation: 'The beam passes through without a visible path.',
+                        visual: 'none',
+                      },
+                    },
+                  ],
+                  defaultEffect: {
+                    observationId: 'none',
+                    observation: 'Nothing observable happens.',
+                    visual: 'none',
+                  },
+                },
+              },
+              categories: [{ id: 'solution', label: 'Solution' }],
+              levels: [
+                {
+                  id: 'only',
+                  title: 'Only case',
+                  intro: 'Test the sample.',
+                  sampleIds: ['a'],
+                  toolIds: ['light'],
+                  goal: { classifyIds: ['a'], categoryIds: ['solution'] },
+                  scaffolding: 'guided',
+                  predictionRequired: false,
+                  hints: [],
+                },
+              ],
+            }
+
+            function App() {
+              return (
+                <main className={experimentLabThemeClasses({ accent: 'violet' })}>
+                  <span>{EXPERIMENT_LAB_PALETTES[0]}</span>
+                  <ExperimentLabViewport game={game} />
+                </main>
+              )
+            }
+
+            createRoot(document.getElementById('root')!).render(<App />)
+          `,
+        },
+      ],
+    })
+
+    const html = await bundleLearnLoopDraft({
+      chatId: CHAT_ID,
+      title: 'ExperimentLab Alias Test',
+      tempParentDir,
+    })
+
+    expect(html).toContain('<title>ExperimentLab Alias Test</title>')
+    expect(html).toContain('xl-accent-violet')
+    expect(html).toContain('night-lab')
+    // The dark-glow stylesheet resolved through the experiment.css alias and was
+    // inlined, not the SandboxLab skin.
+    expect(html).toContain('experiment-lab-app')
+    expect(html).not.toMatch(/href="\/assets\//)
+    await expect(listTempLearnLoopBuildDirs(tempParentDir)).resolves.toEqual([])
+  })
+
+  it('blocks publishing an ExperimentLab game the validator rejects', async () => {
+    writeLearnLoopDraftFiles({
+      chatId: CHAT_ID,
+      files: [
+        {
+          path: 'src/content/game.ts',
+          content: `
+            // A structurally invalid ExperimentGame: a rule points at a tool that
+            // does not exist, so validateExperimentMission must reject it.
+            export const game = {
+              id: 'broken-exp',
+              title: 'Broken Experiment',
+              definition: {
+                samples: [
+                  { id: 's1', label: 'S1', properties: { size: 'big' }, categoryId: 'a' },
+                ],
+                tools: [{ id: 'light', label: 'Light' }],
+                ruleSet: {
+                  rules: [
+                    {
+                      toolId: 'ghost',
+                      when: {},
+                      effect: { observationId: 'x', observation: 'x', visual: 'none' },
+                    },
+                  ],
+                  defaultEffect: {
+                    observationId: 'none',
+                    observation: 'none',
+                    visual: 'none',
+                  },
+                },
+              },
+              categories: [{ id: 'a', label: 'A' }],
+              levels: [
+                {
+                  id: 'l1',
+                  title: 'L',
+                  intro: 'i',
+                  outro: 'o',
+                  sampleIds: ['s1'],
+                  toolIds: ['light'],
+                  goal: { classifyIds: ['s1'], categoryIds: ['a'] },
+                  scaffolding: 'open',
+                  predictionRequired: false,
+                  hints: [],
+                },
+              ],
+            }
+          `,
+        },
+        { path: 'src/main.tsx', content: 'export {}' },
+      ],
+    })
+
+    await expect(
+      bundleLearnLoopDraft({
+        chatId: CHAT_ID,
+        title: 'Broken Experiment',
+        tempParentDir,
+      }),
+    ).rejects.toThrow(/Experiment "broken-exp"/)
+    await expect(listTempLearnLoopBuildDirs(tempParentDir)).resolves.toEqual([])
+  })
+
   it('cleans up the temp build directory when Vite fails', async () => {
     writeLearnLoopDraftFiles({
       chatId: CHAT_ID,

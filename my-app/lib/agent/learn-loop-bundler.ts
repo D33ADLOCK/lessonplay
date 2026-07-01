@@ -251,9 +251,19 @@ async function runLearnLoopSolvabilityGate({
     result = parseSolvabilityWorkerStdout(stdout)
   } catch (error) {
     if (error instanceof Error && 'stdout' in error) {
-      result = parseSolvabilityWorkerStdout(
-        String((error as Error & { stdout?: unknown }).stdout ?? ''),
-      )
+      const execError = error as Error & { stdout?: unknown; stderr?: unknown }
+      const stdout = String(execError.stdout ?? '').trim()
+      result = stdout
+        ? parseSolvabilityWorkerStdout(stdout)
+        : {
+            ok: false,
+            fatal: true,
+            errors: [
+              String(execError.stderr ?? '').trim() ||
+                execError.message ||
+                'Learn Loop solvability worker failed before producing JSON',
+            ],
+          }
     } else {
       result = {
         ok: false,

@@ -142,7 +142,17 @@ describe('bundleLearnLoopDraft', () => {
                 ],
                 tools: [{ id: 'light', label: 'Light' }],
                 ruleSet: {
-                  rules: [],
+                  rules: [
+                    {
+                      toolId: 'light',
+                      when: { size: 'tiny' },
+                      effect: {
+                        observationId: 'light-clear',
+                        observation: 'The beam passes through without a visible path.',
+                        visual: 'none',
+                      },
+                    },
+                  ],
                   defaultEffect: {
                     observationId: 'none',
                     observation: 'Nothing observable happens.',

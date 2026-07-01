@@ -18,12 +18,12 @@ ExperimentGame
 
 ## Samples
 
-`ExperimentSample = { id, label, properties, category, revealLabel? }`
+`ExperimentSample = { id, label, properties, categoryId, revealLabel? }`
 
 - `properties` is the **hidden ground truth** the simulation reasons over
   (e.g. `{ particleSize: "coarse" }`). Never shown to the player.
 - `label` is the public, learner-facing name (`"Unknown B"`). Never the answer.
-- `category` is the classification answer; it must match an `ExperimentCategory.id`.
+- `categoryId` is the classification answer; it must match an `ExperimentCategory.id`.
 - `revealLabel` is the optional real-world identity for the reveal
   (`"chalk water"`).
 - Drive every outcome from `properties`. Two samples that should behave

@@ -1,7 +1,7 @@
 import type {
   ExperimentDefinition,
   ExperimentGame,
-} from "../../src/model/experimentLab";
+} from "@learn-loop/core";
 
 /**
  * Reference ExperimentLab physics: the "Invisible Particle Detective" bench.
@@ -208,7 +208,7 @@ export const particleGame: ExperimentGame = {
         categoryIds: ["solution", "suspension", "colloid"],
       },
       scaffolding: "hinted",
-      predictionRequired: true,
+      predictionRequired: false,
       hints: [
         { id: "h1", text: "Use the light first to spot which samples hold floating particles." },
         { id: "h2", text: "Of the two that scatter light, only one settles or filters out." },

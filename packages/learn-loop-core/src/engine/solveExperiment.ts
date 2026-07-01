@@ -1,10 +1,12 @@
 import type {
   ExperimentDefinition,
   ExperimentLevel,
+  ExperimentRuleSet,
   ExperimentSample,
+  ExperimentVisual,
 } from "../model/experimentLab";
 import type { ValidationResult } from "../model/scenario";
-import { distinguishable, sampleSignature } from "./experimentSignature";
+import { runExperimentSequence } from "./experimentRules";
 
 /**
  * The deterministic quality verdict for one level — the reviewer's backbone.
@@ -53,6 +55,39 @@ function resolveSamples(
   return { samples, missing };
 }
 
+type StatefulExperimentSignature = Readonly<Record<string, ExperimentVisual>>;
+
+function signatureKey(toolId: string, index: number): string {
+  return `${index}:${toolId}`;
+}
+
+/**
+ * Compute the visible evidence from applying tools in the same order a learner
+ * can apply them during a session, carrying `setState` between probes.
+ */
+function statefulSignature(
+  sample: ExperimentSample,
+  toolIds: readonly string[],
+  ruleSet: ExperimentRuleSet,
+): StatefulExperimentSignature {
+  const signature: Record<string, ExperimentVisual> = {};
+  const { results } = runExperimentSequence(sample.properties, toolIds, ruleSet);
+  results.forEach((result, index) => {
+    signature[signatureKey(toolIds[index], index)] = result.effect.visual;
+  });
+  return signature;
+}
+
+function signaturesDiffer(
+  a: StatefulExperimentSignature,
+  b: StatefulExperimentSignature,
+  toolIds: readonly string[],
+): boolean {
+  return toolIds.some(
+    (toolId, index) => a[signatureKey(toolId, index)] !== b[signatureKey(toolId, index)],
+  );
+}
+
 /** Do all classify samples of different categories differ under this one tool? */
 function toolSeparatesAllCategories(
   toolId: string,
@@ -62,9 +97,9 @@ function toolSeparatesAllCategories(
   for (let i = 0; i < samples.length; i++) {
     for (let j = i + 1; j < samples.length; j++) {
       if (samples[i].categoryId === samples[j].categoryId) continue;
-      const a = sampleSignature(samples[i], [toolId], definition.ruleSet);
-      const b = sampleSignature(samples[j], [toolId], definition.ruleSet);
-      if (!distinguishable(a, b, [toolId])) return false;
+      const a = statefulSignature(samples[i], [toolId], definition.ruleSet);
+      const b = statefulSignature(samples[j], [toolId], definition.ruleSet);
+      if (!signaturesDiffer(a, b, [toolId])) return false;
     }
   }
   return true;
@@ -79,9 +114,9 @@ function toolsSeparateAll(
   for (let i = 0; i < samples.length; i++) {
     for (let j = i + 1; j < samples.length; j++) {
       if (samples[i].categoryId === samples[j].categoryId) continue;
-      const a = sampleSignature(samples[i], toolIds, definition.ruleSet);
-      const b = sampleSignature(samples[j], toolIds, definition.ruleSet);
-      if (!distinguishable(a, b, toolIds)) return false;
+      const a = statefulSignature(samples[i], toolIds, definition.ruleSet);
+      const b = statefulSignature(samples[j], toolIds, definition.ruleSet);
+      if (!signaturesDiffer(a, b, toolIds)) return false;
     }
   }
   return true;
@@ -151,9 +186,9 @@ export function solveExperiment(
       const a = classifySamples[i];
       const b = classifySamples[j];
       if (a.categoryId === b.categoryId) continue;
-      const sigA = sampleSignature(a, level.toolIds, definition.ruleSet);
-      const sigB = sampleSignature(b, level.toolIds, definition.ruleSet);
-      if (!distinguishable(sigA, sigB, level.toolIds)) {
+      const sigA = statefulSignature(a, level.toolIds, definition.ruleSet);
+      const sigB = statefulSignature(b, level.toolIds, definition.ruleSet);
+      if (!signaturesDiffer(sigA, sigB, level.toolIds)) {
         indistinguishablePairs.push([a.id, b.id]);
         errors.push(
           `level "${level.id}": samples "${a.id}" (${a.categoryId}) and "${b.id}" (${b.categoryId}) are indistinguishable with the available tools, so the level cannot be won by reasoning`,

@@ -249,6 +249,13 @@ describe("classification and reveal", () => {
     expect(state.phase).toBe("classifying");
     expect(state.classificationResult?.correct).toBe(false);
     expect(state.classificationResult?.perSample["unknown-b"]).toBe(false);
+
+    state = run(state, {
+      type: "assign-category",
+      sampleId: "unknown-b",
+      categoryId: "suspension",
+    });
+    expect(state.classificationResult).toBeNull();
   });
 
   it("advances to the next level after a reveal", () => {

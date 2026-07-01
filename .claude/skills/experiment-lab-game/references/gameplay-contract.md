@@ -49,7 +49,7 @@ and what is asked.
 
 - `classifyIds` are the samples the learner must classify; leave the
   control/reference out so it aids reasoning without being graded.
-- `categoryIds` are the choices offered; every classify sample's `category` must
+- `categoryIds` are the choices offered; every classify sample's `categoryId` must
   be among them, with at least two distinct categories in play (or the analyzer
   flags `bruteForceable`).
 - The runtime reducer (`canClassify`) blocks the classify step until **every**

@@ -3,7 +3,7 @@ import {
   analyzeExperimentGame,
   solveExperiment,
 } from "../src/engine/solveExperiment";
-import type { ExperimentLevel } from "../src/model/experimentLab";
+import type { ExperimentDefinition, ExperimentLevel } from "../src/model/experimentLab";
 import { particleGame } from "./fixtures/experimentParticles";
 
 const { definition, levels } = particleGame;
@@ -118,6 +118,94 @@ describe("solveExperiment — rejecting fake experiments", () => {
     expect(analysis.winnable).toBe(false);
     expect(analysis.errors.some((e) => e.includes("not offered"))).toBe(true);
   });
+
+  it("recognizes evidence that only appears after an earlier state-changing probe", () => {
+    const statefulDefinition: ExperimentDefinition = {
+      samples: [
+        {
+          id: "unknown-a",
+          label: "Unknown A",
+          properties: { formula: "a" },
+          categoryId: "charged",
+        },
+        {
+          id: "unknown-b",
+          label: "Unknown B",
+          properties: { formula: "b" },
+          categoryId: "plain",
+        },
+      ],
+      tools: [
+        { id: "primer", label: "Primer" },
+        { id: "light", label: "Light" },
+      ],
+      ruleSet: {
+        rules: [
+          {
+            toolId: "primer",
+            when: { formula: "a" },
+            effect: {
+              observationId: "primer-a",
+              observation: "The liquid warms slightly.",
+              visual: "none" as const,
+              setState: { primed: "yes" },
+            },
+          },
+          {
+            toolId: "primer",
+            when: { formula: "b" },
+            effect: {
+              observationId: "primer-b",
+              observation: "The liquid warms slightly.",
+              visual: "none" as const,
+              setState: { primed: "no" },
+            },
+          },
+          {
+            toolId: "light",
+            when: { primed: "yes" },
+            effect: {
+              observationId: "light-primed",
+              observation: "A bright path appears after priming.",
+              visual: "beam" as const,
+            },
+          },
+          {
+            toolId: "light",
+            when: { primed: "no" },
+            effect: {
+              observationId: "light-plain",
+              observation: "No path appears after priming.",
+              visual: "none" as const,
+            },
+          },
+        ],
+        defaultEffect: {
+          observationId: "no-change",
+          observation: "Nothing observable happens.",
+          visual: "none" as const,
+        },
+      },
+    };
+
+    const analysis = solveExperiment(
+      statefulDefinition,
+      makeLevel({
+        sampleIds: ["unknown-a", "unknown-b"],
+        toolIds: ["primer", "light"],
+        goal: {
+          classifyIds: ["unknown-a", "unknown-b"],
+          categoryIds: ["charged", "plain"],
+        },
+      }),
+    );
+
+    expect(analysis.winnable).toBe(true);
+    expect(analysis.toolsNeeded).toBe(2);
+    expect(analysis.railed).toBe(false);
+    expect(analysis.errors).toEqual([]);
+  });
+
 });
 
 describe("analyzeExperimentGame", () => {

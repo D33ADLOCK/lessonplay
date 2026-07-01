@@ -260,6 +260,7 @@ export function reduceExperimentSession(
       return {
         ...state,
         assignments: { ...state.assignments, [event.sampleId]: event.categoryId },
+        classificationResult: null,
       };
     }
 

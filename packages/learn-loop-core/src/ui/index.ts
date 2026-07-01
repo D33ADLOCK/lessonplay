@@ -50,3 +50,27 @@ export {
   reactionLabel,
   stationVisualClasses,
 } from "./sandboxLabKit";
+export { Beaker } from "./Beaker";
+export {
+  ExperimentLabViewport,
+  type ExperimentLabViewportProps,
+} from "./ExperimentLabViewport";
+export {
+  useExperimentSession,
+  EXPERIMENT_OBSERVE_MS,
+  type ExperimentSession,
+} from "./useExperimentSession";
+export {
+  EXPERIMENT_LAB_PALETTES,
+  EXPERIMENT_LAB_ACCENTS,
+  EXPERIMENT_LAB_INTENSITIES,
+  DEFAULT_EXPERIMENT_LAB_THEME,
+  normalizeExperimentLabTheme,
+  assertExperimentLabTheme,
+  experimentLabThemeClasses,
+  type ExperimentLabTheme,
+  type ExperimentLabThemeInput,
+  type ExperimentLabPalette,
+  type ExperimentLabAccent,
+  type ExperimentLabIntensity,
+} from "./experimentLabTheme";

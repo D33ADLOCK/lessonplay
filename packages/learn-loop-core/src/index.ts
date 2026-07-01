@@ -82,6 +82,27 @@ export {
   SANDBOX_LAB_SOUND_CUES,
   validateSandboxLabPresentation,
 } from "./model/sandboxLab";
+export type {
+  ExperimentCategory,
+  ExperimentDefinition,
+  ExperimentEffect,
+  ExperimentGame,
+  ExperimentGoal,
+  ExperimentHint,
+  ExperimentLevel,
+  ExperimentPropertyValue,
+  ExperimentRule,
+  ExperimentRuleSet,
+  ExperimentSample,
+  ExperimentSampleState,
+  ExperimentScaffolding,
+  ExperimentTool,
+  ExperimentVisual,
+} from "./model/experimentLab";
+export {
+  EXPERIMENT_SCAFFOLDING,
+  EXPERIMENT_VISUALS,
+} from "./model/experimentLab";
 
 // Engine
 export { applyAction, type ApplyResult } from "./engine/applyAction";
@@ -112,6 +133,43 @@ export {
   type TapOutcome,
   type ToolHint,
 } from "./engine/tapGate";
+export {
+  solveSandboxLabMission,
+  type SandboxLabSolveResult,
+} from "./engine/solveSandboxLabMission";
+export { validateSandboxLabMission } from "./engine/validateSandboxLabMission";
+export {
+  matchesWhen,
+  runExperimentStep,
+  runExperimentSequence,
+  type ExperimentStepResult,
+} from "./engine/experimentRules";
+export {
+  sampleSignature,
+  distinguishable,
+  type ExperimentSignature,
+} from "./engine/experimentSignature";
+export {
+  solveExperiment,
+  analyzeExperimentGame,
+  type ExperimentAnalysis,
+} from "./engine/solveExperiment";
+export {
+  validateExperimentGame,
+  validateExperimentMission,
+} from "./engine/validateExperimentGame";
+export {
+  createExperimentSession,
+  reduceExperimentSession,
+  currentLevel,
+  canClassify,
+  type ExperimentPhase,
+  type ExperimentNotebookEntry,
+  type ExperimentObservationResult,
+  type ExperimentClassificationResult,
+  type ExperimentSessionState,
+  type ExperimentSessionEvent,
+} from "./engine/experimentSession";
 
 // Stage geometry
 export {

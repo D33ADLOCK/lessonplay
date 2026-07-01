@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./ui": "./src/ui/index.ts",
-    "./ui/styles.css": "./src/ui/sandboxLab.css"
+    "./ui/styles.css": "./src/ui/sandboxLab.css",
+    "./ui/experiment.css": "./src/ui/experimentLab.css"
   },
   "scripts": {
     "test": "vitest run",

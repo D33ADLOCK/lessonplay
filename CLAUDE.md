@@ -28,6 +28,12 @@ and a collection of small games. Each reference game lives in its own folder und
 - `games/mixture-methods-lab/` — a React + Vite guided-sim chapter game using
   `@learn-loop/core` scenarios plus the shared `GuidedLabViewport` 9:16 template.
   It is also an explicit scoped-workspace consumer.
+- `games/invisible-particle-detective/` — a React + Vite bespoke cause-and-effect
+  discovery game (Class 6: solutions, suspensions, colloids). A scoped-workspace
+  consumer that imports the `@learn-loop/core` ExperimentLab engine (reducer +
+  analyzer + validator) as its brain and hand-builds a dark-glowing-lab UI (the
+  Tyndall beam is the hero). Run workspace commands from the repo root. Its only
+  committed test is the `validateExperimentMission` content gate.
 
 ## Game-creation skills
 
@@ -46,6 +52,7 @@ for designing and building games, ported from
 | `physics-contraption-level-generator` | Convert Class 6–7 physics topics into validated JSON contraption-game levels. |
 | `chapter-to-game` | Convert chapter material into a mechanic choice and scaffolded learning game. |
 | `chemquest-lab-game` | Build a chemistry game plan with the fixed ChemQuest Lab 9:16 template. |
+| `experiment-lab-game` | Author a cause-and-effect discovery game on the `@learn-loop/core` ExperimentLab engine (rule-driven simulation, Predict → Act → Observe → Reconcile, with validator + analyzer gates). |
 
 - **Claude Code** auto-discovers these from `.claude/skills/` (invoke via the Skill tool).
 - **Codex** and other agents should read the `SKILL.md` files under `.agents/skills/`
@@ -99,6 +106,16 @@ agent: first produce a chemistry game plan and stop, then build from that plan
 when the user asks to proceed. Use `.agents/skills/chemquest-lab-game/SKILL.md`
 for ChemQuest implementation guidance. Do not repeat the same plan when the user
 has asked to build.
+
+For **discovery-driven** science games — where the player must reason from
+evidence to classify hidden samples rather than follow a guided demonstration —
+use the cause-and-effect ExperimentLab engine via
+`.agents/skills/experiment-lab-game/SKILL.md`. It authors an `ExperimentGame`
+(rule-driven `ExperimentDefinition` + categories + a guided→hinted→open level
+ladder) and gates it with `validateExperimentMission` / `solveExperiment` from
+`@learn-loop/core`. The headless engine, analyzer, validator, and session
+reducer exist and are tested; the `ExperimentLabViewport` render surface is not
+built yet, so this skill currently produces and validates game *data* only.
 
 ## Stable project constraints (one-button crisp-game-lib games)
 

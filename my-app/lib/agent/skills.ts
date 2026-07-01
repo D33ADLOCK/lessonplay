@@ -2,9 +2,11 @@ import 'server-only'
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
-import matter from 'gray-matter'
 
-import { renderAvailableSkills } from './tools/skills/skillIndex'
+import {
+  parseSkillFrontmatter,
+  renderAvailableSkills,
+} from './tools/skills/skillIndex'
 
 export const SKILLS_DIR = path.join(process.cwd(), 'skills')
 
@@ -26,23 +28,16 @@ export const REQUIRED_SKILLS = [
 
 function readSkillMeta(skillName: string) {
   const skillPath = path.join(SKILLS_DIR, skillName, 'SKILL.md')
-  const parsed = matter(readFileSync(skillPath, 'utf8'))
-  const name =
-    typeof parsed.data.name === 'string' && parsed.data.name.trim()
-      ? parsed.data.name.trim()
-      : skillName
-  const description =
-    typeof parsed.data.description === 'string'
-      ? parsed.data.description.trim()
-      : ''
+  const frontmatter = parseSkillFrontmatter(
+    readFileSync(skillPath, 'utf8'),
+    skillPath,
+  )
 
-  if (!description) {
-    throw new Error(
-      `Skill ${skillName} is missing a description in its SKILL.md frontmatter`,
-    )
+  return {
+    id: skillName,
+    name: frontmatter.name,
+    description: frontmatter.description,
   }
-
-  return { id: skillName, name, description }
 }
 
 function readAvailableSkills() {
@@ -239,7 +234,7 @@ For ExperimentLab games:
   and readSkillFile to read the model, gameplay, authoring, and validation
   contracts you need before writing files.
 - Author the game as data: one ExperimentDefinition (samples with hidden
-  properties + category, tools, and a first-match-wins ruleSet with a
+  properties + categoryId, tools, and a first-match-wins ruleSet with a
   defaultEffect), the ExperimentCategory list (concept names, revealed last), and
   a guided -> hinted -> open ExperimentLevel ladder, exported as one
   ExperimentGame from src/content/game.ts.

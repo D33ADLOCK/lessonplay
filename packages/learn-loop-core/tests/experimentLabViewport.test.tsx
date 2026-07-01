@@ -14,12 +14,12 @@ const smokeGame: ExperimentGame = {
   title: "Smoke Lab",
   definition: {
     samples: [
-      { id: "control", label: "Water control", properties: { size: "tiny" }, category: "control" },
+      { id: "control", label: "Water control", properties: { size: "tiny" }, categoryId: "control" },
       {
         id: "unknown-x",
         label: "Unknown X",
         properties: { size: "coarse" },
-        category: "suspension",
+        categoryId: "suspension",
         revealLabel: "chalk water",
       },
     ],
@@ -162,12 +162,12 @@ describe("ExperimentLabViewport", () => {
       title: "Acid Bench",
       definition: {
         samples: [
-          { id: "inert", label: "Inert chip", properties: { reactive: "no" }, category: "unreactive" },
+          { id: "inert", label: "Inert chip", properties: { reactive: "no" }, categoryId: "unreactive" },
           {
             id: "metal",
             label: "Mystery metal",
             properties: { reactive: "yes" },
-            category: "reactive",
+            categoryId: "reactive",
             revealLabel: "zinc",
           },
         ],

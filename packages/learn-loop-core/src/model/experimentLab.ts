@@ -35,8 +35,8 @@ export interface ExperimentSample {
   readonly label: string;
   /** Hidden ground-truth the simulation reasons over. Not shown to the player. */
   readonly properties: ExperimentSampleState;
-  /** Classification answer revealed only after a correct call, e.g. `"colloid"`. */
-  readonly category: string;
+  /** Internal classification id used for grading, e.g. `"colloid"`. */
+  readonly categoryId: ExperimentCategory["id"];
   /** Optional real-world identity for the reveal, e.g. `"diluted milk"`. */
   readonly revealLabel?: string;
 }

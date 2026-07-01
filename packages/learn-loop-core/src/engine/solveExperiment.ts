@@ -61,7 +61,7 @@ function toolSeparatesAllCategories(
 ): boolean {
   for (let i = 0; i < samples.length; i++) {
     for (let j = i + 1; j < samples.length; j++) {
-      if (samples[i].category === samples[j].category) continue;
+      if (samples[i].categoryId === samples[j].categoryId) continue;
       const a = sampleSignature(samples[i], [toolId], definition.ruleSet);
       const b = sampleSignature(samples[j], [toolId], definition.ruleSet);
       if (!distinguishable(a, b, [toolId])) return false;
@@ -78,7 +78,7 @@ function toolsSeparateAll(
 ): boolean {
   for (let i = 0; i < samples.length; i++) {
     for (let j = i + 1; j < samples.length; j++) {
-      if (samples[i].category === samples[j].category) continue;
+      if (samples[i].categoryId === samples[j].categoryId) continue;
       const a = sampleSignature(samples[i], toolIds, definition.ruleSet);
       const b = sampleSignature(samples[j], toolIds, definition.ruleSet);
       if (!distinguishable(a, b, toolIds)) return false;
@@ -136,9 +136,9 @@ export function solveExperiment(
 
   const offered = new Set(level.goal.categoryIds);
   for (const sample of classifySamples) {
-    if (!offered.has(sample.category)) {
+    if (!offered.has(sample.categoryId)) {
       errors.push(
-        `level "${level.id}": sample "${sample.id}" is category "${sample.category}" but that category is not offered as a choice`,
+        `level "${level.id}": sample "${sample.id}" is category "${sample.categoryId}" but that category is not offered as a choice`,
       );
     }
   }
@@ -150,13 +150,13 @@ export function solveExperiment(
     for (let j = i + 1; j < classifySamples.length; j++) {
       const a = classifySamples[i];
       const b = classifySamples[j];
-      if (a.category === b.category) continue;
+      if (a.categoryId === b.categoryId) continue;
       const sigA = sampleSignature(a, level.toolIds, definition.ruleSet);
       const sigB = sampleSignature(b, level.toolIds, definition.ruleSet);
       if (!distinguishable(sigA, sigB, level.toolIds)) {
         indistinguishablePairs.push([a.id, b.id]);
         errors.push(
-          `level "${level.id}": samples "${a.id}" (${a.category}) and "${b.id}" (${b.category}) are indistinguishable with the available tools, so the level cannot be won by reasoning`,
+          `level "${level.id}": samples "${a.id}" (${a.categoryId}) and "${b.id}" (${b.categoryId}) are indistinguishable with the available tools, so the level cannot be won by reasoning`,
         );
       }
     }
@@ -165,10 +165,10 @@ export function solveExperiment(
   const winnable =
     missing.length === 0 &&
     indistinguishablePairs.length === 0 &&
-    classifySamples.every((s) => offered.has(s.category));
+    classifySamples.every((s) => offered.has(s.categoryId));
 
   const distinctCategories = new Set(
-    classifySamples.map((s) => s.category),
+    classifySamples.map((s) => s.categoryId),
   ).size;
   const isTutorial = level.scaffolding === "guided";
 

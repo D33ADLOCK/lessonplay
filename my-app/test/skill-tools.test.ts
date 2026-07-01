@@ -46,6 +46,12 @@ describe('progressive-disclosure skill tools', () => {
     ).rejects.toThrow(/must start with one of: references, assets, scripts/)
   })
 
+  it('rejects bare support-directory paths', async () => {
+    await expect(
+      readSkillFile.execute({ id: 'experiment-lab-game', path: 'references' }),
+    ).rejects.toThrow(/must include a filename/)
+  })
+
   it('rejects parent-segment traversal before touching the filesystem', async () => {
     await expect(
       readSkillFile.execute({

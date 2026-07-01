@@ -60,10 +60,13 @@ function validateSkillFilePath(relativePath: string) {
     throw new Error('Skill file path must not contain empty, current, or parent segments')
   }
 
+  if (ALLOWED_SUPPORT_DIRS.some((directory) => normalizedPath === directory)) {
+    throw new Error('Skill file path must include a filename inside the support directory')
+  }
+
   if (
-    !ALLOWED_SUPPORT_DIRS.some(
-      (directory) =>
-        normalizedPath === directory || normalizedPath.startsWith(`${directory}/`),
+    !ALLOWED_SUPPORT_DIRS.some((directory) =>
+      normalizedPath.startsWith(`${directory}/`),
     )
   ) {
     throw new Error(

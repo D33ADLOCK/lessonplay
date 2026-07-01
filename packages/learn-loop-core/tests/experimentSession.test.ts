@@ -117,6 +117,78 @@ describe("the predict → act → observe loop", () => {
     );
     expect(state.notebook).toHaveLength(1);
   });
+
+  it("keeps distinct stateful observations for the same sample and tool", () => {
+    const statefulGame: ExperimentGame = {
+      ...particleGame,
+      definition: {
+        samples: [
+          {
+            id: "sample",
+            label: "Sample",
+            properties: { stage: "before" },
+            categoryId: "changed",
+          },
+        ],
+        tools: [{ id: "shake", label: "Shake" }],
+        ruleSet: {
+          rules: [
+            {
+              toolId: "shake",
+              when: { stage: "after" },
+              effect: {
+                observationId: "after-shake",
+                observation: "The liquid stays cloudy after shaking.",
+                visual: "none",
+              },
+            },
+            {
+              toolId: "shake",
+              when: { stage: "before" },
+              effect: {
+                observationId: "first-shake",
+                observation: "A layer breaks apart and clouds the liquid.",
+                visual: "settle",
+                setState: { stage: "after" },
+              },
+            },
+          ],
+          defaultEffect: {
+            observationId: "none",
+            observation: "Nothing observable happens.",
+            visual: "none",
+          },
+        },
+      },
+      categories: [{ id: "changed", label: "Changed" }],
+      levels: [
+        {
+          id: "stateful",
+          title: "Stateful",
+          intro: "Probe twice.",
+          sampleIds: ["sample"],
+          toolIds: ["shake"],
+          goal: { classifyIds: ["sample"], categoryIds: ["changed"] },
+          scaffolding: "guided",
+          predictionRequired: false,
+          hints: [],
+        },
+      ],
+    };
+
+    let state = run(createExperimentSession(statefulGame), { type: "start-level" });
+    state = run(
+      state,
+      { type: "select-tool", toolId: "shake" },
+      { type: "dismiss-observation" },
+      { type: "select-tool", toolId: "shake" },
+    );
+
+    expect(state.notebook.map((entry) => entry.observationId)).toEqual([
+      "first-shake",
+      "after-shake",
+    ]);
+  });
 });
 
 describe("the classify gate", () => {

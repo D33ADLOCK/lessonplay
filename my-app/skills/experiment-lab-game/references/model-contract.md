@@ -67,9 +67,9 @@ ExperimentGame
   `"beam" | "settle" | "residue" | "fizz" | "color-change" | "gas" |
   "precipitate" | "none"`. All eight are animated by the `Beaker`.
 - `gasLabel?` is a short gas token shown as a chip on the escaping bubbles, e.g.
-  `"H₂"` / `"CO₂"` / `"O₂"`. Set it only when `visual === "gas"`; the specific
-  gas name still belongs in `observation` text too — the chip is just the
-  "first sign". Ignored for every other visual.
+  `"H₂"` / `"CO₂"` / `"O₂"`. Set it only when `visual === "gas"`; when the chip
+  names the gas, keep `observation` sensory and neutral instead of repeating the
+  gas identity. Ignored for every other visual.
 - **Distinguishability is measured on `visual`**, not on `observationId` or
   text. Two samples that should be hard to tell apart must share the same
   `visual` for the ambiguous tool (this is how a "designed ambiguity" is made
@@ -105,12 +105,12 @@ Any tool id outside this list still works; it just renders the generic 🔬 icon
 - `label` is the concept name revealed last (`"Colloid"`). Keep it out of all
   observation text.
 - `definition` is the one-line payoff shown in the reveal.
-- Every `sample.category` must reference a declared category id.
+- Every `sample.categoryId` must reference a declared category id.
 
 ## Worked reference
 
 The tested gold-standard fixture is the "Invisible Particle Detective" bench:
 one hidden property `particleSize` (`tiny` / `fine` / `coarse`) plus three tools
 (`light`, `settle`, `filter`) yields solution / suspension / colloid. See
-`packages/learn-loop-core/tests/fixtures/experimentParticles.ts` for a complete,
-analyzer-passing `ExperimentGame`.
+`references/invisible-particle-detective.ts` for a complete, analyzer-passing
+`ExperimentGame` that stays inside this skill's readable reference tree.

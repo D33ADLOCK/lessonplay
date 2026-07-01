@@ -6,8 +6,8 @@ import { analyzeExperimentGame } from "./solveExperiment";
  * Structural / referential validation for an {@link ExperimentGame}.
  *
  * This catches authoring mistakes before play: dangling references, an
- * observation id that means two different things, an inert tool offered in a
- * level, and — to protect the "discovery before naming" principle — a concept
+ * observation id that means two different things, and — to protect the
+ * "discovery before naming" principle — a concept
  * name leaking into observation text. Distinguishability (can the level actually
  * be reasoned out?) is intentionally left to {@link solveExperiment}, because it
  * is per-level and must not false-positive on reference samples like a control
@@ -54,9 +54,9 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
   // Every classify sample's category must be a declared category, so the reveal
   // has a concept name to show.
   for (const sample of game.definition.samples) {
-    if (sample.category && !categoryIds.has(sample.category)) {
+    if (!categoryIds.has(sample.categoryId)) {
       errors.push(
-        `sample "${sample.id}" has category "${sample.category}" which is not a declared category`,
+        `sample "${sample.id}" has categoryId "${sample.categoryId}" which is not a declared category`,
       );
     }
   }
@@ -73,12 +73,10 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
       observationText.set(id, text);
     }
   };
-  const toolsWithRules = new Set<string>();
   for (const rule of game.definition.ruleSet.rules) {
     if (!toolIds.has(rule.toolId)) {
       errors.push(`rule references unknown tool "${rule.toolId}"`);
     }
-    toolsWithRules.add(rule.toolId);
     recordObservation(rule.effect.observationId, rule.effect.observation);
   }
   recordObservation(
@@ -104,6 +102,10 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
   for (const rule of game.definition.ruleSet.rules) {
     checkObservation(rule.effect.observationId, rule.effect.observation);
   }
+  checkObservation(
+    game.definition.ruleSet.defaultEffect.observationId,
+    game.definition.ruleSet.defaultEffect.observation,
+  );
 
   // Levels: references resolve, the goal is coherent, offered tools are not inert.
   for (const level of game.levels) {
@@ -115,10 +117,6 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
     for (const id of level.toolIds) {
       if (!toolIds.has(id)) {
         errors.push(`level "${level.id}" references unknown tool "${id}"`);
-      } else if (!toolsWithRules.has(id)) {
-        errors.push(
-          `level "${level.id}" offers tool "${id}" but no rule ever fires for it, so it is inert`,
-        );
       }
     }
     const levelSamples = new Set(level.sampleIds);

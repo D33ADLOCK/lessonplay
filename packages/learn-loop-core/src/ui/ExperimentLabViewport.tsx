@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { ReactNode } from "react";
 import type { ExperimentGame, ExperimentVisual } from "../model/experimentLab";
 import { Beaker } from "./Beaker";
 import {
@@ -342,7 +343,7 @@ export function ExperimentLabViewport({
             {level.goal.classifyIds.map((id) => {
               const s = session.sampleById.get(id);
               if (!s) return null;
-              const cat = categoryById.get(s.category);
+              const cat = categoryById.get(s.categoryId);
               return (
                 <div key={id} className="reveal__row">
                   <div className="reveal__head">
@@ -391,7 +392,7 @@ function Overlay({
   children,
   wide,
 }: {
-  readonly children: React.ReactNode;
+  readonly children: ReactNode;
   readonly wide?: boolean;
 }) {
   return (

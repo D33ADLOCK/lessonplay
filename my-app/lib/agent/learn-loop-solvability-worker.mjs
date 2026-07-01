@@ -181,13 +181,7 @@ async function main() {
     if (typeof validateSandboxLabMission !== 'function') {
       throw new Error('validateSandboxLabMission is not exported from @learn-loop/core')
     }
-    // ExperimentLab games are gated by their own validator (structural + quality
-    // analyzer). It is a function on current core; tolerate its absence so an
-    // older core branch still runs the SandboxLab gate.
-    const validateExperimentMission =
-      typeof core.validateExperimentMission === 'function'
-        ? core.validateExperimentMission
-        : null
+    const validateExperimentMission = core.validateExperimentMission
 
     const dataModules = await collectDataModules(path.join(tempDir, 'src'))
     const missions = []
@@ -209,12 +203,10 @@ async function main() {
           missions.push(mission)
         }
       }
-      if (validateExperimentMission) {
-        for (const game of collectShaped(namespace, isExperimentGameShaped)) {
-          if (!seen.has(game)) {
-            seen.add(game)
-            experimentGames.push(game)
-          }
+      for (const game of collectShaped(namespace, isExperimentGameShaped)) {
+        if (!seen.has(game)) {
+          seen.add(game)
+          experimentGames.push(game)
         }
       }
     }
@@ -229,15 +221,21 @@ async function main() {
         }
       }
     })
-    experimentGames.forEach((game, index) => {
-      const result = validateExperimentMission(game)
-      if (!result.ok) {
-        const label = experimentGameLabel(game, index)
-        for (const error of result.errors) {
-          errors.push(`Experiment "${label}": ${error}`)
+    if (experimentGames.length > 0 && typeof validateExperimentMission !== 'function') {
+      errors.push(
+        'ExperimentLab game found, but validateExperimentMission is not exported from @learn-loop/core',
+      )
+    } else {
+      experimentGames.forEach((game, index) => {
+        const result = validateExperimentMission(game)
+        if (!result.ok) {
+          const label = experimentGameLabel(game, index)
+          for (const error of result.errors) {
+            errors.push(`Experiment "${label}": ${error}`)
+          }
         }
-      }
-    })
+      })
+    }
 
     return {
       ok: errors.length === 0,

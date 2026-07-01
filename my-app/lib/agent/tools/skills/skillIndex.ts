@@ -8,6 +8,18 @@ const SkillFrontmatterSchema = z.object({
   description: z.string().min(1),
 });
 
+export function parseSkillFrontmatter(raw: string, skillPath: string) {
+  try {
+    return SkillFrontmatterSchema.parse(matter(raw).data);
+  } catch (error) {
+    throw new Error(
+      `Invalid SKILL.md frontmatter at ${skillPath}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}
+
 export type SkillIndexEntry = {
   name: string;
   description: string;
@@ -33,22 +45,29 @@ export async function buildSkillIndex(skillsRoot: string) {
     const skillDir = path.join(skillsRoot, entry.name);
     const skillPath = path.join(skillDir, "SKILL.md");
 
+    let raw: string;
     try {
-      const raw = await fs.readFile(skillPath, "utf8");
-      const parsed = matter(raw);
-      const frontmatter = SkillFrontmatterSchema.parse(parsed.data);
-
-      skills.push({
-        name: frontmatter.name,
-        description: frontmatter.description,
-        id: entry.name,
-        skillPath,
-        skillDir,
-      });
-    } catch {
-      // Skip folders without a valid SKILL.md.
-      // Or log this as a warning.
+      raw = await fs.readFile(skillPath, "utf8");
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        continue;
+      }
+      throw new Error(
+        `Failed to read SKILL.md for skill folder ${entry.name} at ${skillPath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
+
+    const frontmatter = parseSkillFrontmatter(raw, skillPath);
+
+    skills.push({
+      name: frontmatter.name,
+      description: frontmatter.description,
+      id: entry.name,
+      skillPath,
+      skillDir,
+    });
   }
 
   return skills;

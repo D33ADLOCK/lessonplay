@@ -20,10 +20,10 @@ Treat a quality defect exactly like a structural error: do not ship it.
 
 - ids are unique across samples, tools, categories, levels.
 - every `rule.toolId` references a known tool.
-- every `sample.category` references a declared category.
+- every `sample.categoryId` references a declared category.
 - an `observationId` maps to exactly one observation text.
-- no observation text names a declared category label (discovery before naming).
-- every tool offered in a level has at least one rule (not inert).
+- no rule or default-effect observation text names a declared category label
+  (discovery before naming).
 - every level's `sampleIds` / `toolIds` resolve; `goal.classifyIds` are present
   on that level's bench; `goal.categoryIds` are declared categories.
 
@@ -53,14 +53,16 @@ npm test --workspace @learn-loop/core
 When the game ships as its own package, also typecheck/test/build that package
 and assert, in its tests, that `validateExperimentMission(game).ok` is true.
 
-## Render surface (pending)
+## Render surface
 
-`ExperimentLabViewport` is **not built yet**. Until it exists:
+`ExperimentLabViewport` is the shipped render surface. Visual QA must confirm:
 
-- author and validate the game *data* only;
-- do not claim a playable or screenshot-ready build;
-- do not hand-build a substitute React layout — the viewport is the contract.
-
-When the viewport lands, add it to this checklist with the same visual-QA items
-used by `chemquest-lab-game` (no overflow on 9:16, legible animated effects for
-`beam` / `settle` / `residue`, working classify and reveal screens).
+- the 9:16 viewport has no clipped controls, unreadable labels, or body overflow;
+- the beaker states are legible for `beam`, `settle`, `residue`, `fizz`,
+  `color-change`, `gas`, and `precipitate`;
+- the `gasLabel` chip is readable when `visual === "gas"` and observation prose
+  stays sensory rather than naming the gas;
+- sample chips, tool buttons, prediction choices, and notebook cells remain
+  usable on mobile-size viewports;
+- classify and reveal overlays work end-to-end and keep concept labels hidden
+  until the learner submits a correct classification.

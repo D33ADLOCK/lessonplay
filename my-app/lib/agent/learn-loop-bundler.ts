@@ -209,15 +209,23 @@ async function runViteBundleWorker({
 
 function parseSolvabilityWorkerStdout(
   stdout: string,
-): SolvabilityWorkerResult | undefined {
+): SolvabilityWorkerResult {
   const trimmed = stdout.trim()
   if (!trimmed) {
-    return undefined
+    return {
+      ok: false,
+      fatal: true,
+      errors: ['Learn Loop solvability worker produced no output'],
+    }
   }
   try {
     return JSON.parse(trimmed) as SolvabilityWorkerResult
   } catch {
-    return undefined
+    return {
+      ok: false,
+      fatal: true,
+      errors: ['Learn Loop solvability worker produced unparseable output'],
+    }
   }
 }
 
@@ -232,7 +240,7 @@ async function runLearnLoopSolvabilityGate({
 }) {
   const workerPath = path.join(appRoot, 'lib', 'agent', 'learn-loop-solvability-worker.mjs')
 
-  let result: SolvabilityWorkerResult | undefined
+  let result: SolvabilityWorkerResult
 
   try {
     const { stdout } = await execFileAsync(
@@ -246,25 +254,26 @@ async function runLearnLoopSolvabilityGate({
       result = parseSolvabilityWorkerStdout(
         String((error as Error & { stdout?: unknown }).stdout ?? ''),
       )
-    }
-    if (!result) {
-      // The gate itself failed to run. Do not block publishing on infrastructure
-      // failure; let the build proceed (and surface any real build errors).
-      return
+    } else {
+      result = {
+        ok: false,
+        fatal: true,
+        errors: [error instanceof Error ? error.message : String(error)],
+      }
     }
   }
 
-  if (!result || result.ok) {
+  if (result.ok) {
     return
   }
 
-  // A fatal worker error means the gate could not evaluate the missions; do not
-  // hard-block on it. Only a clean unsolvable verdict blocks publishing.
-  if (result.fatal) {
-    return
-  }
-
-  throw new LearnLoopSolvabilityError(result.errors ?? ['Mission is not solvable'])
+  throw new LearnLoopSolvabilityError(
+    result.errors ?? [
+      result.fatal
+        ? 'Learn Loop solvability gate failed before it could validate the draft'
+        : 'Mission is not solvable',
+    ],
+  )
 }
 
 export function formatLearnLoopBuildError(error: unknown) {

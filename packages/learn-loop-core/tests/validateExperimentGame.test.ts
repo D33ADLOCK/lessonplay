@@ -42,7 +42,7 @@ describe("validateExperimentGame — referential integrity", () => {
     expect(result.errors.some((e) => e.includes('unknown tool "zap"'))).toBe(true);
   });
 
-  it("rejects an inert tool offered in a level (no rule ever fires)", () => {
+  it("allows a tool that relies only on defaultEffect", () => {
     const game = clone();
     const result = validateExperimentGame({
       ...game,
@@ -54,8 +54,7 @@ describe("validateExperimentGame — referential integrity", () => {
         i === 0 ? { ...level, toolIds: [...level.toolIds, "stir"] } : level,
       ),
     });
-    expect(result.ok).toBe(false);
-    expect(result.errors.some((e) => e.includes("inert"))).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("rejects reusing one observation id for two different observations", () => {
@@ -117,6 +116,25 @@ describe("validateExperimentGame — discovery before naming", () => {
     const result = validateExperimentGame({
       ...game,
       definition: { ...game.definition, ruleSet: { ...game.definition.ruleSet, rules } },
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes("names the concept"))).toBe(true);
+  });
+
+  it("rejects defaultEffect observation text that names the concept", () => {
+    const game = clone();
+    const result = validateExperimentGame({
+      ...game,
+      definition: {
+        ...game.definition,
+        ruleSet: {
+          ...game.definition.ruleSet,
+          defaultEffect: {
+            ...game.definition.ruleSet.defaultEffect,
+            observation: "This is a solution.",
+          },
+        },
+      },
     });
     expect(result.ok).toBe(false);
     expect(result.errors.some((e) => e.includes("names the concept"))).toBe(true);

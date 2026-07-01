@@ -125,16 +125,52 @@ describe('bundleLearnLoopDraft', () => {
           content: `
             import React from 'react'
             import { createRoot } from 'react-dom/client'
+            import type { ExperimentGame } from '@learn-loop/core'
             import {
               EXPERIMENT_LAB_PALETTES,
+              ExperimentLabViewport,
               experimentLabThemeClasses,
             } from '@learn-loop/core/ui'
             import '@learn-loop/core/ui/experiment.css'
 
+            const game: ExperimentGame = {
+              id: 'alias-exp',
+              title: 'Alias Experiment',
+              definition: {
+                samples: [
+                  { id: 'a', label: 'Unknown A', properties: { size: 'tiny' }, categoryId: 'solution' },
+                ],
+                tools: [{ id: 'light', label: 'Light' }],
+                ruleSet: {
+                  rules: [],
+                  defaultEffect: {
+                    observationId: 'none',
+                    observation: 'Nothing observable happens.',
+                    visual: 'none',
+                  },
+                },
+              },
+              categories: [{ id: 'solution', label: 'Solution' }],
+              levels: [
+                {
+                  id: 'only',
+                  title: 'Only case',
+                  intro: 'Test the sample.',
+                  sampleIds: ['a'],
+                  toolIds: ['light'],
+                  goal: { classifyIds: ['a'], categoryIds: ['solution'] },
+                  scaffolding: 'guided',
+                  predictionRequired: false,
+                  hints: [],
+                },
+              ],
+            }
+
             function App() {
               return (
                 <main className={experimentLabThemeClasses({ accent: 'violet' })}>
-                  {EXPERIMENT_LAB_PALETTES[0]}
+                  <span>{EXPERIMENT_LAB_PALETTES[0]}</span>
+                  <ExperimentLabViewport game={game} />
                 </main>
               )
             }
@@ -175,7 +211,7 @@ describe('bundleLearnLoopDraft', () => {
               title: 'Broken Experiment',
               definition: {
                 samples: [
-                  { id: 's1', label: 'S1', properties: { size: 'big' }, category: 'a' },
+                  { id: 's1', label: 'S1', properties: { size: 'big' }, categoryId: 'a' },
                 ],
                 tools: [{ id: 'light', label: 'Light' }],
                 ruleSet: {

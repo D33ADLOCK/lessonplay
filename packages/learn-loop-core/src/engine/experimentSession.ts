@@ -270,7 +270,7 @@ export function reduceExperimentSession(
       for (const id of level.goal.classifyIds) {
         const sample = state.game.definition.samples.find((s) => s.id === id);
         const correct = sample
-          ? state.assignments[id] === sample.category
+          ? state.assignments[id] === sample.categoryId
           : false;
         perSample[id] = correct;
         if (!correct) allCorrect = false;
@@ -306,9 +306,11 @@ function addNotebookEntry(
   entries: readonly ExperimentNotebookEntry[],
   next: ExperimentNotebookEntry,
 ): readonly ExperimentNotebookEntry[] {
-  // One row per (sample, tool): re-probing refreshes rather than duplicates.
-  const filtered = entries.filter(
-    (entry) => !(entry.sampleId === next.sampleId && entry.toolId === next.toolId),
+  const alreadyRecorded = entries.some(
+    (entry) =>
+      entry.sampleId === next.sampleId &&
+      entry.toolId === next.toolId &&
+      entry.observationId === next.observationId,
   );
-  return [...filtered, next];
+  return alreadyRecorded ? entries : [...entries, next];
 }

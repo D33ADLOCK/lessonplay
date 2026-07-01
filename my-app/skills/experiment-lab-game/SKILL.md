@@ -47,9 +47,9 @@ classification ("discovery before naming").
 
 ## Workflow
 
-1. Confirm the conversation contains an approved plan (a `# Chemistry Game Plan`
-   from `chemistry-concept-planner`, or an equivalent chapter/concept plan)
-   naming the concept, grade, the categories to discover, and the misconception.
+1. Confirm the conversation contains an approved plan (the planner's
+   `# Chemistry Game Brief`, or an equivalent chapter/concept plan) naming the
+   concept, the categories to discover, and the core misconception.
 2. Read `references/model-contract.md` before writing any `ExperimentDefinition`.
 3. Read `references/gameplay-contract.md` before designing the level ladder.
 4. Read `references/authoring-contract.md` before writing observation text,
@@ -69,11 +69,11 @@ guessing.
 ```text
 ExperimentGame (definition + categories + levels)  ->  @learn-loop/core experiment engine
   -> validateExperimentMission / solveExperiment (build-time gates)
-  -> ExperimentLabViewport (render surface; pending)
+  -> ExperimentLabViewport (render surface)
 ```
 
 The author **may** write:
-- one `ExperimentDefinition`: samples (with hidden `properties` + `category`),
+- one `ExperimentDefinition`: samples (with hidden `properties` + `categoryId`),
   tools, and a first-match-wins `ruleSet` with a `defaultEffect`.
 - `ExperimentCategory[]` (the concept names, revealed last).
 - an `ExperimentLevel[]` ladder (guided -> hinted -> open).

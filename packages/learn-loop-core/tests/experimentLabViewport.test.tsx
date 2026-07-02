@@ -225,4 +225,142 @@ describe("ExperimentLabViewport", () => {
     const grid = screen.getByRole("region", { name: "Lab notebook" });
     expect(within(grid).getByText("H₂")).toBeInTheDocument();
   });
+
+  it("plays a predict-outcome level as a guided prompt walk with a score", async () => {
+    const user = userEvent.setup();
+    // Two prompts on the acid world: acid reacts (gas), inert does not (none).
+    const predictOutcomeGame: ExperimentGame = {
+      id: "predict",
+      title: "Call the Reaction",
+      definition: {
+        samples: [
+          { id: "inert", label: "Chip", properties: { reactive: "no" }, categoryId: "unreactive" },
+          { id: "metal", label: "Metal", properties: { reactive: "yes" }, categoryId: "reactive" },
+        ],
+        tools: [{ id: "acid", label: "Add dilute acid" }],
+        ruleSet: {
+          rules: [
+            {
+              toolId: "acid",
+              when: { reactive: "yes" },
+              effect: {
+                observationId: "gas",
+                observation: "Bubbles stream off.",
+                visual: "gas",
+                gasLabel: "H₂",
+              },
+            },
+          ],
+          defaultEffect: { observationId: "none", observation: "Nothing happens.", visual: "none" },
+        },
+      },
+      categories: [
+        { id: "unreactive", label: "Unreactive" },
+        { id: "reactive", label: "Reactive" },
+      ],
+      levels: [
+        {
+          id: "only",
+          title: "Call it",
+          intro: "Predict each reaction before it runs.",
+          outro: "Reaction, not identity.",
+          sampleIds: ["metal", "inert"],
+          toolIds: ["acid"],
+          goal: {
+            kind: "predict-outcome",
+            prompts: [
+              { sampleId: "metal", toolId: "acid" },
+              { sampleId: "inert", toolId: "acid" },
+            ],
+          },
+          scaffolding: "open",
+          predictionRequired: false,
+          hints: [],
+        },
+      ],
+    };
+    render(<ExperimentLabViewport game={predictOutcomeGame} />);
+
+    await user.click(screen.getByRole("button", { name: "Enter the lab" }));
+    // Opens straight into the first prediction (no free tool picker).
+    expect(screen.queryByRole("region", { name: "Tools" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Predict first" })).toBeInTheDocument();
+
+    // Correct on the metal (gas).
+    await user.click(screen.getByRole("button", { name: "Gas bubbles off" }));
+    expect(screen.getByText(/You called it/)).toBeInTheDocument();
+    await waitFor(
+      () => expect(screen.getByRole("heading", { name: "Predict first" })).toBeInTheDocument(),
+      { timeout: 3000 },
+    );
+
+    // Wrong on the inert chip (predict gas, it does nothing) → finishes with 1/2.
+    await user.click(screen.getByRole("button", { name: "Gas bubbles off" }));
+    expect(
+      await screen.findByText(/You called/, undefined, { timeout: 3000 }),
+    ).toHaveTextContent("You called 1 of 2 right.");
+  });
+
+  it("plays a reach-target-state level and wins on reaching the target", async () => {
+    const user = userEvent.setup();
+    const neutraliseGame: ExperimentGame = {
+      id: "reach",
+      title: "Neutralise It",
+      definition: {
+        samples: [
+          { id: "acid", label: "Acid beaker", properties: { nature: "acid" }, categoryId: "acid" },
+        ],
+        tools: [{ id: "add-base", label: "Add base" }],
+        ruleSet: {
+          rules: [
+            {
+              toolId: "add-base",
+              when: { nature: "acid" },
+              effect: {
+                observationId: "neutralise",
+                observation: "The colour settles to a flat middle tint.",
+                visual: "color-change",
+                readout: { kind: "color", value: "green" },
+                setState: { nature: "neutral" },
+              },
+            },
+          ],
+          defaultEffect: { observationId: "none", observation: "Nothing happens.", visual: "none" },
+        },
+      },
+      categories: [{ id: "acid", label: "Acid" }],
+      levels: [
+        {
+          id: "only",
+          title: "Neutralise the acid",
+          intro: "Drive the beaker to neutral.",
+          outro: "Neutralised.",
+          sampleIds: ["acid"],
+          toolIds: ["add-base"],
+          goal: {
+            kind: "reach-target-state",
+            sampleId: "acid",
+            target: { nature: "neutral" },
+            targetLabel: "Make it neutral",
+          },
+          scaffolding: "open",
+          predictionRequired: false,
+          hints: [],
+        },
+      ],
+    };
+    render(<ExperimentLabViewport game={neutraliseGame} />);
+
+    await user.click(screen.getByRole("button", { name: "Enter the lab" }));
+    // The objective banner names the target during play.
+    expect(screen.getByText(/Make it neutral/)).toBeInTheDocument();
+
+    const tools = screen.getByRole("region", { name: "Tools" });
+    await user.click(within(tools).getByRole("button", { name: /Add base/ }));
+
+    // Reaching the target auto-wins into the reveal.
+    expect(
+      await screen.findByRole("heading", { name: "Target reached" }, { timeout: 3000 }),
+    ).toBeInTheDocument();
+  });
 });

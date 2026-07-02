@@ -1,12 +1,30 @@
-import type {
-  ExperimentDefinition,
-  ExperimentLevel,
-  ExperimentRuleSet,
-  ExperimentSample,
+import {
+  isPredictOutcomeGoal,
+  isReachTargetStateGoal,
+  type ClassifyGoal,
+  type ExperimentDefinition,
+  type ExperimentGoalKind,
+  type ExperimentLevel,
+  type ExperimentRuleSet,
+  type ExperimentSample,
+  type ExperimentSampleState,
+  type PredictOutcomeGoal,
+  type ReachTargetStateGoal,
 } from "../model/experimentLab";
 import type { ValidationResult } from "../model/scenario";
-import { runExperimentSequence } from "./experimentRules";
+import {
+  matchesWhen,
+  runExperimentSequence,
+  runExperimentStep,
+} from "./experimentRules";
 import { effectEvidenceToken } from "./experimentSignature";
+
+/**
+ * Search depth cap for the reach-target-state reachability proof. Real
+ * transformation activities reach their target in a handful of moves; the cap
+ * keeps the breadth-first search bounded on the (finite) property state space.
+ */
+const REACH_MAX_DEPTH = 8;
 
 /**
  * The deterministic quality verdict for one level — the reviewer's backbone.
@@ -27,15 +45,34 @@ import { effectEvidenceToken } from "./experimentSignature";
  */
 export interface ExperimentAnalysis {
   readonly levelId: string;
-  /** Every different-category sample pair can be told apart by the toolset. */
+  /** Which goal shape was analysed (the checks below are goal-specific). */
+  readonly goalKind: ExperimentGoalKind;
+  /**
+   * The level is achievable *and* fair for its goal kind:
+   *   - classify: every different-category sample pair can be told apart.
+   *   - predict-outcome: prompts are valid and not answerable by one guess.
+   *   - reach-target-state: the target is reachable and not already satisfied.
+   */
   readonly winnable: boolean;
+  /**
+   * The answer can be reached without evidence. For classify: too few
+   * samples/categories to reason about. For predict-outcome: the prompts share a
+   * single answer, so one repeated guess wins. Never flagged for
+   * reach-target-state. (Also false on guided tutorials, which may be trivial.)
+   */
   readonly bruteForceable: boolean;
+  /**
+   * classify-only: a single tool already separates every category (no real
+   * "combine causes"), or fewer than two tools are offered. False otherwise.
+   */
   readonly railed: boolean;
-  /** Different-category sample pairs that share an identical signature. */
+  /** classify-only: different-category sample pairs that share a signature. */
   readonly indistinguishablePairs: readonly (readonly [string, string])[];
-  /** Smallest number of tools whose combined signatures separate all
-   * categories; `Infinity` when no toolset can. A value `> 1` is the sign of a
-   * genuine "combine causes" experiment. */
+  /**
+   * classify: smallest tool subset that separates all categories (`> 1` marks a
+   * genuine "combine causes" level). reach-target-state: the fewest actions that
+   * reach the target. `Infinity` when unachievable; `0` when not applicable.
+   */
   readonly toolsNeeded: number;
   /** Human-readable, ship-blocking problems (empty ⇒ the level is acceptable). */
   readonly errors: readonly string[];
@@ -154,17 +191,38 @@ function subsetsOfSize(
 }
 
 /**
- * Prove a level is winnable by reasoning and reject the brute-force / rail
- * cheats. Pure and dependent only on the definition + level, so it is a deep,
- * deterministic module that anchors both the build-time gate and the reviewer.
+ * Prove a level is winnable by reasoning and reject the cheats appropriate to
+ * its goal kind. Pure and dependent only on the definition + level, so it is a
+ * deep, deterministic module that anchors both the build-time gate and the
+ * reviewer. Dispatches on the goal's discriminant.
  */
 export function solveExperiment(
   definition: ExperimentDefinition,
   level: ExperimentLevel,
 ): ExperimentAnalysis {
+  const goal = level.goal;
+  if (isPredictOutcomeGoal(goal)) {
+    return solvePredictOutcome(definition, level, goal);
+  }
+  if (isReachTargetStateGoal(goal)) {
+    return solveReachTargetState(definition, level, goal);
+  }
+  return solveClassify(definition, level, goal);
+}
+
+/**
+ * classify: prove every different-category pair is distinguishable, and reject
+ * the brute-force (too few samples/categories) and rail (one tool separates
+ * everything, or fewer than two tools) cheats.
+ */
+function solveClassify(
+  definition: ExperimentDefinition,
+  level: ExperimentLevel,
+  goal: ClassifyGoal,
+): ExperimentAnalysis {
   const errors: string[] = [];
   const { samples: classifySamples, missing } = resolveSamples(
-    level.goal.classifyIds,
+    goal.classifyIds,
     definition,
   );
   for (const id of missing) {
@@ -173,7 +231,7 @@ export function solveExperiment(
     );
   }
 
-  const offered = new Set(level.goal.categoryIds);
+  const offered = new Set(goal.categoryIds);
   for (const sample of classifySamples) {
     if (!offered.has(sample.categoryId)) {
       errors.push(
@@ -240,6 +298,7 @@ export function solveExperiment(
 
   return {
     levelId: level.id,
+    goalKind: "classify",
     winnable,
     bruteForceable,
     railed,
@@ -247,6 +306,188 @@ export function solveExperiment(
     toolsNeeded,
     errors,
   };
+}
+
+/**
+ * predict-outcome: prove each prompt names a real sample/tool on the bench and
+ * that the prompts are not answerable by one repeated guess — the correct
+ * visual must vary across at least two prompts (guided tutorials are exempt, as
+ * they may teach a single beat).
+ */
+function solvePredictOutcome(
+  definition: ExperimentDefinition,
+  level: ExperimentLevel,
+  goal: PredictOutcomeGoal,
+): ExperimentAnalysis {
+  const errors: string[] = [];
+  const onBench = new Set(level.sampleIds);
+  const offeredTools = new Set(level.toolIds);
+  const isTutorial = level.scaffolding === "guided";
+
+  if (goal.prompts.length === 0) {
+    errors.push(
+      `level "${level.id}" is a predict-outcome level but lists no prompts`,
+    );
+  }
+
+  // The distinct *visuals* a learner would have to predict across the prompts.
+  const predictedVisuals: string[] = [];
+  for (const prompt of goal.prompts) {
+    const sample = definition.samples.find((s) => s.id === prompt.sampleId);
+    if (!sample) {
+      errors.push(
+        `level "${level.id}" prompts sample "${prompt.sampleId}" but no such sample exists`,
+      );
+      continue;
+    }
+    if (!onBench.has(prompt.sampleId)) {
+      errors.push(
+        `level "${level.id}" prompts sample "${prompt.sampleId}" which is not on the bench in that level`,
+      );
+    }
+    if (!offeredTools.has(prompt.toolId)) {
+      errors.push(
+        `level "${level.id}" prompts tool "${prompt.toolId}" which is not offered in that level`,
+      );
+    }
+    const { effect } = runExperimentStep(
+      sample.properties,
+      prompt.toolId,
+      definition.ruleSet,
+    );
+    predictedVisuals.push(effect.visual);
+  }
+
+  const distinctVisuals = new Set(predictedVisuals).size;
+  const guessable =
+    !isTutorial && (goal.prompts.length < 2 || distinctVisuals < 2);
+  if (guessable) {
+    errors.push(
+      `level "${level.id}" is guessable: its predict-outcome prompts do not have at least two different answers, so a single repeated prediction wins`,
+    );
+  }
+
+  return {
+    levelId: level.id,
+    goalKind: "predict-outcome",
+    winnable: errors.length === 0,
+    bruteForceable: guessable,
+    railed: false,
+    indistinguishablePairs: [],
+    toolsNeeded: 0,
+    errors,
+  };
+}
+
+/**
+ * reach-target-state: prove the target is actually reachable from the sample's
+ * initial state with the offered tools (a breadth-first search over the finite
+ * property state space), and that it is not already satisfied at the start (a
+ * trivially-reachable goal asks for no action).
+ */
+function solveReachTargetState(
+  definition: ExperimentDefinition,
+  level: ExperimentLevel,
+  goal: ReachTargetStateGoal,
+): ExperimentAnalysis {
+  const errors: string[] = [];
+  const sample = definition.samples.find((s) => s.id === goal.sampleId);
+
+  if (!sample) {
+    errors.push(
+      `level "${level.id}" targets sample "${goal.sampleId}" but no such sample exists`,
+    );
+    return {
+      levelId: level.id,
+      goalKind: "reach-target-state",
+      winnable: false,
+      bruteForceable: false,
+      railed: false,
+      indistinguishablePairs: [],
+      toolsNeeded: Number.POSITIVE_INFINITY,
+      errors,
+    };
+  }
+
+  if (!level.sampleIds.includes(goal.sampleId)) {
+    errors.push(
+      `level "${level.id}" targets sample "${goal.sampleId}" which is not on the bench in that level`,
+    );
+  }
+  if (Object.keys(goal.target).length === 0) {
+    errors.push(`level "${level.id}" has an empty reach-target-state target`);
+  }
+
+  const triviallyReachable = matchesWhen(sample.properties, goal.target);
+  if (triviallyReachable) {
+    errors.push(
+      `level "${level.id}" target is already satisfied by the sample's initial state, so it needs no action`,
+    );
+  }
+
+  const stepsToTarget = minStepsToTarget(
+    sample.properties,
+    goal.target,
+    level.toolIds,
+    definition.ruleSet,
+  );
+  const reachable = Number.isFinite(stepsToTarget);
+  if (!triviallyReachable && !reachable) {
+    errors.push(
+      `level "${level.id}" target cannot be reached from the sample's initial state with the offered tools`,
+    );
+  }
+
+  return {
+    levelId: level.id,
+    goalKind: "reach-target-state",
+    winnable: reachable && !triviallyReachable && errors.length === 0,
+    bruteForceable: false,
+    railed: false,
+    indistinguishablePairs: [],
+    toolsNeeded: stepsToTarget,
+    errors,
+  };
+}
+
+/** Stable key for a property state, so the BFS can dedupe visited states. */
+function stateKey(state: ExperimentSampleState): string {
+  return Object.keys(state)
+    .sort()
+    .map((k) => `${k}=${state[k]}`)
+    .join("&");
+}
+
+/**
+ * Fewest tool applications that drive `initial` to a state satisfying `target`,
+ * or `Infinity` if no sequence within {@link REACH_MAX_DEPTH} does. A plain BFS
+ * over the finite property state space; each tool is a deterministic edge.
+ */
+function minStepsToTarget(
+  initial: ExperimentSampleState,
+  target: ExperimentSampleState,
+  toolIds: readonly string[],
+  ruleSet: ExperimentRuleSet,
+): number {
+  if (matchesWhen(initial, target)) return 0;
+  const visited = new Set<string>([stateKey(initial)]);
+  let frontier: ExperimentSampleState[] = [initial];
+  for (let depth = 1; depth <= REACH_MAX_DEPTH; depth++) {
+    const next: ExperimentSampleState[] = [];
+    for (const state of frontier) {
+      for (const toolId of toolIds) {
+        const { nextState } = runExperimentStep(state, toolId, ruleSet);
+        const key = stateKey(nextState);
+        if (visited.has(key)) continue;
+        visited.add(key);
+        if (matchesWhen(nextState, target)) return depth;
+        next.push(nextState);
+      }
+    }
+    if (next.length === 0) break;
+    frontier = next;
+  }
+  return Number.POSITIVE_INFINITY;
 }
 
 /**

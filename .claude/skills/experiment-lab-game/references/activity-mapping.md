@@ -4,9 +4,16 @@ How to turn a science chapter's hands-on **Activities** into the pieces of an
 ExperimentLab game. Read this after `model-contract.md` (which owns the exact
 tool / visual / readout vocabulary) and after you have an approved brief.
 
-The engine plays exactly one kind of game: **the learner probes hidden samples
-with tools, reads the evidence, and classifies each sample into a category.**
-Everything below is about mapping a chapter onto that one loop.
+The engine's core loop is always **probe hidden samples with tools and read the
+evidence**; what the level asks for that evidence is one of three `goal` kinds
+(see `gameplay-contract.md` → "Goals"):
+
+- **`classify`** — sort each sample into a category. The workhorse; most
+  Activities become *tools* that feed one classify goal.
+- **`predict-outcome`** — call a reaction's visible result before it runs.
+- **`reach-target-state`** — drive a sample to a goal state (e.g. neutral).
+
+Everything below is about mapping a chapter's Activities onto those pieces.
 
 ## Each Activity plays one of three roles
 
@@ -34,16 +41,20 @@ Everything below is about mapping a chapter onto that one loop.
    suspension / colloid). Categories are the *answers*, named only at the reveal.
    Aim for **2–5** categories per game.
 
-3. **Out of scope → defer.** An Activity whose point is a *transformation or a
-   step-by-step process* rather than an *identification* does not fit the
-   classify loop:
-   - neutralisation as "reach a neutral solution",
-   - water of crystallisation as "heat, then rehydrate",
-   - any "carry out these steps in order" demonstration.
+3. **A reaction → a `predict-outcome` or `reach-target-state` goal.** An Activity
+   whose point is a *transformation* rather than an *identification* becomes a
+   level with one of the non-classify goals, on the **same** shared bench/rules:
+   - A reaction whose **visible event** is the lesson (metal + acid → H₂;
+     carbonate + acid → CO₂) → a `predict-outcome` level: the learner calls
+     "gas or nothing?" before each probe. Author prompts whose *visuals* differ.
+   - A transformation framed as a **goal to achieve** (neutralisation → "make it
+     neutral"; water of crystallisation → "heat, then rehydrate to blue") →
+     a `reach-target-state` level, driven by a tool that carries `setState`.
 
-   The engine classifies unknowns; it does not (yet) model reach-a-target or
-   predict-the-outcome goals. List these Activities as deferred rather than
-   bending them into a fake classification.
+   Only defer an Activity that is neither an identification nor an interactive
+   transformation (writing formulae/equations, a purely olfactory step with no
+   usable cue). List those as deferred rather than bending them into a fake
+   classification.
 
 ## Turning the mapped pieces into a level
 
@@ -61,6 +72,10 @@ Everything below is about mapping a chapter onto that one loop.
      kind of evidence.
   2. **Hinted** — all samples, the ambiguous pair present, ordered hints on.
   3. **Open** — all samples, every test, no hints: the real identification.
+  4. **Transformation levels (optional)** — after the classify ladder, add any
+     `predict-outcome` / `reach-target-state` levels on the same bench for the
+     chapter's reaction Activities. They reuse the rules you already authored
+     (add a `setState` tool where a reach goal needs one).
 
 ## The gate is the source of truth
 

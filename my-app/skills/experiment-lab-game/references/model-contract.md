@@ -121,6 +121,26 @@ Any tool id outside this list still works; it just renders the generic 🔬 icon
 - `definition` is the one-line payoff shown in the reveal.
 - Every `sample.categoryId` must reference a declared category id.
 
+## Levels and goals
+
+`ExperimentLevel = { id, title, intro, outro?, sampleIds, toolIds, goal,
+scaffolding, predictionRequired, hints }`
+
+- `sampleIds` / `toolIds` are the subset of the bench present in this level.
+  Levels share one `ExperimentDefinition` and differ only in what they expose and
+  what `goal` they set.
+- `scaffolding` is `"guided" | "hinted" | "open"` (see `gameplay-contract.md`).
+- `goal` is a discriminated union over `kind` — pick the shape that matches the
+  activity (full design guidance in `gameplay-contract.md`):
+  - `{ kind?: "classify", classifyIds, categoryIds }` — sort samples into
+    categories (default; `kind` may be omitted).
+  - `{ kind: "predict-outcome", prompts: [{ sampleId, toolId }] }` — predict each
+    tool's visible `visual` before it runs; graded on correctness.
+  - `{ kind: "reach-target-state", sampleId, target, targetLabel }` — drive one
+    sample's state to satisfy `target` (needs a `setState` tool that reaches it).
+- Narrow a goal with the exported guards `isClassifyGoal` /
+  `isPredictOutcomeGoal` / `isReachTargetStateGoal`, or read `experimentGoalKind`.
+
 ## Worked reference
 
 The tested gold-standard fixture is the "Invisible Particle Detective" bench:

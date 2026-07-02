@@ -83,13 +83,16 @@ export {
   validateSandboxLabPresentation,
 } from "./model/sandboxLab";
 export type {
+  ClassifyGoal,
   ExperimentCategory,
   ExperimentDefinition,
   ExperimentEffect,
   ExperimentGame,
   ExperimentGoal,
+  ExperimentGoalKind,
   ExperimentHint,
   ExperimentLevel,
+  ExperimentPrompt,
   ExperimentPropertyValue,
   ExperimentReadout,
   ExperimentReadoutKind,
@@ -100,11 +103,17 @@ export type {
   ExperimentScaffolding,
   ExperimentTool,
   ExperimentVisual,
+  PredictOutcomeGoal,
+  ReachTargetStateGoal,
 } from "./model/experimentLab";
 export {
   EXPERIMENT_READOUT_KINDS,
   EXPERIMENT_SCAFFOLDING,
   EXPERIMENT_VISUALS,
+  experimentGoalKind,
+  isClassifyGoal,
+  isPredictOutcomeGoal,
+  isReachTargetStateGoal,
 } from "./model/experimentLab";
 
 // Engine

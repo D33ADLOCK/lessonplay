@@ -1,6 +1,6 @@
 ---
 name: discovery-game-planner
-description: "Turns a science chapter, textbook passage, or set of classroom Activities into an approved Discovery Game Brief for a cause-and-effect ExperimentLab game — where the player probes hidden samples and classifies them from evidence. Use when the user wants a discovery / identify-the-unknown science game from source material and no approved brief exists yet: it decides archetype fit, the categories to discover, which Activities become tools, the designed ambiguity that makes it fun, and the level ladder, then stops and hands off to experiment-lab-game. Do not use once a brief is approved and the user asks to build."
+description: "Turns a science chapter, textbook passage, or set of classroom Activities into an approved Discovery Game Brief for a cause-and-effect ExperimentLab game — where the player probes a consistent world and reasons from evidence to identify unknowns, predict a reaction, or reach a target state. Use when the user wants a discovery / identify-the-unknown science game from source material and no approved brief exists yet: it decides archetype fit, the categories to discover, which Activities become tools, the designed ambiguity that makes it fun, the level ladder, and any transformation beats, then stops and hands off to experiment-lab-game. Do not use once a brief is approved and the user asks to build."
 ---
 
 # Discovery Game Planner
@@ -20,23 +20,24 @@ or create the game. In that case hand off to `experiment-lab-game`.
 
 ## Is it a discovery game? (fit)
 
-Plan an ExperimentLab discovery game when the concept is an **identification
-from evidence**:
+Plan an ExperimentLab discovery game when the concept is **reasoning from
+evidence** — the learner probes a consistent world and must think, not follow
+steps. That reasoning can take three shapes, and a chapter often mixes them:
 
-- "Which of these unknowns is an acid / a base / a salt?"
-- "Sort these into solution / suspension / colloid."
-- tell samples apart by what a test *shows* (colour, pH, a gas, a glowing bulb,
-  a precipitate, settling, a residue),
-- gather several clues and combine them before deciding.
+- **Identification** (the workhorse): "Which unknown is an acid / a base / a
+  salt?" "Sort these into solution / suspension / colloid." Tell samples apart by
+  what a test *shows* (colour, pH, a gas, a glowing bulb, a precipitate,
+  settling), gathering and combining clues before deciding.
+- **Predict a reaction**: "Will the metal bubble a gas here, or do nothing?" —
+  the learner calls a reaction's visible result before it happens.
+- **Reach a target**: "Neutralise the acid until it's neutral", "heat the
+  crystal white, then rehydrate it to blue" — the learner *drives* a sample to a
+  goal state.
 
 Route **away** from this archetype when:
 
 - the point is a **guided, step-by-step demonstration** → use the ChemQuest /
   guided-sim path (`chemistry-concept-planner` / `chemquest-lab-game`),
-- the point is a **transformation or a target state** — "neutralise it to
-  pH 7", "heat the crystal then rehydrate it", "titrate to the endpoint". The
-  engine classifies unknowns; it does **not** yet model reach-a-target or
-  predict-the-outcome goals. Say so and defer, or pick a different concept.
 - the concept is mainly **memorisation, equations, or symbols** — there is
   nothing to probe.
 
@@ -45,8 +46,9 @@ Route **away** from this archetype when:
 1. Read the user's chapter, passage, summary, or concept.
 2. List the chapter's hands-on **Activities**.
 3. Sort each Activity into a role: a **test** the player runs (a tool), a
-   **concept** the player discovers (a category), or **out of scope** (a
-   transformation / step-by-step demo — defer it).
+   **concept** the player discovers (a category), a **transformation** the player
+   drives or predicts (a reaction/target beat), or **out of scope** (formulae /
+   memorisation / a step-by-step demo — defer it).
 4. Choose one **atomic** game: 2–5 categories that a handful of unknown samples
    span, unless the user already picked the concept.
 5. Design the **designed ambiguity** — at least one pair of different-category
@@ -55,6 +57,8 @@ Route **away** from this archetype when:
    a one-click slideshow.
 6. Outline the **level ladder**: guided (teach one read) → hinted (all samples,
    the ambiguity present, hints) → open (all samples, every test, no hints).
+   Then, if the chapter has transformation Activities, append a **predict-a-
+   reaction** and/or **reach-a-target** level on the same bench.
 7. Write exactly one `# Discovery Game Brief` (template below).
 8. **Stop.** Ask the user to approve the brief or request edits. On approval,
    `experiment-lab-game` turns it into a validated game.
@@ -63,13 +67,17 @@ Route **away** from this archetype when:
 
 This is the anti-drift rule. Describe each test by its **real-world name** and
 the **observation a student would record** ("dip litmus → it turns red", "pass
-current → the bulb lights"). Do **not** invent or commit to engine tool ids,
-`visual` kinds, `readout` kinds, or goal types — those live in
-`experiment-lab-game`'s `model-contract.md`, and `validateExperimentMission` is
-the final gate. If a beat the source suggests needs something beyond "classify
-unknowns from what tests show", flag it as out of scope in the brief rather than
-assuming the builder can do it. You cannot over-promise a capability you never
-name.
+current → the bulb lights"), and each transformation beat in plain pedagogy
+terms ("add base until the acid reads neutral", "predict whether the metal
+bubbles"). Do **not** invent or commit to engine tool ids, `visual` kinds,
+`readout` kinds, or the exact goal-type identifiers — those live in
+`experiment-lab-game`'s `model-contract.md` / `gameplay-contract.md`, and
+`validateExperimentMission` is the final gate. Keep beats to the three shapes the
+engine reasons about (identify from evidence, predict a reaction's visible
+result, reach a target state); anything outside those — a beat that needs new
+apparatus or a genuinely non-interactive step — is out of scope, so flag it
+rather than assuming the builder can do it. You cannot over-promise a capability
+you never name.
 
 ## The brief
 
@@ -105,10 +113,16 @@ and split only on ONE test, forcing the player to combine causes>
 2. Hinted — <all samples, the ambiguity present, hints on>
 3. Open — <all samples, every test, no hints>
 
+## Transformation beats (optional — only if the chapter has them)
+- Predict-a-reaction — <which reaction, on which samples; the visible call the
+  learner makes, e.g. "gas or nothing?">
+- Reach-a-target — <which sample, driven to what goal state, with which test to
+  check progress, e.g. "add base until it reads neutral">
+
 ## Out of scope / deferred
-<any Activity that is a transformation or a step-by-step demo rather than an
-identification — mark deferred; note the engine classifies and does not yet
-model reach-a-target goals>
+<any Activity that is none of: identify from evidence, predict a reaction, reach
+a target — e.g. writing formulae/equations, pure memorisation, or a step-by-step
+demo — mark deferred with the reason>
 ```
 
 After approval, hand off to `experiment-lab-game`, which authors the

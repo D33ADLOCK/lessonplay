@@ -1,13 +1,16 @@
-import type {
-  ExperimentEffect,
-  ExperimentGame,
-  ExperimentLevel,
-  ExperimentReadout,
-  ExperimentSample,
-  ExperimentSampleState,
-  ExperimentVisual,
+import {
+  isClassifyGoal,
+  isPredictOutcomeGoal,
+  isReachTargetStateGoal,
+  type ExperimentEffect,
+  type ExperimentGame,
+  type ExperimentLevel,
+  type ExperimentReadout,
+  type ExperimentSample,
+  type ExperimentSampleState,
+  type ExperimentVisual,
 } from "../model/experimentLab";
-import { runExperimentStep } from "./experimentRules";
+import { matchesWhen, runExperimentStep } from "./experimentRules";
 
 /**
  * The runtime state machine for an ExperimentLab playthrough.
@@ -73,6 +76,11 @@ export interface ExperimentSessionState {
   /** Current classify assignments: sampleId → categoryId. */
   readonly assignments: Readonly<Record<string, string>>;
   readonly classificationResult: ExperimentClassificationResult | null;
+  /**
+   * Which prompt of a `predict-outcome` goal is active. Advances as each
+   * prediction is made and dismissed; unused by the other goal kinds.
+   */
+  readonly promptIndex: number;
   readonly hintsRevealed: number;
   readonly predictionsMade: number;
   readonly predictionsCorrect: number;
@@ -135,6 +143,7 @@ function enterLevel(
     lastObservation: null,
     assignments: {},
     classificationResult: null,
+    promptIndex: 0,
     hintsRevealed: 0,
     predictionsMade: 0,
     predictionsCorrect: 0,
@@ -148,12 +157,14 @@ export function createExperimentSession(
 }
 
 /**
- * The evidence gate: a learner may only attempt a classification once every
- * sample they must classify has been probed at least once. This is what makes
- * the goal unreachable by pure guessing.
+ * The evidence gate: on a `classify` level a learner may only attempt a
+ * classification once every sample they must classify has been probed at least
+ * once. This is what makes the goal unreachable by pure guessing. Always false
+ * for the other goal kinds, which have no classify step.
  */
 export function canClassify(state: ExperimentSessionState): boolean {
   const level = currentLevel(state);
+  if (!isClassifyGoal(level.goal)) return false;
   const probed = new Set(state.notebook.map((entry) => entry.sampleId));
   return level.goal.classifyIds.every((id) => probed.has(id));
 }
@@ -213,9 +224,23 @@ export function reduceExperimentSession(
   const level = currentLevel(state);
 
   switch (event.type) {
-    case "start-level":
+    case "start-level": {
       if (state.phase !== "intro") return state;
+      // A predict-outcome goal is a guided walk through its prompts, so it opens
+      // straight into the first prediction rather than free probing.
+      if (isPredictOutcomeGoal(level.goal)) {
+        const first = level.goal.prompts[0];
+        if (!first) return { ...state, phase: "revealed" };
+        return {
+          ...state,
+          phase: "predicting",
+          promptIndex: 0,
+          selectedSampleId: first.sampleId,
+          selectedToolId: first.toolId,
+        };
+      }
       return { ...state, phase: "exploring" };
+    }
 
     case "select-sample":
       if (state.phase !== "exploring") return state;
@@ -243,14 +268,48 @@ export function reduceExperimentSession(
       );
     }
 
-    case "dismiss-observation":
+    case "dismiss-observation": {
       if (state.phase !== "observing") return state;
+      // predict-outcome: advance to the next prompt, or finish when they run out.
+      if (isPredictOutcomeGoal(level.goal)) {
+        const nextIndex = state.promptIndex + 1;
+        const next = level.goal.prompts[nextIndex];
+        if (next) {
+          return {
+            ...state,
+            phase: "predicting",
+            promptIndex: nextIndex,
+            selectedSampleId: next.sampleId,
+            selectedToolId: next.toolId,
+            lastObservation: null,
+          };
+        }
+        return {
+          ...state,
+          phase: "revealed",
+          selectedToolId: null,
+          lastObservation: null,
+        };
+      }
+      // reach-target-state: win the moment the sample satisfies the target.
+      if (isReachTargetStateGoal(level.goal)) {
+        const sampleState = state.sampleStates[level.goal.sampleId];
+        if (sampleState && matchesWhen(sampleState, level.goal.target)) {
+          return {
+            ...state,
+            phase: "revealed",
+            selectedToolId: null,
+            lastObservation: null,
+          };
+        }
+      }
       return {
         ...state,
         phase: "exploring",
         selectedToolId: null,
         lastObservation: null,
       };
+    }
 
     case "open-classify":
       if (state.phase !== "exploring") return state;
@@ -259,8 +318,10 @@ export function reduceExperimentSession(
 
     case "assign-category": {
       if (state.phase !== "classifying") return state;
-      if (!level.goal.classifyIds.includes(event.sampleId)) return state;
-      if (!level.goal.categoryIds.includes(event.categoryId)) return state;
+      const goal = level.goal;
+      if (!isClassifyGoal(goal)) return state;
+      if (!goal.classifyIds.includes(event.sampleId)) return state;
+      if (!goal.categoryIds.includes(event.categoryId)) return state;
       return {
         ...state,
         assignments: { ...state.assignments, [event.sampleId]: event.categoryId },
@@ -270,9 +331,11 @@ export function reduceExperimentSession(
 
     case "submit-classification": {
       if (state.phase !== "classifying") return state;
+      const goal = level.goal;
+      if (!isClassifyGoal(goal)) return state;
       const perSample: Record<string, boolean> = {};
       let allCorrect = true;
-      for (const id of level.goal.classifyIds) {
+      for (const id of goal.classifyIds) {
         const sample = state.game.definition.samples.find((s) => s.id === id);
         const correct = sample
           ? state.assignments[id] === sample.categoryId

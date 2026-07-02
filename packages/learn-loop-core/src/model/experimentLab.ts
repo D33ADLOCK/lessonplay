@@ -188,15 +188,92 @@ export interface ExperimentHint {
   readonly text: string;
 }
 
+/** The three shapes a level's win condition can take. */
+export type ExperimentGoalKind =
+  | "classify"
+  | "predict-outcome"
+  | "reach-target-state";
+
 /**
- * What a level asks the learner to do: assign each sample in `classifyIds` to
- * one of `categoryIds`. The control/reference samples on the bench are
- * deliberately excluded from `classifyIds` so they aid reasoning without being
- * graded.
+ * The original, default goal: assign each sample in `classifyIds` to one of
+ * `categoryIds`. The control/reference samples on the bench are deliberately
+ * excluded from `classifyIds` so they aid reasoning without being graded.
+ *
+ * `kind` is optional and defaults to `"classify"` so existing data that predates
+ * the discriminated union keeps validating and playing unchanged.
  */
-export interface ExperimentGoal {
+export interface ClassifyGoal {
+  readonly kind?: "classify";
   readonly classifyIds: readonly string[];
   readonly categoryIds: readonly string[];
+}
+
+/**
+ * One predict-then-apply beat: the learner calls this `toolId`'s visible result
+ * on this `sampleId` *before* the tool is run.
+ */
+export interface ExperimentPrompt {
+  readonly sampleId: string;
+  readonly toolId: string;
+}
+
+/**
+ * Predict-outcome goal: the learner is walked through an ordered list of
+ * `prompts`, predicting each tool's visible result before it is applied, and is
+ * graded on how many predictions were right. The prediction is bound to the
+ * action rather than posed as a detached quiz. Suited to genuine transformation
+ * activities where the reaction — not the sample's identity — is the lesson.
+ */
+export interface PredictOutcomeGoal {
+  readonly kind: "predict-outcome";
+  readonly prompts: readonly ExperimentPrompt[];
+}
+
+/**
+ * Reach-target-state goal: the learner must drive `sampleId` to a state that
+ * satisfies every entry in `target` (e.g. `{ nature: "neutral" }`) by applying
+ * tools whose effects carry `setState`. `targetLabel` names the goal for the
+ * learner ("Make it neutral") without leaking the mechanism. Models an activity
+ * as an outcome to achieve, not merely to observe (e.g. neutralisation).
+ */
+export interface ReachTargetStateGoal {
+  readonly kind: "reach-target-state";
+  readonly sampleId: string;
+  readonly target: ExperimentSampleState;
+  readonly targetLabel: string;
+}
+
+/**
+ * What a level asks the learner to do — a discriminated union over
+ * {@link ExperimentGoalKind}. Absent `kind` is treated as `classify`.
+ */
+export type ExperimentGoal =
+  | ClassifyGoal
+  | PredictOutcomeGoal
+  | ReachTargetStateGoal;
+
+/** The kind of a goal, treating an absent discriminant as `"classify"`. */
+export function experimentGoalKind(goal: ExperimentGoal): ExperimentGoalKind {
+  return goal.kind ?? "classify";
+}
+
+/** Narrow a goal to the classic classify variant (the default when `kind` is absent). */
+export function isClassifyGoal(goal: ExperimentGoal): goal is ClassifyGoal {
+  return experimentGoalKind(goal) === "classify";
+}
+
+/** Narrow a goal to the predict-outcome variant. */
+export function isPredictOutcomeGoal(
+  goal: ExperimentGoal,
+): goal is PredictOutcomeGoal {
+  return goal.kind === "predict-outcome";
+}
+
+/** Narrow a goal to the reach-target-state variant. */
+export function isReachTargetStateGoal(
+  goal: ExperimentGoal,
+): goal is ReachTargetStateGoal {
+  return goal.kind === "reach-target-state";
 }
 
 /**
@@ -219,6 +296,8 @@ export interface ExperimentLevel {
   /**
    * When true, the learner must predict a tool's visible result before it is
    * applied, binding prediction to the action rather than a detached quiz.
+   * Applies to free-probe goals (`classify`, `reach-target-state`); a
+   * `predict-outcome` goal always predicts, so this flag is ignored there.
    */
   readonly predictionRequired: boolean;
   readonly hints: readonly ExperimentHint[];

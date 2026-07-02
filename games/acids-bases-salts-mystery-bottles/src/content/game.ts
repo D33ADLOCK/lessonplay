@@ -88,6 +88,11 @@ export const acidsBasesSaltsBench: ExperimentDefinition = {
     },
     { id: "acid", label: "Dilute acid", description: "Add a few drops of acid and watch." },
     { id: "zinc", label: "Zinc granule", description: "Drop in a piece of zinc and watch." },
+    {
+      id: "add-base",
+      label: "Add base",
+      description: "Titrate in base drop by drop to cancel the acid.",
+    },
   ],
   ruleSet: {
     rules: [
@@ -195,6 +200,20 @@ export const acidsBasesSaltsBench: ExperimentDefinition = {
           gasLabel: "H₂",
         },
       },
+      // --- Add base: titrating base into an acid cancels it (Activity 2.6) ---
+      // A persistent `setState` flips the sample to neutral, so this is a genuine
+      // transformation the learner can *drive* toward a target, not just observe.
+      {
+        toolId: "add-base",
+        when: { nature: "acid" },
+        effect: {
+          observationId: "titrate-neutral",
+          observation: "The fierce colour eases back to a calm middle green.",
+          visual: "color-change",
+          readout: { kind: "color", value: "green" },
+          setState: { nature: "neutral" },
+        },
+      },
     ],
     defaultEffect: {
       observationId: "no-change",
@@ -205,14 +224,20 @@ export const acidsBasesSaltsBench: ExperimentDefinition = {
 };
 
 /**
- * The full "Mystery Bottles" chapter game on {@link acidsBasesSaltsBench}: five
- * categories to discover across a guided → hinted → open ladder.
+ * The full "Mystery Bottles" chapter game on {@link acidsBasesSaltsBench}: a
+ * guided → hinted → open classify ladder, then two transformation activities on
+ * the same world that use the other goal kinds.
  *
- *   1. `meet-the-indicators` (guided) — one clue, two tools: read a colour and a
- *      pH value on a single acidic bottle, with prediction on to teach the beat.
- *   2. `the-lookalikes`      (hinted) — all five bottles; two pairs look identical
- *      to litmus and pH paper, so you must bring in acid and the tester. Hints on.
- *   3. `open-bench`          (open)   — all bottles, every tool, no hints.
+ *   1. `meet-the-indicators` (guided, classify)  — one clue, two tools: read a
+ *      colour and a pH value on a single acidic bottle to teach the beat.
+ *   2. `the-lookalikes`      (hinted, classify)  — all five bottles; two pairs
+ *      look identical to litmus and pH paper, so you must bring in acid and the
+ *      tester. Hints on.
+ *   3. `open-bench`          (open, classify)    — all bottles, every tool, no hints.
+ *   4. `call-the-reaction`   (predict-outcome)   — predict whether zinc bubbles a
+ *      gas on each bottle before it lands (Activities 2.3/2.4).
+ *   5. `neutralise-it`       (reach-target-state) — titrate base into the acid
+ *      until it reaches neutral (Activity 2.6).
  */
 export const game: ExperimentGame = {
   id: "acids-bases-salts-mystery-bottles",
@@ -322,6 +347,53 @@ export const game: ExperimentGame = {
           "bottle-sugar",
         ],
         categoryIds: ["acid", "base", "carbonate", "neutral-salt", "non-conductor"],
+      },
+      scaffolding: "open",
+      predictionRequired: false,
+      hints: [],
+    },
+    {
+      // predict-outcome (Activities 2.3/2.4): the reaction, not the identity, is
+      // the lesson. A metal fizzes hydrogen on an acid but does nothing on a base
+      // or a neutral solution — so "will it bubble?" is a real, evidence-bound
+      // call, not a coin flip. Two different answers keep it from being guessable.
+      id: "call-the-reaction",
+      title: "Call the reaction",
+      intro:
+        "Drop zinc into each bottle in turn. Before it lands, call it: will the metal bubble a gas, or sit there doing nothing?",
+      outro:
+        "Only the sharp, reactive liquid fed the metal a gas — the others left it untouched.",
+      sampleIds: ["bottle-hcl", "bottle-naoh", "bottle-nacl"],
+      toolIds: ["zinc"],
+      goal: {
+        kind: "predict-outcome",
+        prompts: [
+          { sampleId: "bottle-hcl", toolId: "zinc" }, // gas (H₂)
+          { sampleId: "bottle-naoh", toolId: "zinc" }, // nothing
+          { sampleId: "bottle-nacl", toolId: "zinc" }, // nothing
+        ],
+      },
+      scaffolding: "open",
+      predictionRequired: false,
+      hints: [],
+    },
+    {
+      // reach-target-state (Activity 2.6): neutralisation as a goal to achieve.
+      // Adding base drives the acid to neutral; litmus and pH paper let the
+      // learner check progress toward the target without changing the state.
+      id: "neutralise-it",
+      title: "Cancel the acid",
+      intro:
+        "This bottle bites — strong red, low on the scale. Titrate base into it drop by drop until it lands neutral. Check with the strips as you go.",
+      outro:
+        "Acid met base and cancelled out — the reading settled square in the middle.",
+      sampleIds: ["bottle-hcl"],
+      toolIds: ["litmus", "ph-paper", "add-base"],
+      goal: {
+        kind: "reach-target-state",
+        sampleId: "bottle-hcl",
+        target: { nature: "neutral" },
+        targetLabel: "Bring the bottle to neutral",
       },
       scaffolding: "open",
       predictionRequired: false,

@@ -1,6 +1,9 @@
 import {
   EXPERIMENT_READOUT_KINDS,
   EXPERIMENT_VISUALS,
+  isClassifyGoal,
+  isPredictOutcomeGoal,
+  isReachTargetStateGoal,
   type ExperimentEffect,
   type ExperimentGame,
 } from "../model/experimentLab";
@@ -158,18 +161,52 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
       }
     }
     const levelSamples = new Set(level.sampleIds);
-    for (const id of level.goal.classifyIds) {
-      if (!levelSamples.has(id)) {
+    const goal = level.goal;
+    if (isClassifyGoal(goal)) {
+      if (goal.classifyIds.length === 0) {
+        errors.push(`level "${level.id}" is a classify level but classifies no samples`);
+      }
+      for (const id of goal.classifyIds) {
+        if (!levelSamples.has(id)) {
+          errors.push(
+            `level "${level.id}" classifies sample "${id}" which is not present on the bench in that level`,
+          );
+        }
+      }
+      for (const id of goal.categoryIds) {
+        if (!categoryIds.has(id)) {
+          errors.push(
+            `level "${level.id}" offers unknown category "${id}" as a choice`,
+          );
+        }
+      }
+    } else if (isPredictOutcomeGoal(goal)) {
+      if (goal.prompts.length === 0) {
+        errors.push(`level "${level.id}" is a predict-outcome level but lists no prompts`);
+      }
+      for (const prompt of goal.prompts) {
+        if (!levelSamples.has(prompt.sampleId)) {
+          errors.push(
+            `level "${level.id}" prompts sample "${prompt.sampleId}" which is not present on the bench in that level`,
+          );
+        }
+        if (!level.toolIds.includes(prompt.toolId)) {
+          errors.push(
+            `level "${level.id}" prompts tool "${prompt.toolId}" which is not offered in that level`,
+          );
+        }
+      }
+    } else if (isReachTargetStateGoal(goal)) {
+      if (!levelSamples.has(goal.sampleId)) {
         errors.push(
-          `level "${level.id}" classifies sample "${id}" which is not present on the bench in that level`,
+          `level "${level.id}" targets sample "${goal.sampleId}" which is not present on the bench in that level`,
         );
       }
-    }
-    for (const id of level.goal.categoryIds) {
-      if (!categoryIds.has(id)) {
-        errors.push(
-          `level "${level.id}" offers unknown category "${id}" as a choice`,
-        );
+      if (Object.keys(goal.target).length === 0) {
+        errors.push(`level "${level.id}" has an empty reach-target-state target`);
+      }
+      if (goal.targetLabel.trim() === "") {
+        errors.push(`level "${level.id}" reach-target-state goal is missing a targetLabel`);
       }
     }
   }

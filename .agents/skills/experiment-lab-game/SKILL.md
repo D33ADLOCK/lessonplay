@@ -1,6 +1,6 @@
 ---
 name: experiment-lab-game
-description: "Author ExperimentLab cause-and-effect learning games on the @learn-loop/core experiment engine: a consistent simulation the learner probes (Predict -> Act -> Observe -> Reconcile) to classify hidden samples. Use for discovery-driven science games where the player must reason from evidence rather than follow a guided slideshow, and for any game built around the rule-driven ExperimentDefinition / ExperimentGame model and its validator + analyzer gates."
+description: "Author ExperimentLab cause-and-effect learning games on the @learn-loop/core experiment engine: a consistent simulation the learner probes (Predict -> Act -> Observe -> Reconcile) to meet a level goal — classify hidden samples, predict a reaction's outcome, or reach a target state. Use for discovery-driven science games where the player must reason from evidence rather than follow a guided slideshow, and for any game built around the rule-driven ExperimentDefinition / ExperimentGame model and its validator + analyzer gates."
 ---
 
 # ExperimentLab Game
@@ -15,7 +15,14 @@ computes the visible effect from those properties. The same cause always yields
 the same effect, so the learner can probe freely and build a real mental model.
 
 This is the right skill when the goal is *discovery* — the player must reason
-from evidence to classify hidden samples — not a step-by-step demonstration.
+from evidence — not a step-by-step demonstration. The evidence can drive one of
+three level goals (see `references/gameplay-contract.md` → "Goals"):
+**`classify`** (sort hidden samples into categories — the workhorse),
+**`predict-outcome`** (call a reaction's visible result before it runs), and
+**`reach-target-state`** (drive a sample to a goal state, e.g. neutral). A
+chapter's identification Activities become a classify ladder; its transformation
+Activities (neutralisation, metal + acid) become the other two goal kinds on the
+same bench.
 
 > **Status:** the headless engine, analyzer, validator, and session reducer are
 > built and tested in `@learn-loop/core`, and the React render surface
@@ -28,13 +35,13 @@ from evidence to classify hidden samples — not a step-by-step demonstration.
 ## The loop
 
 ```text
-Predict -> Act -> Observe -> Reconcile  ->  (enough evidence)  ->  Classify -> Reveal
+Predict -> Act -> Observe -> Reconcile  ->  (enough evidence)  ->  Classify / Predict-outcome / Reach-target -> Reveal
 ```
 
 The learner predicts what a tool will do, applies it, sees a neutral
 observation of what happened, and updates their thinking. They never read the
-inference; they make it. Concept names are withheld until after a correct
-classification ("discovery before naming").
+inference; they make it. Concept names are withheld until after the goal is met
+("discovery before naming").
 
 > **Prediction is off by default.** Ship levels with `predictionRequired: false`
 > — the probe → read → classify loop is the game. Turn prediction on for at most

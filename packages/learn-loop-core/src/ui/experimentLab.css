@@ -156,6 +156,18 @@
   text-transform: uppercase;
   color: var(--ink-dim);
 }
+/* Objective banner for goal-driven levels (reach a target / prediction count). */
+.experiment-lab-app .stage__objective {
+  margin-top: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-line);
+  background: rgba(120, 170, 255, 0.1);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--ink);
+}
 
 /* ---- Beaker ---- */
 .experiment-lab-app .beaker {
@@ -684,6 +696,15 @@
 .experiment-lab-app .actions {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+/* Non-button status line in the footer (predict-outcome score / reach hint). */
+.experiment-lab-app .actions__status {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dim);
 }
 .experiment-lab-app .btn {
   appearance: none;

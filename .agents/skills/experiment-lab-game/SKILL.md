@@ -43,7 +43,20 @@ classification ("discovery before naming").
 >
 > **Animated visuals:** the `Beaker` animates all of `beam`, `settle`, `residue`,
 > `fizz`, `color-change`, `gas`, and `precipitate` (`gas` can carry a `gasLabel`
-> chip like "H₂"). See `references/model-contract.md` for tool → visual pairings.
+> chip like "H₂"), plus `conductivity` (bulb glow), `temperature` (thermometer),
+> `ph-scale` (0–14 strip), and `odour`. See `references/model-contract.md` for
+> tool → visual pairings.
+>
+> **Structured readouts (evidence, not prose):** attach an optional
+> `readout: { kind, value }` to an effect to record the *specific* clue — e.g.
+> `{ kind: "color", value: "red" }`, `{ kind: "ph-scale", value: "2" }`,
+> `{ kind: "conductivity", value: "on" }`, `{ kind: "temperature", value: "hot" }`,
+> `{ kind: "odour", value: "pungent" }`. Readout `value` (and `gasLabel`) feed the
+> distinguishability signature, so two effects that share a `visual` but differ in
+> their readout (red vs blue litmus, bulb on vs off, H₂ vs CO₂) are treated as
+> distinct evidence. Prefer a readout whenever the clue is the *specific reading*
+> rather than merely "something changed". Kinds are limited to
+> `EXPERIMENT_READOUT_KINDS`; a `gasLabel` is only valid with `visual: "gas"`.
 
 ## Workflow
 
@@ -85,7 +98,8 @@ The author **must not**:
   rejects this).
 - make a non-tutorial level winnable by a single tool or by guessing (the
   analyzer rejects `railed` / `bruteForceable`).
-- invent visual kinds outside `EXPERIMENT_VISUALS`.
+- invent visual kinds outside `EXPERIMENT_VISUALS` or readout kinds outside
+  `EXPERIMENT_READOUT_KINDS`.
 - build a custom render surface in place of `ExperimentLabViewport`.
 
 ## Why a rule engine, not authored pairs

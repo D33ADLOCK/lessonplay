@@ -2,6 +2,7 @@ import type {
   ExperimentEffect,
   ExperimentGame,
   ExperimentLevel,
+  ExperimentReadout,
   ExperimentSample,
   ExperimentSampleState,
   ExperimentVisual,
@@ -37,6 +38,8 @@ export interface ExperimentNotebookEntry {
   readonly visual: ExperimentVisual;
   /** Gas chip token carried over from the effect, when the visual is `gas`. */
   readonly gasLabel?: string;
+  /** Structured reading (colour, pH value, bulb state, …) carried from the effect. */
+  readonly readout?: ExperimentReadout;
 }
 
 /** The just-applied cause: its effect plus whether the prediction was right. */
@@ -176,6 +179,7 @@ function applyTool(
     observation: result.effect.observation,
     visual: result.effect.visual,
     gasLabel: result.effect.gasLabel,
+    readout: result.effect.readout,
   };
 
   return {

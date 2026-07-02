@@ -3,10 +3,10 @@ import type {
   ExperimentLevel,
   ExperimentRuleSet,
   ExperimentSample,
-  ExperimentVisual,
 } from "../model/experimentLab";
 import type { ValidationResult } from "../model/scenario";
 import { runExperimentSequence } from "./experimentRules";
+import { effectEvidenceToken } from "./experimentSignature";
 
 /**
  * The deterministic quality verdict for one level — the reviewer's backbone.
@@ -55,7 +55,7 @@ function resolveSamples(
   return { samples, missing };
 }
 
-type StatefulExperimentSignature = Readonly<Record<string, ExperimentVisual>>;
+type StatefulExperimentSignature = Readonly<Record<string, string>>;
 
 function signatureKey(toolId: string, index: number): string {
   return `${index}:${toolId}`;
@@ -63,17 +63,21 @@ function signatureKey(toolId: string, index: number): string {
 
 /**
  * Compute the visible evidence from applying tools in the same order a learner
- * can apply them during a session, carrying `setState` between probes.
+ * can apply them during a session, carrying `setState` between probes. Each
+ * step is reduced to its {@link effectEvidenceToken}, so a difference in colour,
+ * pH value, bulb state, or gas label counts as distinguishing evidence.
  */
 function statefulSignature(
   sample: ExperimentSample,
   toolIds: readonly string[],
   ruleSet: ExperimentRuleSet,
 ): StatefulExperimentSignature {
-  const signature: Record<string, ExperimentVisual> = {};
+  const signature: Record<string, string> = {};
   const { results } = runExperimentSequence(sample.properties, toolIds, ruleSet);
   results.forEach((result, index) => {
-    signature[signatureKey(toolIds[index], index)] = result.effect.visual;
+    signature[signatureKey(toolIds[index], index)] = effectEvidenceToken(
+      result.effect,
+    );
   });
   return signature;
 }

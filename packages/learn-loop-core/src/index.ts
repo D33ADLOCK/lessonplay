@@ -91,6 +91,8 @@ export type {
   ExperimentHint,
   ExperimentLevel,
   ExperimentPropertyValue,
+  ExperimentReadout,
+  ExperimentReadoutKind,
   ExperimentRule,
   ExperimentRuleSet,
   ExperimentSample,
@@ -100,6 +102,7 @@ export type {
   ExperimentVisual,
 } from "./model/experimentLab";
 export {
+  EXPERIMENT_READOUT_KINDS,
   EXPERIMENT_SCAFFOLDING,
   EXPERIMENT_VISUALS,
 } from "./model/experimentLab";

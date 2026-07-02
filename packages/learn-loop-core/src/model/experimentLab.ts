@@ -57,10 +57,44 @@ export const EXPERIMENT_VISUALS = [
   "color-change",
   "gas",
   "precipitate",
+  // Added for chapter-activity coverage (e.g. Class 10 Acids, Bases and Salts):
+  "conductivity", // a bulb/LED in the test circuit glows or stays dark
+  "temperature", // the mixture warms or cools (thermometer moves)
+  "ph-scale", // a strip/indicator lands on a spot of the 0–14 colour scale
+  "odour", // a distinct smell is released (shown as a scent cue)
   "none",
 ] as const;
 
 export type ExperimentVisual = (typeof EXPERIMENT_VISUALS)[number];
+
+/**
+ * The kinds of structured, quantitative-ish reading a cause can produce. A
+ * readout turns "what is seen" into first-class *data* — the specific colour, a
+ * point on the pH scale, whether the bulb lit — so the analyzer can treat two
+ * otherwise same-visual outcomes as distinct evidence (see
+ * `engine/experimentSignature.ts`). Each maps to the visual that renders it.
+ */
+export const EXPERIMENT_READOUT_KINDS = [
+  "color", // e.g. "red", "blue", "pink", "colourless" — pairs with color-change
+  "ph-scale", // e.g. "2", "7", "12" on the 0–14 scale — pairs with ph-scale
+  "conductivity", // "on" | "off" (bulb glows / stays dark) — pairs with conductivity
+  "temperature", // "hot" | "warm" | "cold" — pairs with temperature
+  "odour", // e.g. "pungent", "none" — pairs with odour
+] as const;
+
+export type ExperimentReadoutKind = (typeof EXPERIMENT_READOUT_KINDS)[number];
+
+/**
+ * A structured reading attached to an effect, e.g. `{ kind: "color", value:
+ * "red" }` or `{ kind: "ph-scale", value: "2" }`. `value` is the discriminating
+ * datum a learner records; unlike free-text `observation`, it feeds the
+ * distinguishability signature, so a difference in `value` alone (red vs blue
+ * litmus, bulb on vs off) counts as evidence.
+ */
+export interface ExperimentReadout {
+  readonly kind: ExperimentReadoutKind;
+  readonly value: string;
+}
 
 /**
  * What the learner observes from one cause. The `observation` text is strictly
@@ -75,8 +109,16 @@ export interface ExperimentEffect {
   /**
    * Short gas token shown as a chip on the escaping bubbles, e.g. `"H₂"` /
    * `"CO₂"` / `"O₂"`. Only meaningful when `visual === "gas"`; ignored otherwise.
+   * Like {@link ExperimentReadout}, it is discriminating evidence and feeds the
+   * signature (H₂ from a metal vs CO₂ from a carbonate are different clues).
    */
   readonly gasLabel?: string;
+  /**
+   * Optional structured reading (colour, pH value, bulb state, temperature,
+   * odour). First-class evidence: two effects that share a `visual` but differ
+   * in their readout `value` are distinguishable to the analyzer.
+   */
+  readonly readout?: ExperimentReadout;
   /**
    * Optional persistent state change merged into the sample after this effect,
    * letting later causes depend on earlier ones (e.g. mark a sample settled).

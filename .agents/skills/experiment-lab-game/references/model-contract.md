@@ -57,7 +57,7 @@ ExperimentGame
 
 ## Effects and visuals
 
-`ExperimentEffect = { observationId, observation, visual, gasLabel?, setState? }`
+`ExperimentEffect = { observationId, observation, visual, gasLabel?, readout?, setState? }`
 
 - `observationId` is a stable handle; the same id must always carry the same
   `observation` text (the validator enforces this).
@@ -65,15 +65,25 @@ ExperimentGame
   `authoring-contract.md`.
 - `visual` must be one of `EXPERIMENT_VISUALS`:
   `"beam" | "settle" | "residue" | "fizz" | "color-change" | "gas" |
-  "precipitate" | "none"`. All eight are animated by the `Beaker`.
+  "precipitate" | "conductivity" | "temperature" | "ph-scale" | "odour" |
+  "none"`. All are animated by the `Beaker`.
 - `gasLabel?` is a short gas token shown as a chip on the escaping bubbles, e.g.
-  `"H₂"` / `"CO₂"` / `"O₂"`. Set it only when `visual === "gas"`; when the chip
-  names the gas, keep `observation` sensory and neutral instead of repeating the
-  gas identity. Ignored for every other visual.
-- **Distinguishability is measured on `visual`**, not on `observationId` or
-  text. Two samples that should be hard to tell apart must share the same
-  `visual` for the ambiguous tool (this is how a "designed ambiguity" is made
-  mechanically real — see `gameplay-contract.md`).
+  `"H₂"` / `"CO₂"` / `"O₂"`. Set it only when `visual === "gas"` (the validator
+  rejects it on any other visual); when the chip names the gas, keep
+  `observation` sensory and neutral instead of repeating the gas identity.
+- `readout?` is a structured reading `{ kind, value }` — the *specific* clue a
+  learner records. `kind` is one of `EXPERIMENT_READOUT_KINDS`
+  (`"color" | "ph-scale" | "conductivity" | "temperature" | "odour"`) and
+  `value` is the datum (`"red"`, `"2"`, `"on"`, `"hot"`, `"pungent"`). Use it
+  whenever the evidence is the reading itself rather than merely that something
+  changed.
+- **Distinguishability is measured on the visible evidence token** — `visual`
+  plus any `readout` `value` and `gasLabel` — not on `observationId` or text. So
+  two samples can share a `visual` (both `color-change`) and still be
+  distinguishable if their readout differs (red vs blue), and two samples that
+  should be hard to tell apart must match on `visual` **and** readout/gas for the
+  ambiguous tool. This is how a "designed ambiguity" is made mechanically real
+  (see `gameplay-contract.md`).
 
 ### Typical tool → visual pairings
 
@@ -89,7 +99,11 @@ animated visuals are built around:
 | `acid` | 💧 | `fizz` / `gas` (H₂, CO₂) |
 | `heat` / `flame` | 🔥 | `fizz` / `gas` / `color-change` |
 | `base` | 🧴 | `color-change` / `precipitate` |
-| `litmus` | 🟪 | `color-change` |
+| `litmus` | 🟪 | `color-change` + readout `color` |
+| `ph-paper` | 🟪 | `ph-scale` + readout `ph-scale` (`"0"`–`"14"`) |
+| `conductivity` | 💡 | `conductivity` + readout `conductivity` (`"on"`/`"off"`) |
+| `zinc` / `metal` | 🔩 | `gas` (H₂ from acids) |
+| `thermometer` | 🌡️ | `temperature` + readout `temperature` (`"hot"`/`"warm"`/`"cold"`) |
 | `limewater` | 🥛 | `precipitate` (milky) |
 | `water` | 💧 | (dissolving — usually `none` for now) |
 | `magnet` | 🧲 | `none` (magnetic = a non-visual property) |

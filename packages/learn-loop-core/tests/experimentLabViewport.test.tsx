@@ -219,10 +219,10 @@ describe("ExperimentLabViewport", () => {
     const tools = screen.getByRole("region", { name: "Tools" });
     await user.click(within(tools).getByRole("button", { name: /Add dilute acid/ }));
 
-    // The gas chip rides above the beaker while the effect plays.
-    expect(screen.getByText(/H₂/)).toBeInTheDocument();
-    // The reading lands in the notebook as a "gas" cell.
+    // The gas chip rides above the beaker while the effect plays, and the
+    // notebook records the actual gas token (real evidence, not a generic label).
+    expect(screen.getAllByText(/H₂/).length).toBeGreaterThanOrEqual(1);
     const grid = screen.getByRole("region", { name: "Lab notebook" });
-    expect(within(grid).getByText("gas")).toBeInTheDocument();
+    expect(within(grid).getByText("H₂")).toBeInTheDocument();
   });
 });

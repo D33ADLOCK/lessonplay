@@ -656,6 +656,26 @@
   font-weight: 600;
   background: linear-gradient(180deg, #eef2f7, #c3cedd);
 }
+.experiment-lab-app .gcell--conductivity {
+  color: #241a02;
+  font-weight: 700;
+  background: linear-gradient(180deg, #ffe9a6, #ffcf3f);
+}
+.experiment-lab-app .gcell--temperature {
+  color: #fff;
+  font-weight: 600;
+  background: linear-gradient(180deg, #ff8a5c, #d9432b);
+}
+.experiment-lab-app .gcell--ph {
+  color: #06121c;
+  font-weight: 700;
+  background: linear-gradient(90deg, #ff5a5a, #ffe14d, #4fd07a, #4f8bff, #7a4fd0);
+}
+.experiment-lab-app .gcell--odour {
+  color: #fff;
+  font-weight: 600;
+  background: linear-gradient(180deg, #b7f0c9, #4faf79);
+}
 .experiment-lab-app .gcell--none {
   color: var(--ink-dim);
 }

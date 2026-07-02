@@ -49,6 +49,10 @@ const VISUAL_CELL: Record<ExperimentVisual, { label: string; cls: string }> = {
   "color-change": { label: "colour", cls: "gcell--colour" },
   gas: { label: "gas", cls: "gcell--gas" },
   precipitate: { label: "milky", cls: "gcell--ppt" },
+  conductivity: { label: "bulb", cls: "gcell--conductivity" },
+  temperature: { label: "temp", cls: "gcell--temperature" },
+  "ph-scale": { label: "pH", cls: "gcell--ph" },
+  odour: { label: "smell", cls: "gcell--odour" },
   none: { label: "clear", cls: "gcell--none" },
 };
 
@@ -61,6 +65,10 @@ const PREDICT_LABEL: Record<ExperimentVisual, string> = {
   "color-change": "The colour changes",
   gas: "Gas bubbles off",
   precipitate: "It turns milky",
+  conductivity: "The bulb glows",
+  temperature: "It heats up or cools",
+  "ph-scale": "The pH strip changes colour",
+  odour: "A smell is released",
   none: "Nothing changes",
 };
 
@@ -205,12 +213,18 @@ export function ExperimentLabViewport({
               {level.toolIds.map((tid) => {
                 const r = session.readingFor(sid, tid);
                 const cell = r ? VISUAL_CELL[r.visual] : null;
+                // Prefer the structured reading (the actual clue: "red", "pH 2",
+                // "on", "H₂") over the generic visual label when the effect
+                // carries one, so the notebook shows real evidence.
+                const cellText = r
+                  ? (r.readout?.value ?? r.gasLabel ?? cell?.label ?? "·")
+                  : "·";
                 return (
                   <span
                     key={tid}
                     className={`gcell ${cell ? cell.cls : "gcell--empty"}`}
                   >
-                    {cell ? cell.label : "·"}
+                    {cellText}
                   </span>
                 );
               })}

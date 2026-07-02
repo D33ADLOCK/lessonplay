@@ -198,6 +198,9 @@ describe("solveExperiment — reach-target-state", () => {
     );
     expect(analysis.winnable).toBe(false);
     expect(analysis.errors.join(" ")).toContain("already satisfied");
+    // The message steers the author toward the fix (a history marker) rather
+    // than only naming the defect — so a weaker agent can self-correct.
+    expect(analysis.errors.join(" ")).toContain("history marker");
   });
 });
 

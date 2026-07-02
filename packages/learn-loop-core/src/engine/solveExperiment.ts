@@ -421,7 +421,8 @@ function solveReachTargetState(
   const triviallyReachable = matchesWhen(sample.properties, goal.target);
   if (triviallyReachable) {
     errors.push(
-      `level "${level.id}" target is already satisfied by the sample's initial state, so it needs no action`,
+      `level "${level.id}" target is already satisfied by the sample's initial state, so it needs no action` +
+        ` — for a reversible round-trip (e.g. heat then rehydrate back to the start colour), set a history marker in the forward step's setState and include that marker in the target so the goal state is distinct from the start`,
     );
   }
 

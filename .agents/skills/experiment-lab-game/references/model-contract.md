@@ -24,6 +24,11 @@ ExperimentGame
   (e.g. `{ particleSize: "coarse" }`). Never shown to the player.
 - `label` is the public, learner-facing name (`"Unknown B"`). Never the answer.
 - `categoryId` is the classification answer; it must match an `ExperimentCategory.id`.
+  It is **required on every sample**, even one used only in a `predict-outcome` or
+  `reach-target-state` level where nothing is classified — the structural validator
+  always checks it resolves. Give such a sample a plain declared category (e.g. a
+  copper-sulphate crystal → a `hydrated-salt` category); it is never graded there,
+  and the uniform "every sample has a category" rule is one less thing to get wrong.
 - `revealLabel` is the optional real-world identity for the reveal
   (`"chalk water"`).
 - Drive every outcome from `properties`. Two samples that should behave

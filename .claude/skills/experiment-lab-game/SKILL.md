@@ -1,6 +1,6 @@
 ---
 name: experiment-lab-game
-description: "Author ExperimentLab cause-and-effect learning games on the @learn-loop/core experiment engine: a consistent simulation the learner probes (Predict -> Act -> Observe -> Reconcile) to classify hidden samples. Use for discovery-driven science games where the player must reason from evidence rather than follow a guided slideshow, and for any game built around the rule-driven ExperimentDefinition / ExperimentGame model and its validator + analyzer gates."
+description: "Author ExperimentLab cause-and-effect learning games on the @learn-loop/core experiment engine: a consistent simulation the learner probes (Predict -> Act -> Observe -> Reconcile) to meet a level goal — classify hidden samples, predict a reaction's outcome, or reach a target state. Use for discovery-driven science games where the player must reason from evidence rather than follow a guided slideshow, and for any game built around the rule-driven ExperimentDefinition / ExperimentGame model and its validator + analyzer gates."
 ---
 
 # ExperimentLab Game
@@ -15,7 +15,14 @@ computes the visible effect from those properties. The same cause always yields
 the same effect, so the learner can probe freely and build a real mental model.
 
 This is the right skill when the goal is *discovery* — the player must reason
-from evidence to classify hidden samples — not a step-by-step demonstration.
+from evidence — not a step-by-step demonstration. The evidence can drive one of
+three level goals (see `references/gameplay-contract.md` → "Goals"):
+**`classify`** (sort hidden samples into categories — the workhorse),
+**`predict-outcome`** (call a reaction's visible result before it runs), and
+**`reach-target-state`** (drive a sample to a goal state, e.g. neutral). A
+chapter's identification Activities become a classify ladder; its transformation
+Activities (neutralisation, metal + acid) become the other two goal kinds on the
+same bench.
 
 > **Status:** the headless engine, analyzer, validator, and session reducer are
 > built and tested in `@learn-loop/core`, and the React render surface
@@ -28,13 +35,13 @@ from evidence to classify hidden samples — not a step-by-step demonstration.
 ## The loop
 
 ```text
-Predict -> Act -> Observe -> Reconcile  ->  (enough evidence)  ->  Classify -> Reveal
+Predict -> Act -> Observe -> Reconcile  ->  (enough evidence)  ->  Classify / Predict-outcome / Reach-target -> Reveal
 ```
 
 The learner predicts what a tool will do, applies it, sees a neutral
 observation of what happened, and updates their thinking. They never read the
-inference; they make it. Concept names are withheld until after a correct
-classification ("discovery before naming").
+inference; they make it. Concept names are withheld until after the goal is met
+("discovery before naming").
 
 > **Prediction is off by default.** Ship levels with `predictionRequired: false`
 > — the probe → read → classify loop is the game. Turn prediction on for at most
@@ -43,21 +50,39 @@ classification ("discovery before naming").
 >
 > **Animated visuals:** the `Beaker` animates all of `beam`, `settle`, `residue`,
 > `fizz`, `color-change`, `gas`, and `precipitate` (`gas` can carry a `gasLabel`
-> chip like "H₂"). See `references/model-contract.md` for tool → visual pairings.
+> chip like "H₂"), plus `conductivity` (bulb glow), `temperature` (thermometer),
+> `ph-scale` (0–14 strip), and `odour`. See `references/model-contract.md` for
+> tool → visual pairings.
+>
+> **Structured readouts (evidence, not prose):** attach an optional
+> `readout: { kind, value }` to an effect to record the *specific* clue — e.g.
+> `{ kind: "color", value: "red" }`, `{ kind: "ph-scale", value: "2" }`,
+> `{ kind: "conductivity", value: "on" }`, `{ kind: "temperature", value: "hot" }`,
+> `{ kind: "odour", value: "pungent" }`. Readout `value` (and `gasLabel`) feed the
+> distinguishability signature, so two effects that share a `visual` but differ in
+> their readout (red vs blue litmus, bulb on vs off, H₂ vs CO₂) are treated as
+> distinct evidence. Prefer a readout whenever the clue is the *specific reading*
+> rather than merely "something changed". Kinds are limited to
+> `EXPERIMENT_READOUT_KINDS`; a `gasLabel` is only valid with `visual: "gas"`.
 
 ## Workflow
 
-1. Confirm the conversation contains an approved plan (the planner's
-   `# Chemistry Game Brief`, or an equivalent chapter/concept plan) naming the
-   concept, the categories to discover, and the core misconception.
+1. Confirm the conversation contains an approved plan — a `# Discovery Game
+   Brief` from `discovery-game-planner`, a `# Chemistry Game Brief`, or an
+   equivalent chapter/concept plan — naming the concept, the categories to
+   discover, and the core misconception. If no such plan exists and the request
+   starts from a chapter or raw concept, use `discovery-game-planner` first to
+   produce and get approval on a brief; do not improvise the design here.
 2. Read `references/model-contract.md` before writing any `ExperimentDefinition`.
-3. Read `references/gameplay-contract.md` before designing the level ladder.
-4. Read `references/authoring-contract.md` before writing observation text,
+3. Read `references/activity-mapping.md` to turn the brief's chapter Activities
+   into tools, categories, the designed ambiguity, and the level ladder.
+4. Read `references/gameplay-contract.md` before designing the level ladder.
+5. Read `references/authoring-contract.md` before writing observation text,
    categories, predictions, or hints.
-5. Read `references/validation-checklist.md` before reporting completion.
-6. Author the game as data: one `ExperimentDefinition` (the consistent world)
+6. Read `references/validation-checklist.md` before reporting completion.
+7. Author the game as data: one `ExperimentDefinition` (the consistent world)
    plus categories and a level ladder, exported as one `ExperimentGame`.
-7. Validate with `validateExperimentMission` (structural + quality) and the
+8. Validate with `validateExperimentMission` (structural + quality) and the
    per-level `solveExperiment`. Do not ship a level the analyzer flags.
 
 Do not re-decide the learning objective or archetype. If the plan is incomplete
@@ -85,7 +110,8 @@ The author **must not**:
   rejects this).
 - make a non-tutorial level winnable by a single tool or by guessing (the
   analyzer rejects `railed` / `bruteForceable`).
-- invent visual kinds outside `EXPERIMENT_VISUALS`.
+- invent visual kinds outside `EXPERIMENT_VISUALS` or readout kinds outside
+  `EXPERIMENT_READOUT_KINDS`.
 - build a custom render surface in place of `ExperimentLabViewport`.
 
 ## Why a rule engine, not authored pairs

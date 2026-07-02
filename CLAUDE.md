@@ -52,13 +52,18 @@ for designing and building games, ported from
 | `physics-contraption-level-generator` | Convert Class 6–7 physics topics into validated JSON contraption-game levels. |
 | `chapter-to-game` | Convert chapter material into a mechanic choice and scaffolded learning game. |
 | `chemquest-lab-game` | Build a chemistry game plan with the fixed ChemQuest Lab 9:16 template. |
+| `discovery-game-planner` | Turn a chapter or concept into an approved `# Discovery Game Brief` (categories, tools-from-Activities, the designed ambiguity, the level ladder) before any building — then hand off to `experiment-lab-game`. |
 | `experiment-lab-game` | Author a cause-and-effect discovery game on the `@learn-loop/core` ExperimentLab engine (rule-driven simulation, Predict → Act → Observe → Reconcile, with validator + analyzer gates). |
 
 - **Claude Code** auto-discovers these from `.claude/skills/` (invoke via the Skill tool).
 - **Codex** and other agents should read the `SKILL.md` files under `.agents/skills/`
   directly as referenced below.
 
-The two directories hold identical content; keep them in sync if you edit a skill.
+A third copy lives at `my-app/skills/` — the one the LessonPlay **runtime agent**
+actually reads (`process.cwd()/skills`), so it governs what the deployed product
+generates. All three (`.agents/skills/`, `.claude/skills/`, `my-app/skills/`) must
+stay byte-identical: when you edit a skill, update all three together, or the
+runtime agent will generate against stale guidance.
 
 ## Workflow: create a new one-button game with crisp-game-lib
 
@@ -109,13 +114,22 @@ has asked to build.
 
 For **discovery-driven** science games — where the player must reason from
 evidence to classify hidden samples rather than follow a guided demonstration —
-use the cause-and-effect ExperimentLab engine via
-`.agents/skills/experiment-lab-game/SKILL.md`. It authors an `ExperimentGame`
-(rule-driven `ExperimentDefinition` + categories + a guided→hinted→open level
-ladder), gates it with `validateExperimentMission` / `solveExperiment` from
-`@learn-loop/core`, and renders the validated game through
+plan and build in two steps, like the ChemQuest flow above. First, when starting
+from a chapter or raw concept, use `.agents/skills/discovery-game-planner/SKILL.md`
+to produce and get approval on a `# Discovery Game Brief` (archetype fit, the
+categories to discover, which chapter Activities become tools, the designed
+ambiguity, and the level ladder), then stop. Second, build from the approved
+brief with `.agents/skills/experiment-lab-game/SKILL.md`: it authors an
+`ExperimentGame` (rule-driven `ExperimentDefinition` + categories + a
+guided→hinted→open level ladder), gates it with `validateExperimentMission` /
+`solveExperiment` from `@learn-loop/core`, and renders the validated game through
 `ExperimentLabViewport` from `@learn-loop/core/ui` with
 `@learn-loop/core/ui/experiment.css`. Do not hand-build a substitute lab UI.
+
+The planner stays at the pedagogy level and never names engine tool / visual /
+readout ids; the builder + `validateExperimentMission` own what is buildable.
+That split is the anti-drift boundary — the plan cannot over-promise a capability
+it never names, and an over-ambitious plan simply fails the build-time gate.
 
 ## Stable project constraints (one-button crisp-game-lib games)
 

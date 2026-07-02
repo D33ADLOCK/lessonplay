@@ -1,0 +1,24 @@
+/* Page shell only. The whole game UI — the dark-glow lab, the beaker and its
+   animations, the readings grid, the reveal — lives in the reusable viewport
+   shipped by `@learn-loop/core/ui/experiment.css` (imported in main.tsx). This
+   file just sets up the full-height dark page the 9:16 viewport centres inside. */
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #05070f;
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+}

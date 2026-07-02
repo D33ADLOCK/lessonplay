@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useReducer } from "react";
-import type {
-  ExperimentGame,
-  ExperimentLevel,
-  ExperimentSample,
-  ExperimentTool,
-  ExperimentVisual,
+import {
+  experimentGoalKind,
+  isPredictOutcomeGoal,
+  isReachTargetStateGoal,
+  type ExperimentGame,
+  type ExperimentGoalKind,
+  type ExperimentLevel,
+  type ExperimentSample,
+  type ExperimentTool,
+  type ExperimentVisual,
 } from "../model/experimentLab";
 import {
   canClassify,
@@ -32,6 +36,17 @@ export interface ExperimentSession {
   readonly predicting: boolean;
   /** Whether every sample that must be classified has been probed. */
   readonly canClassify: boolean;
+  /** Which goal shape this level uses, so the viewport can render the right beats. */
+  readonly goalKind: ExperimentGoalKind;
+  /**
+   * predict-outcome progress: the active prompt index and the prompt count.
+   * `total` is 0 for the other goal kinds.
+   */
+  readonly promptProgress: { readonly index: number; readonly total: number };
+  /** predict-outcome score so far: correct predictions out of the prompt count. */
+  readonly predictionScore: { readonly correct: number; readonly total: number };
+  /** reach-target-state: the learner-facing goal label, else null. */
+  readonly targetLabel: string | null;
   readonly selectedSample: ExperimentSample | undefined;
   /** The tool awaiting a prediction (only set in the `predicting` phase). */
   readonly selectedTool: ExperimentTool | undefined;
@@ -123,6 +138,14 @@ export function useExperimentSession(game: ExperimentGame): ExperimentSession {
         : "wrong"
       : null;
 
+  const goalKind = experimentGoalKind(level.goal);
+  const promptTotal = isPredictOutcomeGoal(level.goal)
+    ? level.goal.prompts.length
+    : 0;
+  const targetLabel = isReachTargetStateGoal(level.goal)
+    ? level.goal.targetLabel
+    : null;
+
   return {
     state,
     level,
@@ -130,6 +153,10 @@ export function useExperimentSession(game: ExperimentGame): ExperimentSession {
     interactive,
     predicting,
     canClassify: canClassify(state),
+    goalKind,
+    promptProgress: { index: state.promptIndex, total: promptTotal },
+    predictionScore: { correct: state.predictionsCorrect, total: promptTotal },
+    targetLabel,
     selectedSample,
     selectedTool,
     predictChoices,

@@ -1,6 +1,17 @@
-import type { ExperimentGame } from "../model/experimentLab";
+import {
+  EXPERIMENT_READOUT_KINDS,
+  EXPERIMENT_VISUALS,
+  isClassifyGoal,
+  isPredictOutcomeGoal,
+  isReachTargetStateGoal,
+  type ExperimentEffect,
+  type ExperimentGame,
+} from "../model/experimentLab";
 import type { ValidationResult } from "../model/scenario";
 import { analyzeExperimentGame } from "./solveExperiment";
+
+const KNOWN_VISUALS = new Set<string>(EXPERIMENT_VISUALS);
+const KNOWN_READOUT_KINDS = new Set<string>(EXPERIMENT_READOUT_KINDS);
 
 /**
  * Structural / referential validation for an {@link ExperimentGame}.
@@ -73,16 +84,46 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
       observationText.set(id, text);
     }
   };
+  // Each effect's visible payload must be well-formed: a known visual, a known
+  // readout kind with a non-empty value, and a gas label only where it renders.
+  const checkEffectShape = (where: string, effect: ExperimentEffect) => {
+    if (!KNOWN_VISUALS.has(effect.visual)) {
+      errors.push(
+        `${where} has unknown visual "${effect.visual}"; expected one of ${EXPERIMENT_VISUALS.join(", ")}`,
+      );
+    }
+    if (effect.readout) {
+      if (!KNOWN_READOUT_KINDS.has(effect.readout.kind)) {
+        errors.push(
+          `${where} has unknown readout kind "${effect.readout.kind}"; expected one of ${EXPERIMENT_READOUT_KINDS.join(", ")}`,
+        );
+      }
+      if (effect.readout.value.trim() === "") {
+        errors.push(`${where} has a readout with an empty value`);
+      }
+    }
+    if (effect.gasLabel !== undefined && effect.visual !== "gas") {
+      errors.push(
+        `${where} sets a gasLabel "${effect.gasLabel}" but its visual is "${effect.visual}", not "gas"; the label would not render`,
+      );
+    }
+  };
+
   for (const rule of game.definition.ruleSet.rules) {
     if (!toolIds.has(rule.toolId)) {
       errors.push(`rule references unknown tool "${rule.toolId}"`);
     }
     recordObservation(rule.effect.observationId, rule.effect.observation);
+    checkEffectShape(
+      `rule for tool "${rule.toolId}" (observation "${rule.effect.observationId}")`,
+      rule.effect,
+    );
   }
   recordObservation(
     game.definition.ruleSet.defaultEffect.observationId,
     game.definition.ruleSet.defaultEffect.observation,
   );
+  checkEffectShape("the default effect", game.definition.ruleSet.defaultEffect);
 
   // Discovery before naming: observation text must not state a concept name.
   const categoryLabels = game.categories.map((c) => ({
@@ -120,18 +161,52 @@ export function validateExperimentGame(game: ExperimentGame): ValidationResult {
       }
     }
     const levelSamples = new Set(level.sampleIds);
-    for (const id of level.goal.classifyIds) {
-      if (!levelSamples.has(id)) {
+    const goal = level.goal;
+    if (isClassifyGoal(goal)) {
+      if (goal.classifyIds.length === 0) {
+        errors.push(`level "${level.id}" is a classify level but classifies no samples`);
+      }
+      for (const id of goal.classifyIds) {
+        if (!levelSamples.has(id)) {
+          errors.push(
+            `level "${level.id}" classifies sample "${id}" which is not present on the bench in that level`,
+          );
+        }
+      }
+      for (const id of goal.categoryIds) {
+        if (!categoryIds.has(id)) {
+          errors.push(
+            `level "${level.id}" offers unknown category "${id}" as a choice`,
+          );
+        }
+      }
+    } else if (isPredictOutcomeGoal(goal)) {
+      if (goal.prompts.length === 0) {
+        errors.push(`level "${level.id}" is a predict-outcome level but lists no prompts`);
+      }
+      for (const prompt of goal.prompts) {
+        if (!levelSamples.has(prompt.sampleId)) {
+          errors.push(
+            `level "${level.id}" prompts sample "${prompt.sampleId}" which is not present on the bench in that level`,
+          );
+        }
+        if (!level.toolIds.includes(prompt.toolId)) {
+          errors.push(
+            `level "${level.id}" prompts tool "${prompt.toolId}" which is not offered in that level`,
+          );
+        }
+      }
+    } else if (isReachTargetStateGoal(goal)) {
+      if (!levelSamples.has(goal.sampleId)) {
         errors.push(
-          `level "${level.id}" classifies sample "${id}" which is not present on the bench in that level`,
+          `level "${level.id}" targets sample "${goal.sampleId}" which is not present on the bench in that level`,
         );
       }
-    }
-    for (const id of level.goal.categoryIds) {
-      if (!categoryIds.has(id)) {
-        errors.push(
-          `level "${level.id}" offers unknown category "${id}" as a choice`,
-        );
+      if (Object.keys(goal.target).length === 0) {
+        errors.push(`level "${level.id}" has an empty reach-target-state target`);
+      }
+      if (goal.targetLabel.trim() === "") {
+        errors.push(`level "${level.id}" reach-target-state goal is missing a targetLabel`);
       }
     }
   }

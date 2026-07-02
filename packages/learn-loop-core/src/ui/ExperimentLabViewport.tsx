@@ -1,6 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { ExperimentGame, ExperimentVisual } from "../model/experimentLab";
+import {
+  isClassifyGoal,
+  type ExperimentGame,
+  type ExperimentVisual,
+} from "../model/experimentLab";
 import { Beaker } from "./Beaker";
 import {
   experimentLabThemeClasses,
@@ -49,6 +53,10 @@ const VISUAL_CELL: Record<ExperimentVisual, { label: string; cls: string }> = {
   "color-change": { label: "colour", cls: "gcell--colour" },
   gas: { label: "gas", cls: "gcell--gas" },
   precipitate: { label: "milky", cls: "gcell--ppt" },
+  conductivity: { label: "bulb", cls: "gcell--conductivity" },
+  temperature: { label: "temp", cls: "gcell--temperature" },
+  "ph-scale": { label: "pH", cls: "gcell--ph" },
+  odour: { label: "smell", cls: "gcell--odour" },
   none: { label: "clear", cls: "gcell--none" },
 };
 
@@ -61,6 +69,10 @@ const PREDICT_LABEL: Record<ExperimentVisual, string> = {
   "color-change": "The colour changes",
   gas: "Gas bubbles off",
   precipitate: "It turns milky",
+  conductivity: "The bulb glows",
+  temperature: "It heats up or cools",
+  "ph-scale": "The pH strip changes colour",
+  odour: "A smell is released",
   none: "Nothing changes",
 };
 
@@ -85,6 +97,12 @@ export function ExperimentLabViewport({
 }: ExperimentLabViewportProps) {
   const session = useExperimentSession(game);
   const { state, level } = session;
+  const goal = level.goal;
+
+  // Hints are shown in a dismissible modal so they never cover the bench and can
+  // always be closed. Local UI state — revealed-hint count still lives in the
+  // session reducer; this only tracks whether the panel is open.
+  const [hintsOpen, setHintsOpen] = useState(false);
 
   const categoryById = useMemo(
     () => new Map(game.categories.map((c) => [c.id, c])),
@@ -112,6 +130,20 @@ export function ExperimentLabViewport({
 
       <main className="stage">
         <div className="stage__label">{session.selectedSample?.label ?? "—"}</div>
+        {session.goalKind === "reach-target-state" && session.targetLabel && (
+          <div className="stage__objective">🎯 {session.targetLabel}</div>
+        )}
+        {session.goalKind === "predict-outcome" &&
+          session.promptProgress.total > 0 && (
+            <div className="stage__objective">
+              Prediction{" "}
+              {Math.min(
+                session.promptProgress.index + 1,
+                session.promptProgress.total,
+              )}{" "}
+              of {session.promptProgress.total}
+            </div>
+          )}
         <Beaker
           visual={session.activeVisual}
           cloudy={session.cloudy}
@@ -130,31 +162,9 @@ export function ExperimentLabViewport({
         )}
       </main>
 
-      <section className="samples" aria-label="Samples">
-        {level.sampleIds.map((id) => {
-          const s = session.sampleById.get(id);
-          if (!s) return null;
-          const probed = state.notebook.some((e) => e.sampleId === id);
-          return (
-            <button
-              key={id}
-              className={`chip ${id === state.selectedSampleId ? "is-active" : ""} ${
-                probed ? "is-probed" : ""
-              }`}
-              disabled={!session.interactive}
-              onClick={() => session.selectSample(id)}
-            >
-              {s.label}
-              {probed && (
-                <span className="chip__dot" aria-hidden>
-                  •
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </section>
-
+      {/* Free-probe tools. A predict-outcome level is prompt-driven (the tool is
+          named by each prompt), so its bench hides the picker. */}
+      {session.goalKind !== "predict-outcome" && (
       <section className="tools" aria-label="Tools">
         {level.toolIds.map((id) => {
           const t = game.definition.tools.find((tool) => tool.id === id);
@@ -174,6 +184,7 @@ export function ExperimentLabViewport({
           );
         })}
       </section>
+      )}
 
       {/* The readings grid — the surface you reason from. */}
       <section
@@ -205,12 +216,18 @@ export function ExperimentLabViewport({
               {level.toolIds.map((tid) => {
                 const r = session.readingFor(sid, tid);
                 const cell = r ? VISUAL_CELL[r.visual] : null;
+                // Prefer the structured reading (the actual clue: "red", "pH 2",
+                // "on", "H₂") over the generic visual label when the effect
+                // carries one, so the notebook shows real evidence.
+                const cellText = r
+                  ? (r.readout?.value ?? r.gasLabel ?? cell?.label ?? "·")
+                  : "·";
                 return (
                   <span
                     key={tid}
                     className={`gcell ${cell ? cell.cls : "gcell--empty"}`}
                   >
-                    {cell ? cell.label : "·"}
+                    {cellText}
                   </span>
                 );
               })}
@@ -220,33 +237,66 @@ export function ExperimentLabViewport({
       </section>
 
       <footer className="actions">
-        {level.hints.length > 0 &&
-          state.hintsRevealed < level.hints.length && (
-            <button
-              className="btn btn--ghost"
-              disabled={!session.interactive}
-              onClick={session.requestHint}
-            >
-              Hint
-            </button>
-          )}
-        <button
-          className="btn btn--primary"
-          disabled={!session.interactive || !session.canClassify}
-          onClick={session.openClassify}
-        >
-          {session.canClassify ? "Make the call" : "Test every unknown first"}
-        </button>
+        {level.hints.length > 0 && (
+          <button
+            className="btn btn--ghost"
+            disabled={!session.interactive}
+            onClick={() => {
+              // Reveal the first hint on the first open; reopening just re-shows
+              // what's already been unlocked.
+              if (state.hintsRevealed === 0) session.requestHint();
+              setHintsOpen(true);
+            }}
+          >
+            Hint
+          </button>
+        )}
+        {session.goalKind === "classify" && (
+          <button
+            className="btn btn--primary"
+            disabled={!session.interactive || !session.canClassify}
+            onClick={session.openClassify}
+          >
+            {session.canClassify ? "Make the call" : "Test every unknown first"}
+          </button>
+        )}
+        {session.goalKind === "reach-target-state" && (
+          <span className="actions__status">
+            Keep acting until the goal is met.
+          </span>
+        )}
+        {session.goalKind === "predict-outcome" && (
+          <span className="actions__status">
+            {session.predictionScore.correct} right so far
+          </span>
+        )}
       </footer>
 
-      {state.hintsRevealed > 0 && session.interactive && (
-        <div className="hints">
-          {level.hints.slice(0, state.hintsRevealed).map((h) => (
-            <p key={h.id} className="hints__line">
-              💡 {h.text}
-            </p>
-          ))}
-        </div>
+      {hintsOpen && session.interactive && state.hintsRevealed > 0 && (
+        <Overlay>
+          <h2 className="card__title">Hints</h2>
+          <div className="hints">
+            {level.hints.slice(0, state.hintsRevealed).map((h) => (
+              <p key={h.id} className="hints__line">
+                💡 {h.text}
+              </p>
+            ))}
+          </div>
+          {state.hintsRevealed < level.hints.length && (
+            <button
+              className="btn btn--ghost btn--block"
+              onClick={session.requestHint}
+            >
+              Show another hint
+            </button>
+          )}
+          <button
+            className="btn btn--primary btn--block"
+            onClick={() => setHintsOpen(false)}
+          >
+            Got it
+          </button>
+        </Overlay>
       )}
 
       {/* ---- Overlays: framing, the call, and the payoff (no quiz) ---- */}
@@ -284,12 +334,12 @@ export function ExperimentLabViewport({
         </Overlay>
       )}
 
-      {state.phase === "classifying" && (
+      {state.phase === "classifying" && isClassifyGoal(goal) && (
         <Overlay wide>
           <h2 className="card__title">What is each one?</h2>
           <p className="card__hint">Read your notes and decide.</p>
           <div className="classify">
-            {level.goal.classifyIds.map((id) => {
+            {goal.classifyIds.map((id) => {
               const s = session.sampleById.get(id);
               if (!s) return null;
               const wrong =
@@ -301,7 +351,7 @@ export function ExperimentLabViewport({
                 >
                   <span className="classify__name">{s.label}</span>
                   <div className="classify__opts">
-                    {level.goal.categoryIds.map((cid) => (
+                    {goal.categoryIds.map((cid) => (
                       <button
                         key={cid}
                         className={`pill ${
@@ -325,9 +375,7 @@ export function ExperimentLabViewport({
           )}
           <button
             className="btn btn--primary btn--block"
-            disabled={level.goal.classifyIds.some(
-              (id) => !state.assignments[id],
-            )}
+            disabled={goal.classifyIds.some((id) => !state.assignments[id])}
             onClick={session.submitClassification}
           >
             Submit
@@ -335,12 +383,12 @@ export function ExperimentLabViewport({
         </Overlay>
       )}
 
-      {state.phase === "revealed" && (
+      {state.phase === "revealed" && isClassifyGoal(goal) && (
         <Overlay wide>
           <h2 className="card__title">Right!</h2>
           {level.outro && <p className="card__body">{level.outro}</p>}
           <div className="reveal">
-            {level.goal.classifyIds.map((id) => {
+            {goal.classifyIds.map((id) => {
               const s = session.sampleById.get(id);
               if (!s) return null;
               const cat = categoryById.get(s.categoryId);
@@ -366,6 +414,46 @@ export function ExperimentLabViewport({
           </button>
         </Overlay>
       )}
+
+      {state.phase === "revealed" && session.goalKind === "predict-outcome" && (
+        <Overlay wide>
+          <h2 className="card__title">
+            {session.predictionScore.correct === session.predictionScore.total
+              ? "Perfect read!"
+              : "Predictions in"}
+          </h2>
+          <p className="card__body">
+            You called <strong>{session.predictionScore.correct}</strong> of{" "}
+            {session.predictionScore.total} right.
+          </p>
+          {level.outro && <p className="card__body">{level.outro}</p>}
+          <button
+            className="btn btn--primary btn--block"
+            onClick={session.nextLevel}
+          >
+            {state.levelIndex >= game.levels.length - 1 ? "Finish" : "Next case"}
+          </button>
+        </Overlay>
+      )}
+
+      {state.phase === "revealed" &&
+        session.goalKind === "reach-target-state" && (
+          <Overlay wide>
+            <h2 className="card__title">Target reached</h2>
+            {session.targetLabel && (
+              <p className="card__hint">{session.targetLabel} ✓</p>
+            )}
+            {level.outro && <p className="card__body">{level.outro}</p>}
+            <button
+              className="btn btn--primary btn--block"
+              onClick={session.nextLevel}
+            >
+              {state.levelIndex >= game.levels.length - 1
+                ? "Finish"
+                : "Next case"}
+            </button>
+          </Overlay>
+        )}
 
       {state.phase === "complete" && (
         <Overlay>

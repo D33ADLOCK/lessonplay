@@ -24,6 +24,11 @@ ExperimentGame
   (e.g. `{ particleSize: "coarse" }`). Never shown to the player.
 - `label` is the public, learner-facing name (`"Unknown B"`). Never the answer.
 - `categoryId` is the classification answer; it must match an `ExperimentCategory.id`.
+  It is **required on every sample**, even one used only in a `predict-outcome` or
+  `reach-target-state` level where nothing is classified — the structural validator
+  always checks it resolves. Give such a sample a plain declared category (e.g. a
+  copper-sulphate crystal → a `hydrated-salt` category); it is never graded there,
+  and the uniform "every sample has a category" rule is one less thing to get wrong.
 - `revealLabel` is the optional real-world identity for the reveal
   (`"chalk water"`).
 - Drive every outcome from `properties`. Two samples that should behave
@@ -57,7 +62,7 @@ ExperimentGame
 
 ## Effects and visuals
 
-`ExperimentEffect = { observationId, observation, visual, gasLabel?, setState? }`
+`ExperimentEffect = { observationId, observation, visual, gasLabel?, readout?, setState? }`
 
 - `observationId` is a stable handle; the same id must always carry the same
   `observation` text (the validator enforces this).
@@ -65,15 +70,25 @@ ExperimentGame
   `authoring-contract.md`.
 - `visual` must be one of `EXPERIMENT_VISUALS`:
   `"beam" | "settle" | "residue" | "fizz" | "color-change" | "gas" |
-  "precipitate" | "none"`. All eight are animated by the `Beaker`.
+  "precipitate" | "conductivity" | "temperature" | "ph-scale" | "odour" |
+  "none"`. All are animated by the `Beaker`.
 - `gasLabel?` is a short gas token shown as a chip on the escaping bubbles, e.g.
-  `"H₂"` / `"CO₂"` / `"O₂"`. Set it only when `visual === "gas"`; when the chip
-  names the gas, keep `observation` sensory and neutral instead of repeating the
-  gas identity. Ignored for every other visual.
-- **Distinguishability is measured on `visual`**, not on `observationId` or
-  text. Two samples that should be hard to tell apart must share the same
-  `visual` for the ambiguous tool (this is how a "designed ambiguity" is made
-  mechanically real — see `gameplay-contract.md`).
+  `"H₂"` / `"CO₂"` / `"O₂"`. Set it only when `visual === "gas"` (the validator
+  rejects it on any other visual); when the chip names the gas, keep
+  `observation` sensory and neutral instead of repeating the gas identity.
+- `readout?` is a structured reading `{ kind, value }` — the *specific* clue a
+  learner records. `kind` is one of `EXPERIMENT_READOUT_KINDS`
+  (`"color" | "ph-scale" | "conductivity" | "temperature" | "odour"`) and
+  `value` is the datum (`"red"`, `"2"`, `"on"`, `"hot"`, `"pungent"`). Use it
+  whenever the evidence is the reading itself rather than merely that something
+  changed.
+- **Distinguishability is measured on the visible evidence token** — `visual`
+  plus any `readout` `value` and `gasLabel` — not on `observationId` or text. So
+  two samples can share a `visual` (both `color-change`) and still be
+  distinguishable if their readout differs (red vs blue), and two samples that
+  should be hard to tell apart must match on `visual` **and** readout/gas for the
+  ambiguous tool. This is how a "designed ambiguity" is made mechanically real
+  (see `gameplay-contract.md`).
 
 ### Typical tool → visual pairings
 
@@ -89,7 +104,11 @@ animated visuals are built around:
 | `acid` | 💧 | `fizz` / `gas` (H₂, CO₂) |
 | `heat` / `flame` | 🔥 | `fizz` / `gas` / `color-change` |
 | `base` | 🧴 | `color-change` / `precipitate` |
-| `litmus` | 🟪 | `color-change` |
+| `litmus` | 🟪 | `color-change` + readout `color` |
+| `ph-paper` | 🟪 | `ph-scale` + readout `ph-scale` (`"0"`–`"14"`) |
+| `conductivity` | 💡 | `conductivity` + readout `conductivity` (`"on"`/`"off"`) |
+| `zinc` / `metal` | 🔩 | `gas` (H₂ from acids) |
+| `thermometer` | 🌡️ | `temperature` + readout `temperature` (`"hot"`/`"warm"`/`"cold"`) |
 | `limewater` | 🥛 | `precipitate` (milky) |
 | `water` | 💧 | (dissolving — usually `none` for now) |
 | `magnet` | 🧲 | `none` (magnetic = a non-visual property) |
@@ -106,6 +125,26 @@ Any tool id outside this list still works; it just renders the generic 🔬 icon
   observation text.
 - `definition` is the one-line payoff shown in the reveal.
 - Every `sample.categoryId` must reference a declared category id.
+
+## Levels and goals
+
+`ExperimentLevel = { id, title, intro, outro?, sampleIds, toolIds, goal,
+scaffolding, predictionRequired, hints }`
+
+- `sampleIds` / `toolIds` are the subset of the bench present in this level.
+  Levels share one `ExperimentDefinition` and differ only in what they expose and
+  what `goal` they set.
+- `scaffolding` is `"guided" | "hinted" | "open"` (see `gameplay-contract.md`).
+- `goal` is a discriminated union over `kind` — pick the shape that matches the
+  activity (full design guidance in `gameplay-contract.md`):
+  - `{ kind?: "classify", classifyIds, categoryIds }` — sort samples into
+    categories (default; `kind` may be omitted).
+  - `{ kind: "predict-outcome", prompts: [{ sampleId, toolId }] }` — predict each
+    tool's visible `visual` before it runs; graded on correctness.
+  - `{ kind: "reach-target-state", sampleId, target, targetLabel }` — drive one
+    sample's state to satisfy `target` (needs a `setState` tool that reaches it).
+- Narrow a goal with the exported guards `isClassifyGoal` /
+  `isPredictOutcomeGoal` / `isReachTargetStateGoal`, or read `experimentGoalKind`.
 
 ## Worked reference
 

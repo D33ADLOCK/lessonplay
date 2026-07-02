@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { ExperimentGame, ExperimentVisual } from "../model/experimentLab";
 import { Beaker } from "./Beaker";
@@ -94,6 +94,11 @@ export function ExperimentLabViewport({
   const session = useExperimentSession(game);
   const { state, level } = session;
 
+  // Hints are shown in a dismissible modal so they never cover the bench and can
+  // always be closed. Local UI state — revealed-hint count still lives in the
+  // session reducer; this only tracks whether the panel is open.
+  const [hintsOpen, setHintsOpen] = useState(false);
+
   const categoryById = useMemo(
     () => new Map(game.categories.map((c) => [c.id, c])),
     [game.categories],
@@ -137,31 +142,6 @@ export function ExperimentLabViewport({
           </p>
         )}
       </main>
-
-      <section className="samples" aria-label="Samples">
-        {level.sampleIds.map((id) => {
-          const s = session.sampleById.get(id);
-          if (!s) return null;
-          const probed = state.notebook.some((e) => e.sampleId === id);
-          return (
-            <button
-              key={id}
-              className={`chip ${id === state.selectedSampleId ? "is-active" : ""} ${
-                probed ? "is-probed" : ""
-              }`}
-              disabled={!session.interactive}
-              onClick={() => session.selectSample(id)}
-            >
-              {s.label}
-              {probed && (
-                <span className="chip__dot" aria-hidden>
-                  •
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </section>
 
       <section className="tools" aria-label="Tools">
         {level.toolIds.map((id) => {
@@ -234,16 +214,20 @@ export function ExperimentLabViewport({
       </section>
 
       <footer className="actions">
-        {level.hints.length > 0 &&
-          state.hintsRevealed < level.hints.length && (
-            <button
-              className="btn btn--ghost"
-              disabled={!session.interactive}
-              onClick={session.requestHint}
-            >
-              Hint
-            </button>
-          )}
+        {level.hints.length > 0 && (
+          <button
+            className="btn btn--ghost"
+            disabled={!session.interactive}
+            onClick={() => {
+              // Reveal the first hint on the first open; reopening just re-shows
+              // what's already been unlocked.
+              if (state.hintsRevealed === 0) session.requestHint();
+              setHintsOpen(true);
+            }}
+          >
+            Hint
+          </button>
+        )}
         <button
           className="btn btn--primary"
           disabled={!session.interactive || !session.canClassify}
@@ -253,14 +237,31 @@ export function ExperimentLabViewport({
         </button>
       </footer>
 
-      {state.hintsRevealed > 0 && session.interactive && (
-        <div className="hints">
-          {level.hints.slice(0, state.hintsRevealed).map((h) => (
-            <p key={h.id} className="hints__line">
-              💡 {h.text}
-            </p>
-          ))}
-        </div>
+      {hintsOpen && session.interactive && state.hintsRevealed > 0 && (
+        <Overlay>
+          <h2 className="card__title">Hints</h2>
+          <div className="hints">
+            {level.hints.slice(0, state.hintsRevealed).map((h) => (
+              <p key={h.id} className="hints__line">
+                💡 {h.text}
+              </p>
+            ))}
+          </div>
+          {state.hintsRevealed < level.hints.length && (
+            <button
+              className="btn btn--ghost btn--block"
+              onClick={session.requestHint}
+            >
+              Show another hint
+            </button>
+          )}
+          <button
+            className="btn btn--primary btn--block"
+            onClick={() => setHintsOpen(false)}
+          >
+            Got it
+          </button>
+        </Overlay>
       )}
 
       {/* ---- Overlays: framing, the call, and the payoff (no quiz) ---- */}

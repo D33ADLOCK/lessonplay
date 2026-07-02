@@ -101,9 +101,9 @@ describe("ExperimentLabViewport", () => {
     // Intro overlay → enter the lab.
     await user.click(screen.getByRole("button", { name: "Enter the lab" }));
 
-    // Select the unknown from the sample chips, then apply the side light.
-    const samples = screen.getByRole("region", { name: "Samples" });
-    await user.click(within(samples).getByRole("button", { name: /Unknown X/ }));
+    // Select the unknown from the notebook rows, then apply the side light.
+    const notebook = screen.getByRole("region", { name: "Lab notebook" });
+    await user.click(within(notebook).getByRole("button", { name: /Unknown X/ }));
     const tools = screen.getByRole("region", { name: "Tools" });
     await user.click(within(tools).getByRole("button", { name: /Side light/ }));
 
@@ -135,8 +135,8 @@ describe("ExperimentLabViewport", () => {
     render(<ExperimentLabViewport game={predictGame} />);
 
     await user.click(screen.getByRole("button", { name: "Enter the lab" }));
-    const samples = screen.getByRole("region", { name: "Samples" });
-    await user.click(within(samples).getByRole("button", { name: /Unknown X/ }));
+    const notebook = screen.getByRole("region", { name: "Lab notebook" });
+    await user.click(within(notebook).getByRole("button", { name: /Unknown X/ }));
     const tools = screen.getByRole("region", { name: "Tools" });
     await user.click(within(tools).getByRole("button", { name: /Side light/ }));
 
@@ -214,8 +214,8 @@ describe("ExperimentLabViewport", () => {
     render(<ExperimentLabViewport game={gasGame} />);
 
     await user.click(screen.getByRole("button", { name: "Enter the lab" }));
-    const samples = screen.getByRole("region", { name: "Samples" });
-    await user.click(within(samples).getByRole("button", { name: /Mystery metal/ }));
+    const notebook = screen.getByRole("region", { name: "Lab notebook" });
+    await user.click(within(notebook).getByRole("button", { name: /Mystery metal/ }));
     const tools = screen.getByRole("region", { name: "Tools" });
     await user.click(within(tools).getByRole("button", { name: /Add dilute acid/ }));
 

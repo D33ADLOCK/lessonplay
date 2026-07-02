@@ -715,13 +715,11 @@
 }
 
 .experiment-lab-app .hints {
-  position: absolute;
-  bottom: 70px;
-  left: 14px;
-  right: 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0 12px;
 }
 .experiment-lab-app .hints__line {
   margin: 0;

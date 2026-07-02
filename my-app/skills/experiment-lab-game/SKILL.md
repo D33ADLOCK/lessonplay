@@ -43,21 +43,39 @@ classification ("discovery before naming").
 >
 > **Animated visuals:** the `Beaker` animates all of `beam`, `settle`, `residue`,
 > `fizz`, `color-change`, `gas`, and `precipitate` (`gas` can carry a `gasLabel`
-> chip like "H₂"). See `references/model-contract.md` for tool → visual pairings.
+> chip like "H₂"), plus `conductivity` (bulb glow), `temperature` (thermometer),
+> `ph-scale` (0–14 strip), and `odour`. See `references/model-contract.md` for
+> tool → visual pairings.
+>
+> **Structured readouts (evidence, not prose):** attach an optional
+> `readout: { kind, value }` to an effect to record the *specific* clue — e.g.
+> `{ kind: "color", value: "red" }`, `{ kind: "ph-scale", value: "2" }`,
+> `{ kind: "conductivity", value: "on" }`, `{ kind: "temperature", value: "hot" }`,
+> `{ kind: "odour", value: "pungent" }`. Readout `value` (and `gasLabel`) feed the
+> distinguishability signature, so two effects that share a `visual` but differ in
+> their readout (red vs blue litmus, bulb on vs off, H₂ vs CO₂) are treated as
+> distinct evidence. Prefer a readout whenever the clue is the *specific reading*
+> rather than merely "something changed". Kinds are limited to
+> `EXPERIMENT_READOUT_KINDS`; a `gasLabel` is only valid with `visual: "gas"`.
 
 ## Workflow
 
-1. Confirm the conversation contains an approved plan (the planner's
-   `# Chemistry Game Brief`, or an equivalent chapter/concept plan) naming the
-   concept, the categories to discover, and the core misconception.
+1. Confirm the conversation contains an approved plan — a `# Discovery Game
+   Brief` from `discovery-game-planner`, a `# Chemistry Game Brief`, or an
+   equivalent chapter/concept plan — naming the concept, the categories to
+   discover, and the core misconception. If no such plan exists and the request
+   starts from a chapter or raw concept, use `discovery-game-planner` first to
+   produce and get approval on a brief; do not improvise the design here.
 2. Read `references/model-contract.md` before writing any `ExperimentDefinition`.
-3. Read `references/gameplay-contract.md` before designing the level ladder.
-4. Read `references/authoring-contract.md` before writing observation text,
+3. Read `references/activity-mapping.md` to turn the brief's chapter Activities
+   into tools, categories, the designed ambiguity, and the level ladder.
+4. Read `references/gameplay-contract.md` before designing the level ladder.
+5. Read `references/authoring-contract.md` before writing observation text,
    categories, predictions, or hints.
-5. Read `references/validation-checklist.md` before reporting completion.
-6. Author the game as data: one `ExperimentDefinition` (the consistent world)
+6. Read `references/validation-checklist.md` before reporting completion.
+7. Author the game as data: one `ExperimentDefinition` (the consistent world)
    plus categories and a level ladder, exported as one `ExperimentGame`.
-7. Validate with `validateExperimentMission` (structural + quality) and the
+8. Validate with `validateExperimentMission` (structural + quality) and the
    per-level `solveExperiment`. Do not ship a level the analyzer flags.
 
 Do not re-decide the learning objective or archetype. If the plan is incomplete
@@ -85,7 +103,8 @@ The author **must not**:
   rejects this).
 - make a non-tutorial level winnable by a single tool or by guessing (the
   analyzer rejects `railed` / `bruteForceable`).
-- invent visual kinds outside `EXPERIMENT_VISUALS`.
+- invent visual kinds outside `EXPERIMENT_VISUALS` or readout kinds outside
+  `EXPERIMENT_READOUT_KINDS`.
 - build a custom render surface in place of `ExperimentLabViewport`.
 
 ## Why a rule engine, not authored pairs

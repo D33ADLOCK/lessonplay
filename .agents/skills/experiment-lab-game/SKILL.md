@@ -60,17 +60,22 @@ classification ("discovery before naming").
 
 ## Workflow
 
-1. Confirm the conversation contains an approved plan (the planner's
-   `# Chemistry Game Brief`, or an equivalent chapter/concept plan) naming the
-   concept, the categories to discover, and the core misconception.
+1. Confirm the conversation contains an approved plan — a `# Discovery Game
+   Brief` from `discovery-game-planner`, a `# Chemistry Game Brief`, or an
+   equivalent chapter/concept plan — naming the concept, the categories to
+   discover, and the core misconception. If no such plan exists and the request
+   starts from a chapter or raw concept, use `discovery-game-planner` first to
+   produce and get approval on a brief; do not improvise the design here.
 2. Read `references/model-contract.md` before writing any `ExperimentDefinition`.
-3. Read `references/gameplay-contract.md` before designing the level ladder.
-4. Read `references/authoring-contract.md` before writing observation text,
+3. Read `references/activity-mapping.md` to turn the brief's chapter Activities
+   into tools, categories, the designed ambiguity, and the level ladder.
+4. Read `references/gameplay-contract.md` before designing the level ladder.
+5. Read `references/authoring-contract.md` before writing observation text,
    categories, predictions, or hints.
-5. Read `references/validation-checklist.md` before reporting completion.
-6. Author the game as data: one `ExperimentDefinition` (the consistent world)
+6. Read `references/validation-checklist.md` before reporting completion.
+7. Author the game as data: one `ExperimentDefinition` (the consistent world)
    plus categories and a level ladder, exported as one `ExperimentGame`.
-7. Validate with `validateExperimentMission` (structural + quality) and the
+8. Validate with `validateExperimentMission` (structural + quality) and the
    per-level `solveExperiment`. Do not ship a level the analyzer flags.
 
 Do not re-decide the learning objective or archetype. If the plan is incomplete

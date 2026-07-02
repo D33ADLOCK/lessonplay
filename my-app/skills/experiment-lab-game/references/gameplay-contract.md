@@ -62,10 +62,14 @@ and what is asked.
   probe, read the evidence, classify — is the game; gating each tool behind a
   "what will happen?" pop-up interrupts that flow. Ship levels with prediction
   off unless there is a specific teaching reason to turn it on.
-- Set `predictionRequired: true` on **at most one** early guided level when you
-  want to teach the predict beat once: the learner picks an expected `visual`
-  before the tool is applied and the engine scores it against the real effect.
-  Never make it the default across the ladder.
+- **Prediction is only meaningful once the learner has evidence to reason from.**
+  Asking "will the colour change?" on the very first probe of an unknown is a
+  blind coin-flip, not a deduction — it feels like guessing and teaches nothing.
+  If you turn it on at all, do it on a single early guided level *after* a related
+  clue is already on the bench, so the "guess" is actually a reasoned expectation.
+- Set `predictionRequired: true` on **at most one** early guided level, and never
+  as the default across the ladder: the learner picks an expected `visual` before
+  the tool is applied and the engine scores it against the real effect.
 
 ## Authoring phases
 

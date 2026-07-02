@@ -62,7 +62,9 @@ and assert, in its tests, that `validateExperimentMission(game).ok` is true.
   `color-change`, `gas`, and `precipitate`;
 - the `gasLabel` chip is readable when `visual === "gas"` and observation prose
   stays sensory rather than naming the gas;
-- sample chips, tool buttons, prediction choices, and notebook cells remain
-  usable on mobile-size viewports;
+- tool buttons, the tappable notebook rows (which select the active sample), any
+  prediction choices, and notebook cells remain usable on mobile-size viewports;
+- the Hint panel opens and dismisses cleanly — it is a modal, so it must never
+  permanently cover the bench or leave the player with no way back;
 - classify and reveal overlays work end-to-end and keep concept labels hidden
   until the learner submits a correct classification.

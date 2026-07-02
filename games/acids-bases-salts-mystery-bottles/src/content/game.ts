@@ -15,6 +15,10 @@ import type {
  *   - dilute acid on the sample (Activity 2.5) → a gas from carbonates only
  *   - a strip of zinc (Activities 2.3, 2.4)    → hydrogen gas from acids only
  *
+ * Two transformation Activities ride the same world: titrating base into the acid
+ * (Activity 2.6) and heating/rehydrating copper sulphate crystals (Activity 2.15,
+ * water of crystallisation), both driven by persistent `setState`.
+ *
  * Nothing here is authored per bottle × tool: every outcome is computed from the
  * bottle's hidden `properties` (`nature`, `ionic`, `carbonate`) through the
  * first-match-wins `ruleSet`, so the world is consistent and the learner can
@@ -77,6 +81,17 @@ export const acidsBasesSaltsBench: ExperimentDefinition = {
       categoryId: "non-conductor",
       revealLabel: "sugar solution",
     },
+    {
+      // A solid on the same bench for the water-of-crystallisation activity. It
+      // never joins a classify level (no `nature`/`ionic`/`carbonate`), so the
+      // identity tools default to "nothing" on it; only heat and water act on its
+      // `hydration`. `categoryId` is required structurally but never graded here.
+      id: "crystals-cuso4",
+      label: "Blue crystals",
+      properties: { hydration: "hydrated" },
+      categoryId: "hydrated-salt",
+      revealLabel: "copper sulphate crystals",
+    },
   ],
   tools: [
     { id: "litmus", label: "Litmus strip", description: "Dip a strip and read the colour." },
@@ -92,6 +107,12 @@ export const acidsBasesSaltsBench: ExperimentDefinition = {
       id: "add-base",
       label: "Add base",
       description: "Titrate in base drop by drop to cancel the acid.",
+    },
+    { id: "heat", label: "Heat", description: "Warm the crystals over a flame and watch." },
+    {
+      id: "water",
+      label: "Add water",
+      description: "Drip a little water onto the crystals and watch.",
     },
   ],
   ruleSet: {
@@ -214,6 +235,34 @@ export const acidsBasesSaltsBench: ExperimentDefinition = {
           setState: { nature: "neutral" },
         },
       },
+      // --- Heat / water: water of crystallisation (Activity 2.15) ---
+      // Heating drives the water of crystallisation off (blue → white); adding it
+      // back floods the blue in again. The `everHeated` marker records that the
+      // round-trip has happened, so the goal state (blue *after* heating) is
+      // distinct from the untouched blue start — the target can only be met by
+      // completing the full reversible loop, never by standing still.
+      {
+        toolId: "heat",
+        when: { hydration: "hydrated" },
+        effect: {
+          observationId: "cuso4-dehydrate",
+          observation: "The blue drains away and the crystals crumble to a chalky white.",
+          visual: "color-change",
+          readout: { kind: "color", value: "white" },
+          setState: { hydration: "anhydrous", everHeated: "yes" },
+        },
+      },
+      {
+        toolId: "water",
+        when: { hydration: "anhydrous" },
+        effect: {
+          observationId: "cuso4-rehydrate",
+          observation: "A few drops soak in and the deep blue floods back.",
+          visual: "color-change",
+          readout: { kind: "color", value: "blue" },
+          setState: { hydration: "hydrated" },
+        },
+      },
     ],
     defaultEffect: {
       observationId: "no-change",
@@ -238,6 +287,9 @@ export const acidsBasesSaltsBench: ExperimentDefinition = {
  *      gas on each bottle before it lands (Activities 2.3/2.4).
  *   5. `neutralise-it`       (reach-target-state) — titrate base into the acid
  *      until it reaches neutral (Activity 2.6).
+ *   6. `water-of-crystallisation` (reach-target-state) — heat blue crystals white,
+ *      then add water to bring the blue back; the target is the post-heat blue, so
+ *      only the full reversible loop wins (Activity 2.15).
  */
 export const game: ExperimentGame = {
   id: "acids-bases-salts-mystery-bottles",
@@ -273,6 +325,12 @@ export const game: ExperimentGame = {
       label: "Non-conductor",
       definition:
         "Neutral and does not conduct — it dissolves without free ions to carry a current.",
+    },
+    {
+      id: "hydrated-salt",
+      label: "Hydrated salt",
+      definition:
+        "Its crystals lock in water of crystallisation — heat drives the water off and turns them white, water takes it back up and the blue returns.",
     },
   ],
   levels: [
@@ -394,6 +452,31 @@ export const game: ExperimentGame = {
         sampleId: "bottle-hcl",
         target: { nature: "neutral" },
         targetLabel: "Bring the bottle to neutral",
+      },
+      scaffolding: "open",
+      predictionRequired: false,
+      hints: [],
+    },
+    {
+      // reach-target-state (Activity 2.15): water of crystallisation as a round
+      // trip. The crystals start blue; heating drives off the water (white);
+      // adding water back restores the blue. The target — blue *after* heating —
+      // can only be met by completing the full reversible loop, so it is neither
+      // trivially satisfied at the start nor a one-click win. This is the reversible
+      // `setState` chain end-to-end.
+      id: "water-of-crystallisation",
+      title: "The colour that comes back",
+      intro:
+        "These blue crystals hide water inside them. Heat them and watch the colour go — then find a way to bring the blue back.",
+      outro:
+        "The water you drove off with heat soaked straight back in, and the blue returned — the crystals had been holding it all along.",
+      sampleIds: ["crystals-cuso4"],
+      toolIds: ["heat", "water"],
+      goal: {
+        kind: "reach-target-state",
+        sampleId: "crystals-cuso4",
+        target: { hydration: "hydrated", everHeated: "yes" },
+        targetLabel: "Drive the blue out, then bring it back",
       },
       scaffolding: "open",
       predictionRequired: false,

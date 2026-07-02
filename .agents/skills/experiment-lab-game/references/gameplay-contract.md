@@ -94,6 +94,17 @@ treated as `classify` (back-compat), but prefer to set `kind` explicitly.
   (a trivial goal needs no action); it reports the fewest actions as
   `toolsNeeded`. Offer a read-only check tool (litmus / pH paper) alongside the
   transforming tool so the learner can watch progress.
+- **Reversible transformations need a marker property.** For a round trip that
+  returns to the starting appearance — heat blue copper sulphate to white, then
+  add water and the blue comes *back* (Activity 2.15) — you cannot set
+  `target` to the returned state directly: it equals the start, so the analyzer
+  rejects it as already-satisfied. Author the forward step's `setState` to also
+  set a history marker (e.g. the "heat" effect sets
+  `{ hydration: "anhydrous", everHeated: "yes" }`), and make the target the
+  returned state **plus** that marker (`{ hydration: "hydrated", everHeated: "yes" }`).
+  Now the goal is distinct from the untouched start and reachable only by
+  completing the full loop (heat → add water), so it passes. `setState` merges,
+  so the marker persists across later steps.
 - Reserve for genuine **transformations** framed as a goal: neutralisation
   (Activity 2.6), water of crystallisation (Activity 2.15).
 
